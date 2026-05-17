@@ -1,0 +1,26 @@
+# Secrets — NOOIT committen
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# App-output
+output/
+uploads/
+*.log
+job_history.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

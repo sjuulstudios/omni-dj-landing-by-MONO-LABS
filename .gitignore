@@ -1,0 +1,70 @@
+# Clip Live — git ignore patterns
+# Genegeerd door git zodat ze nooit per ongeluk in een repo / push terechtkomen.
+
+# ----- Geheimen — NOOIT committen -----
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.eggs/
+*.egg-info/
+.pytest_cache/
+
+# ----- Build artefacten -----
+build/
+dist/
+*.spec.bak
+
+# ----- PyInstaller tijdelijke output -----
+*.toc
+*.pkg
+*.manifest
+
+# ----- App-runtime data (niet in repo) -----
+output/
+uploads/
+job_history.json
+*.log
+
+# ----- Backups -----
+*.bak
+*.backup
+*.orig
+_bak-archive-*.tar.gz
+_bak-archive-*.zip
+
+# ----- Editor / IDE -----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ----- OS -----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ----- Claude state -----
+.superpowers/
+.claude/local/
+
+# ----- Stripe / Supabase lokale dev -----
+supabase/.temp/
+.supabase/
+
+# ----- Node (als er ooit frontend tooling bijkomt) -----
+node_modules/
+npm-debug.log*
+yarn-debug.log*

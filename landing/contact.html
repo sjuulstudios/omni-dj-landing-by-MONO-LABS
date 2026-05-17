@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Contact — Clipdrop Live</title>
+<meta name="description" content="Get in touch with Sjuul Studios about Clipdrop Live — questions, support, partnerships, or press." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="nav">
+  <a class="brand" href="/">
+    <span class="brand-mark"></span>
+    <span class="brand-words">
+      <span class="brand-name">Clipdrop Live</span>
+      <span class="brand-sub">Drop · Detection · Clip</span>
+    </span>
+  </a>
+  <nav class="nav-links">
+    <a href="/#features">Features</a>
+    <a href="/#solutions">Solutions</a>
+    <a href="/#resources">Resources</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/#faq">FAQ</a>
+  </nav>
+  <a href="/#early-access" class="btn btn-primary nav-cta">Early access</a>
+</header>
+
+<main class="legal">
+
+  <a href="/" class="contact-back">← Back to home</a>
+
+  <h1>Contact</h1>
+  <div class="legal-meta">We reply within 2 business days</div>
+
+  <p>For support, billing, partnerships, press, or general questions — drop us a message. Everything goes to <a href="mailto:business@sjuulstudios.com">business@sjuulstudios.com</a>.</p>
+
+  <p>If you'd rather email directly, <a href="mailto:business@sjuulstudios.com">business@sjuulstudios.com</a> works too.</p>
+
+  <form class="contact-form"
+        action="mailto:business@sjuulstudios.com"
+        method="post"
+        enctype="text/plain">
+    <label for="contact-name">Your name</label>
+    <input type="text" id="contact-name" name="name" required autocomplete="name" />
+
+    <label for="contact-email">Email address</label>
+    <input type="email" id="contact-email" name="email" required autocomplete="email" placeholder="you@example.com" />
+
+    <label for="contact-subject">Subject</label>
+    <input type="text" id="contact-subject" name="subject" required placeholder="What's this about?" />
+
+    <label for="contact-message">Message</label>
+    <textarea id="contact-message" name="message" required placeholder="Tell us what's going on..."></textarea>
+
+    <button type="submit" class="btn btn-primary">Send message</button>
+  </form>
+
+  <h2>Company details</h2>
+  <p>
+    Sjuul Studios (eenmanszaak)<br/>
+    The Netherlands<br/>
+    KVK: <strong>92316476</strong><br/>
+    BTW / VAT ID: <strong>NL004948553B64</strong>
+  </p>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="brand-mark"></span>
+      <div>
+        <div class="brand-name">Clipdrop Live</div>
+        <div class="brand-sub">© 2026 · Sjuul Studios</div>
+      </div>
+    </div>
+    <nav class="footer-links">
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/contact.html">Contact</a>
+      <a href="#" id="cookie-settings-link">Cookie settings</a>
+    </nav>
+  </div>
+</footer>
+
+<aside class="cookie-banner" id="cookie-banner" role="dialog" aria-live="polite" aria-label="Cookie preferences">
+  <div class="cookie-banner-inner">
+    <p>
+      <strong>We use a few cookies.</strong>
+      Strictly necessary cookies keep the site working. Analytics cookies are optional and only set if you accept. See our <a href="/privacy.html#cookies">cookie policy</a>.
+    </p>
+    <div class="cookie-banner-actions">
+      <button class="btn btn-ghost" id="cookie-reject" type="button">Only essential</button>
+      <button class="btn btn-primary" id="cookie-accept" type="button">Accept all</button>
+    </div>
+  </div>
+</aside>
+
+<script src="script.js"></script>
+</body>
+</html>

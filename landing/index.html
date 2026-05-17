@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Clipdrop Live — Detect drops in DJ sets, create clips for social</title>
+<meta name="description" content="Clipdrop Live detects drops in DJ sets and creates short clips ready for TikTok, Instagram, and Facebook. Upload a set. Get the highlights. In seconds." />
+<meta property="og:title" content="Clipdrop Live" />
+<meta property="og:description" content="Detect drops in DJ sets, create short clips for social." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://clipdroplive.com/" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ─── TOP NAV ─── -->
+<header class="nav">
+  <a class="brand" href="/">
+    <span class="brand-mark"></span>
+    <span class="brand-words">
+      <span class="brand-name">Clipdrop Live</span>
+      <span class="brand-sub">Drop · Detection · Clip</span>
+    </span>
+  </a>
+  <nav class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#solutions">Solutions</a>
+    <a href="#resources">Resources</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+  <button type="button" class="btn btn-ghost nav-cta" data-open-wizard>Create account</button>
+  <a href="#early-access" class="btn btn-primary nav-cta">Early access</a>
+  <button class="nav-toggle" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<!-- ─── HERO ─── -->
+<section class="hero">
+  <div class="hero-eyebrow">For DJs · Festival teams · Content managers</div>
+  <h1 class="hero-title">
+    Detecting drops in DJ&nbsp;sets,<br/>
+    <em>creates short clips</em> for social.
+  </h1>
+  <p class="hero-sub">
+    Upload a set. Clipdrop Live finds the drops, the buildups, the moments that matter — then exports them clip-ready for TikTok, Instagram, and Facebook.
+  </p>
+
+  <div class="hero-cta-row" id="early-access">
+    <a href="#early-access-form" class="btn btn-primary btn-xl" id="droplive-btn">
+      <span class="dot"></span>
+      Drop DJ-set Live
+    </a>
+    <button type="button" class="btn btn-ghost btn-xl" data-open-wizard>Create account</button>
+    <span class="hero-cta-meta">No signup needed for free tier · Mac &amp; Windows</span>
+  </div>
+
+  <!--
+    Early-access form.
+    To make this work without the "not secure" browser warning:
+    1. Sign up at https://formspree.io (free tier: 50 submissions/month).
+    2. Create a new form, copy your endpoint URL (looks like https://formspree.io/f/abcd1234).
+    3. Replace the action="" value below with that URL.
+    4. The form will email submissions to business@sjuulstudios.com automatically.
+    Alternative: Resend.com, Web3Forms, or a tiny Vercel/Netlify function.
+  -->
+  <form class="hero-email" id="early-access-form" action="https://formspree.io/f/REPLACE_ME" method="POST">
+    <input type="email" name="email" placeholder="your@email.com" required aria-label="Email for early access" />
+    <input type="hidden" name="_subject" value="Clipdrop Live — early access request" />
+    <input type="hidden" name="_replyto" value="business@sjuulstudios.com" />
+    <button type="submit" class="btn btn-primary">Request early access</button>
+  </form>
+  <p class="early-access-note" id="early-access-note" hidden>
+    Thanks — we'll be in touch soon.
+  </p>
+
+  <div class="hero-marquee">
+    <span>Detected: 1 INTRO · 3 BUILDUPS · 5 DROPS · 2 BREAKS · 1 OUTRO</span>
+    <span>Detected: 1 INTRO · 3 BUILDUPS · 5 DROPS · 2 BREAKS · 1 OUTRO</span>
+  </div>
+</section>
+
+<!-- ─── FEATURES ─── -->
+<section class="section" id="features">
+  <div class="section-head">
+    <div class="eyebrow">Features</div>
+    <h2>Everything a DJ needs<br/><em>to turn a set into shorts.</em></h2>
+  </div>
+  <div class="grid-4">
+    <article class="card">
+      <div class="card-ico">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12c2-6 6-6 6 0s4 6 6 0 4-6 6 0"/></svg>
+      </div>
+      <h3>Drop detection</h3>
+      <p>Spectral and energy analysis tuned for electronic music — finds the drop, not the hi-hat.</p>
+    </article>
+    <article class="card">
+      <div class="card-ico">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h10M4 18h16"/><circle cx="18" cy="12" r="2"/></svg>
+      </div>
+      <h3>Auto-clipping</h3>
+      <p>30–60 second clips cut around each drop, with smart in/out points and silence trimming.</p>
+    </article>
+    <article class="card">
+      <div class="card-ico">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      </div>
+      <h3>Multi-aspect export</h3>
+      <p>9:16, 16:9, 1:1, 4:5 — pick per platform. Blurred-background fill so nothing looks letterboxed.</p>
+    </article>
+    <article class="card">
+      <div class="card-ico">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 21h14"/></svg>
+      </div>
+      <h3>One-click social</h3>
+      <p>Share directly to TikTok, Instagram, and Facebook. Connect once in settings, post in seconds.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ─── SOLUTIONS ─── -->
+<section class="section" id="solutions">
+  <div class="section-head">
+    <div class="eyebrow">Solutions</div>
+    <h2>Built for the people<br/><em>who actually play the sets.</em></h2>
+  </div>
+  <div class="grid-3">
+    <article class="card card-tall">
+      <span class="tag">For DJs</span>
+      <h3>Stop manually scrubbing for the drop.</h3>
+      <p>Drag in a 90-minute set, get back the 6 clips that actually matter. Caption them, post them, keep mixing.</p>
+      <ul class="bullets">
+        <li>Local processing — your set never leaves your machine</li>
+        <li>Works with WAV, MP3, AIFF, MP4 video sets</li>
+        <li>Aspect-aware export per platform</li>
+      </ul>
+    </article>
+    <article class="card card-tall">
+      <span class="tag">For festival organizers</span>
+      <h3>Recap reels, ready before the encore.</h3>
+      <p>Auto-clip every set on every stage, batch-export, push to socials the same night.</p>
+      <ul class="bullets">
+        <li>Batch process whole stage recordings</li>
+        <li>Push to socials in one click</li>
+        <li>Studio plan: unlimited sets per month</li>
+      </ul>
+    </article>
+    <article class="card card-tall">
+      <span class="tag">For content managers</span>
+      <h3>Ten posts from one upload.</h3>
+      <p>Turn a single set into a week of content — drops, buildups, transitions, all clip-ready.</p>
+      <ul class="bullets">
+        <li>Auto-titled clips you can rename inline</li>
+        <li>Per-platform aspect ratios in one flow</li>
+        <li>Pro plan: 10 sets per month</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<!-- ─── RESOURCES ─── -->
+<section class="section" id="resources">
+  <div class="section-head">
+    <div class="eyebrow">Resources</div>
+    <h2>Learn the craft<br/><em>of clipping a set.</em></h2>
+  </div>
+  <div class="grid-3">
+    <a class="card card-link" href="#">
+      <span class="tag">Coming soon</span>
+      <h3>The Clipdrop Blog</h3>
+      <p>Field notes on drop detection, social algorithms, and what makes a clip travel.</p>
+      <span class="link-arrow">Read →</span>
+    </a>
+    <a class="card card-link" href="#">
+      <span class="tag">Coming soon</span>
+      <h3>Documentation</h3>
+      <p>Install guide, supported formats, OAuth setup for TikTok / Instagram / Facebook.</p>
+      <span class="link-arrow">Read →</span>
+    </a>
+    <a class="card card-link" href="#">
+      <span class="tag">Coming soon</span>
+      <h3>Changelog</h3>
+      <p>What shipped, what broke, what's next. Updated every release.</p>
+      <span class="link-arrow">Read →</span>
+    </a>
+  </div>
+</section>
+
+<!-- ─── PRICING ─── -->
+<section class="section" id="pricing">
+  <div class="section-head">
+    <div class="eyebrow">Pricing</div>
+    <h2>Pay for the sets,<br/><em>not the seats.</em></h2>
+  </div>
+  <div class="grid-3 pricing-grid">
+
+    <article class="card price-card">
+      <div class="price-head">
+        <span class="tag">Free</span>
+        <h3>For trying it out</h3>
+      </div>
+      <div class="price-row">
+        <span class="price">€0</span>
+        <span class="per">/ month</span>
+      </div>
+      <ul class="bullets">
+        <li>2 DJ sets per month</li>
+        <li>All aspect ratios</li>
+        <li>Local processing</li>
+        <li>Exports always accessible</li>
+      </ul>
+      <button type="button" class="btn btn-ghost btn-block" data-open-wizard>Start free</button>
+    </article>
+
+    <article class="card price-card price-card--highlight">
+      <div class="price-flag">Most popular</div>
+      <div class="price-head">
+        <span class="tag tag--amber">Pro</span>
+        <h3>For working DJs</h3>
+      </div>
+      <div class="price-row">
+        <span class="price">€21,99</span>
+        <span class="per">/ month</span>
+      </div>
+      <ul class="bullets">
+        <li>10 DJ sets per month</li>
+        <li>One-click social sharing</li>
+        <li>Dropbox / Google Drive watch-folder</li>
+      </ul>
+      <button type="button" class="btn btn-primary btn-block" data-open-wizard data-plan="pro">Get Pro</button>
+    </article>
+
+    <article class="card price-card">
+      <div class="price-head">
+        <span class="tag">Studio</span>
+        <h3>For festivals &amp; agencies</h3>
+      </div>
+      <div class="price-row">
+        <span class="price">€200</span>
+        <span class="per">/ month</span>
+      </div>
+      <ul class="bullets">
+        <li>Unlimited DJ sets</li>
+        <li>Batch processing</li>
+        <li>Early access to new features</li>
+      </ul>
+      <button type="button" class="btn btn-ghost btn-block" data-open-wizard data-plan="studio">Get Studio</button>
+    </article>
+  </div>
+</section>
+
+<!-- ─── FAQ ─── -->
+<section class="section" id="faq">
+  <div class="section-head">
+    <div class="eyebrow">FAQ</div>
+    <h2>The questions<br/><em>we get most.</em></h2>
+  </div>
+  <div class="faq-list">
+
+    <details class="faq-item">
+      <summary class="faq-q">
+        <span>What's your refund policy?</span>
+        <span class="faq-q-mark">+</span>
+      </summary>
+      <div class="faq-a">
+        <p>If you're an EU consumer, you have a 14-day right of withdrawal under the Consumer Rights Directive — email <a href="mailto:business@sjuulstudios.com">business@sjuulstudios.com</a> within 14 days of your purchase and we'll refund you.</p>
+        <p>Outside the 14-day window, paid subscriptions are non-refundable except where required by law or where a serious technical issue prevented you from using the Service. We may still offer a refund at our discretion — just reach out.</p>
+        <p>You can cancel any time from your account; you keep access until the end of your current billing period.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-q">
+        <span>What about chargebacks?</span>
+        <span class="faq-q-mark">+</span>
+      </summary>
+      <div class="faq-a">
+        <p>If something looks wrong on your bill, please email us first — most issues get resolved the same day. Initiating a chargeback through your bank without contacting us may result in your account being suspended pending resolution.</p>
+        <p>Chargebacks found to be unjustified by the card network may lead to permanent account termination plus recovery of the disputed amount and reasonable administrative costs.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-q">
+        <span>Who's responsible for music rights in the clips I create?</span>
+        <span class="faq-q-mark">+</span>
+      </summary>
+      <div class="faq-a">
+        <p>You are. Clipdrop Live is a tool for processing audio you already have the right to use. We don't grant any music license, and we're not a music rights clearinghouse.</p>
+        <p>DJ sets typically contain copyrighted music, and the platforms you publish to (TikTok, Instagram, Facebook) have their own commercial-music policies and Content ID systems. You are responsible for clearing rights and complying with platform rules. See section 3 of our <a href="/terms.html">Terms</a> for the full text.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-q">
+        <span>Does my audio leave my computer?</span>
+        <span class="faq-q-mark">+</span>
+      </summary>
+      <div class="faq-a">
+        <p>No. Drop detection, clip cutting, and export all run locally on your machine. We don't upload your sets to our servers. The only data on our side is what you give us directly — your account email, subscription info, and any support messages you send.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-q">
+        <span>How do I cancel?</span>
+        <span class="faq-q-mark">+</span>
+      </summary>
+      <div class="faq-a">
+        <p>From your account settings, click "Manage subscription" → "Cancel". Your plan stays active until the end of the current billing period — no surprise mid-month cut-off. If you can't find the option, email <a href="mailto:business@sjuulstudios.com">business@sjuulstudios.com</a> and we'll handle it.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-q">
+        <span>How do I get into the beta?</span>
+        <span class="faq-q-mark">+</span>
+      </summary>
+      <div class="faq-a">
+        <p>Drop your email in the early access form at the top of the page. We're starting with a small group of working DJs to stress-test the tool before opening it up.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-q">
+        <span>What payment methods do you support?</span>
+        <span class="faq-q-mark">+</span>
+      </summary>
+      <div class="faq-a">
+        <p>Payments are handled by Stripe. We support major credit and debit cards (Visa, Mastercard, American Express), iDEAL for Dutch customers, SEPA Direct Debit, and Apple Pay / Google Pay where available. Pricing is in euros, and applicable VAT is calculated at checkout based on your billing country.</p>
+      </div>
+    </details>
+
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="brand-mark"></span>
+      <div>
+        <div class="brand-name">Clipdrop Live</div>
+        <div class="brand-sub">© 2026 · Sjuul Studios</div>
+      </div>
+    </div>
+    <nav class="footer-links">
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/contact.html">Contact</a>
+      <a href="#" id="cookie-settings-link">Cookie settings</a>
+    </nav>
+  </div>
+</footer>
+
+<!-- ─── ONBOARDING WIZARD ─── -->
+<div class="wizard-overlay" id="wizard-overlay" role="dialog" aria-modal="true" aria-labelledby="wizard-title" hidden>
+  <section class="wizard" id="wizard">
+    <button class="wizard-back" id="wizard-back" type="button" aria-label="Previous step" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <button class="wizard-close" id="wizard-close" type="button" aria-label="Close">×</button>
+
+    <div class="wizard-progress" aria-hidden="true">
+      <div class="wizard-progress-seg" data-seg="1"></div>
+      <div class="wizard-progress-seg" data-seg="2"></div>
+      <div class="wizard-progress-seg" data-seg="3"></div>
+      <div class="wizard-progress-seg" data-seg="4"></div>
+    </div>
+
+    <div class="wizard-stack" id="wizard-stack">
+
+      <!-- STEP 1 — Where did you hear -->
+      <div class="wizard-step is-active" data-step="1">
+        <div class="wizard-eyebrow">Step 1 of 4</div>
+        <h2 id="wizard-title">Where did you hear about Clipdrop Live?</h2>
+        <p class="wizard-sub">Pick the closest one. This helps us understand which channels actually reach DJs.</p>
+        <div class="wizard-bubbles" data-field="hear_about" data-mode="single">
+          <button class="wizard-bubble" type="button" data-value="artist_friend">An (artist) friend <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="manager">Your manager <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="whatsapp">WhatsApp <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="tiktok">TikTok <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="instagram">Instagram <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="google">Google <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="reddit">Reddit <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="facebook">Facebook <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="other" data-other="true">Other <span class="wizard-bubble-check">✓</span></button>
+        </div>
+        <div class="wizard-other" id="hear-about-other-wrap">
+          <div class="wizard-field">
+            <label for="hear-about-other">Tell us where</label>
+            <input type="text" id="hear-about-other" name="hear_about_other" placeholder="e.g. Friend of a friend at a club" />
+          </div>
+        </div>
+        <div class="wizard-cta">
+          <button class="btn btn-primary btn-block" id="wizard-next-1" type="button" disabled>Continue</button>
+        </div>
+      </div>
+
+      <!-- STEP 2 — Reasons -->
+      <div class="wizard-step" data-step="2">
+        <div class="wizard-eyebrow">Step 2 of 4</div>
+        <h2>What are your reasons for wanting to use Clipdrop Live?</h2>
+        <p class="wizard-sub">Pick all that apply.</p>
+        <div class="wizard-bubbles" data-field="reasons" data-mode="multi">
+          <button class="wizard-bubble" type="button" data-value="cant_afford_editor">I can't afford a videographer or video editor <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="saves_time">It saves me time so I can focus on making music <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="easier_sharing">It makes social sharing easier <span class="wizard-bubble-check">✓</span></button>
+          <button class="wizard-bubble" type="button" data-value="post_after_show">I can upload social posts right after my show <span class="wizard-bubble-check">✓</span></button>
+        </div>
+        <div class="wizard-cta">
+          <button class="btn btn-primary btn-block" id="wizard-next-2" type="button" disabled>Continue</button>
+        </div>
+      </div>
+
+      <!-- STEP 3 — Identity -->
+      <div class="wizard-step" data-step="3">
+        <div class="wizard-eyebrow">Step 3 of 4</div>
+        <h2>Tell us who you are</h2>
+        <p class="wizard-sub">Fields with <span style="color:var(--rose)">*</span> are required.</p>
+        <div class="wizard-fields">
+          <div class="wizard-field">
+            <label for="onb-artist">Artist name <span class="req">*</span></label>
+            <input type="text" id="onb-artist" name="artist_name" required placeholder="The name on the lineup" />
+            <div class="wizard-field-error" data-error-for="onb-artist">Artist name is required.</div>
+          </div>
+          <div class="wizard-field">
+            <label for="onb-real">Full (real) name <span class="req">*</span></label>
+            <input type="text" id="onb-real" name="real_name" required placeholder="Used for billing &amp; rights" />
+            <div class="wizard-field-error" data-error-for="onb-real">Real name is required.</div>
+          </div>
+          <div class="wizard-field">
+            <label for="onb-instagram">Instagram link</label>
+            <input type="url" id="onb-instagram" name="instagram_url" placeholder="https://instagram.com/yourhandle" />
+          </div>
+          <div class="wizard-field">
+            <label for="onb-tiktok">TikTok link</label>
+            <input type="url" id="onb-tiktok" name="tiktok_url" placeholder="https://tiktok.com/@yourhandle" />
+          </div>
+          <div class="wizard-field">
+            <label for="onb-streaming">Streaming link <span style="color:var(--mute);font-weight:400;letter-spacing:.05em">(Spotify, SoundCloud, Bandcamp…)</span></label>
+            <input type="url" id="onb-streaming" name="streaming_url" placeholder="https://soundcloud.com/yourhandle" />
+          </div>
+        </div>
+        <div class="wizard-cta">
+          <button class="btn btn-primary btn-block" id="wizard-next-3" type="button">Continue</button>
+        </div>
+      </div>
+
+      <!-- STEP 4 — Account -->
+      <div class="wizard-step" data-step="4">
+        <div class="wizard-eyebrow">Step 4 of 4</div>
+        <h2>Account login details</h2>
+        <p class="wizard-sub">You'll use these to sign in to Clipdrop Live.</p>
+        <div class="wizard-fields">
+          <div class="wizard-field">
+            <label for="onb-email">Email address <span class="req">*</span></label>
+            <input type="email" id="onb-email" name="email" required autocomplete="email" placeholder="you@example.com" />
+            <div class="wizard-field-error" data-error-for="onb-email">A valid email is required.</div>
+          </div>
+          <div class="wizard-field">
+            <label for="onb-pass">Password <span class="req">*</span></label>
+            <input type="password" id="onb-pass" name="password" required autocomplete="new-password" placeholder="At least 8 characters" />
+            <div class="wizard-field-error" data-error-for="onb-pass">Password must be at least 8 characters.</div>
+          </div>
+          <div class="wizard-field">
+            <label for="onb-pass2">Confirm password <span class="req">*</span></label>
+            <input type="password" id="onb-pass2" name="password_confirm" required autocomplete="new-password" placeholder="Type it again" />
+            <div class="wizard-field-error" data-error-for="onb-pass2">Passwords don't match.</div>
+          </div>
+        </div>
+        <div class="wizard-cta">
+          <button class="btn btn-primary btn-block" id="wizard-submit" type="button">Let's clip some live DJ-sets</button>
+        </div>
+        <p class="wizard-cta-meta">By creating an account you agree to our <a href="/terms.html" target="_blank" style="color:var(--amber-2);border-bottom:1px solid rgba(232,183,102,0.3)">Terms</a> and <a href="/privacy.html" target="_blank" style="color:var(--amber-2);border-bottom:1px solid rgba(232,183,102,0.3)">Privacy Policy</a>.</p>
+      </div>
+
+      <!-- SUCCESS -->
+      <div class="wizard-step" data-step="5">
+        <div class="wizard-success">
+          <div class="wizard-success-mark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+          </div>
+          <h2>You're on the list.</h2>
+          <p>We'll be in touch as soon as your beta access is ready. Check your inbox at the email you provided — and check spam, just in case.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</div>
+
+<!-- ─── COOKIE BANNER ─── -->
+<aside class="cookie-banner" id="cookie-banner" role="dialog" aria-live="polite" aria-label="Cookie preferences">
+  <div class="cookie-banner-inner">
+    <p>
+      <strong>We use a few cookies.</strong>
+      Strictly necessary cookies keep the site working. Analytics cookies are optional and only set if you accept. See our <a href="/privacy.html#cookies">cookie policy</a>.
+    </p>
+    <div class="cookie-banner-actions">
+      <button class="btn btn-ghost" id="cookie-reject" type="button">Only essential</button>
+      <button class="btn btn-primary" id="cookie-accept" type="button">Accept all</button>
+    </div>
+  </div>
+</aside>
+
+<script src="script.js"></script>
+</body>
+</html>

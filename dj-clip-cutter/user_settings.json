@@ -1,0 +1,13 @@
+{
+  "clip_duration": 30,
+  "min_gap": 30,
+  "sensitivity": 0.5,
+  "formats": [
+    "landscape",
+    "vertical"
+  ],
+  "use_demucs": false,
+  "normalize_audio": false,
+  "bars_before": 4,
+  "bars_after": 4
+}

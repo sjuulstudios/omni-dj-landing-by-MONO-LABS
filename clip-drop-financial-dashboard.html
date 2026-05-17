@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clip Drop — Financial Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+    <style>
+        :root {
+            --color-background-primary: #ffffff;
+            --color-background-secondary: #f5f5f5;
+            --color-background-tertiary: #efefef;
+            --color-text-primary: #1a1a1a;
+            --color-text-secondary: #666666;
+            --color-text-tertiary: #999999;
+            --color-border-tertiary: #e8e8e8;
+            --color-border-secondary: #d8d8d8;
+            --color-border-primary: #c0c0c0;
+
+            --color-info: #0066cc;
+            --color-success: #00aa33;
+            --color-warning: #ff9900;
+            --color-danger: #dd0000;
+
+            --color-purple-1: #f3e8ff;
+            --color-purple-2: #e9d5ff;
+            --color-purple-3: #d8b4fe;
+            --color-purple-4: #c084fc;
+            --color-purple-5: #a855f7;
+            --color-purple-6: #9333ea;
+            --color-purple-7: #7e22ce;
+
+            --color-teal-1: #e0f2f1;
+            --color-teal-2: #b2dfdb;
+            --color-teal-3: #80cbc4;
+            --color-teal-4: #4db6ac;
+            --color-teal-5: #26a69a;
+            --color-teal-6: #009688;
+            --color-teal-7: #00695c;
+
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            --font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+
+            --border-radius-md: 8px;
+            --border-radius-lg: 12px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-background-primary: #1a1a1a;
+                --color-background-secondary: #2a2a2a;
+                --color-background-tertiary: #3a3a3a;
+                --color-text-primary: #f0f0f0;
+                --color-text-secondary: #aaaaaa;
+                --color-text-tertiary: #777777;
+                --color-border-tertiary: #444444;
+                --color-border-secondary: #555555;
+                --color-border-primary: #666666;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--color-background-primary);
+            color: var(--color-text-primary);
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 13px;
+            color: var(--color-text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--color-success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--color-border-tertiary);
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--color-text-primary);
+        }
+
+        .tab.active {
+            color: var(--color-info);
+            border-bottom-color: var(--color-info);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background-color: var(--color-background-secondary);
+            padding: 1rem;
+            border-radius: var(--border-radius-md);
+            border: 1px solid var(--color-border-tertiary);
+        }
+
+        .metric-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+            word-break: break-word;
+        }
+
+        .metric-value.small {
+            font-size: 18px;
+        }
+
+        .metric-subtext {
+            font-size: 12px;
+            color: var(--color-text-tertiary);
+            margin-top: 0.25rem;
+        }
+
+        .tier-section {
+            margin-bottom: 2rem;
+        }
+
+        .tier-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+            margin-bottom: 1rem;
+            text-transform: capitalize;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            margin-bottom: 2rem;
+            background-color: var(--color-background-secondary);
+            padding: 1.5rem;
+            border-radius: var(--border-radius-lg);
+            border: 1px solid var(--color-border-tertiary);
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--color-text-secondary);
+            font-size: 14px;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--color-border-tertiary);
+            border-top-color: var(--color-info);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            padding: 1rem;
+            background-color: rgba(221, 0, 0, 0.1);
+            border: 1px solid var(--color-danger);
+            border-radius: var(--border-radius-md);
+            color: var(--color-danger);
+            font-size: 14px;
+        }
+
+        .note {
+            font-size: 12px;
+            color: var(--color-text-tertiary);
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--color-border-tertiary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Clip Drop — Financial Dashboard</h1>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Live from Stripe</span>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('overview')">Overview</button>
+            <button class="tab" onclick="switchTab('tiers')">By Tier</button>
+            <button class="tab" onclick="switchTab('metrics')">Key Metrics</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div id="overview-loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <span>Loading dashboard...</span>
+            </div>
+            <div id="overview-content"></div>
+        </div>
+
+        <!-- By Tier Tab -->
+        <div id="tiers" class="tab-content">
+            <div id="tiers-loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <span>Loading tier data...</span>
+            </div>
+            <div id="tiers-content"></div>
+        </div>
+
+        <!-- Key Metrics Tab -->
+        <div id="metrics" class="tab-content">
+            <div id="metrics-loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <span>Loading metrics...</span>
+            </div>
+            <div id="metrics-content"></div>
+        </div>
+
+        <div class="note">
+            Dashboard refreshes every 30 seconds. Last updated: <span id="last-update">—</span>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5555/api/billing/metrics';
+        let currentData = null;
+        let charts = {};
+
+        async function fetchMetrics() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const result = await response.json();
+
+                if (!result.ok) {
+                    showError(`API Error: ${result.error}`);
+                    return;
+                }
+
+                currentData = result.data;
+                renderOverviewTab();
+                renderTiersTab();
+                renderMetricsTab();
+                updateLastUpdate(result.data.last_updated);
+            } catch (error) {
+                showError(`Failed to fetch metrics: ${error.message}`);
+            }
+        }
+
+        function showError(msg) {
+            const overview = document.getElementById('overview-content');
+            if (overview) {
+                overview.innerHTML = `<div class="error">${msg}</div>`;
+            }
+        }
+
+        function updateLastUpdate(timestamp) {
+            const el = document.getElementById('last-update');
+            if (timestamp) {
+                const date = new Date(timestamp);
+                el.textContent = date.toLocaleTimeString();
+            }
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function renderOverviewTab() {
+            if (!currentData) return;
+
+            const html = `
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Monthly Recurring Revenue</div>
+                        <div class="metric-value">€${currentData.mrr.toFixed(2)}</div>
+                        <div class="metric-subtext">${currentData.active_subscriptions} active subs</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total Revenue (Lifetime)</div>
+                        <div class="metric-value small">€${currentData.total_revenue.toFixed(2)}</div>
+                        <div class="metric-subtext">${currentData.customer_count} customers</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Available Balance</div>
+                        <div class="metric-value small">€${currentData.available_balance.toFixed(2)}</div>
+                        <div class="metric-subtext">Ready for payout</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Outstanding Invoices</div>
+                        <div class="metric-value">${currentData.outstanding_invoices}</div>
+                        <div class="metric-subtext">Pending payment</div>
+                    </div>
+                </div>
+
+                <div class="chart-wrapper">
+                    <canvas id="overviewChart" role="img" aria-label="MRR by Tier"></canvas>
+                </div>
+            `;
+
+            document.getElementById('overview-content').innerHTML = html;
+            renderMRRChart();
+        }
+
+        function renderTiersTab() {
+            if (!currentData) return;
+
+            const { mrr_by_tier, ltv_by_tier, subscription_stats } = currentData;
+
+            const html = `
+                <div class="tier-section">
+                    <div class="tier-title">Pro Tier (€21.99/month)</div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Active Subscriptions</div>
+                            <div class="metric-value">${subscription_stats.pro_active}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Inactive Subscriptions</div>
+                            <div class="metric-value">${subscription_stats.pro_inactive}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">MRR</div>
+                            <div class="metric-value small">€${mrr_by_tier.pro.toFixed(2)}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Estimated LTV</div>
+                            <div class="metric-value small">€${ltv_by_tier.pro.toFixed(2)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tier-section">
+                    <div class="tier-title">Studio Tier (€200.00/month)</div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Active Subscriptions</div>
+                            <div class="metric-value">${subscription_stats.studio_active}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Inactive Subscriptions</div>
+                            <div class="metric-value">${subscription_stats.studio_inactive}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">MRR</div>
+                            <div class="metric-value small">€${mrr_by_tier.studio.toFixed(2)}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Estimated LTV</div>
+                            <div class="metric-value small">€${ltv_by_tier.studio.toFixed(2)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-wrapper">
+                    <canvas id="tierChart" role="img" aria-label="Active Subscriptions by Tier"></canvas>
+                </div>
+            `;
+
+            document.getElementById('tiers-content').innerHTML = html;
+            renderTierChart();
+        }
+
+        function renderMetricsTab() {
+            if (!currentData) return;
+
+            const html = `
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Churn Rate (30-day)</div>
+                        <div class="metric-value">${(currentData.churn_rate_30d * 100).toFixed(2)}%</div>
+                        <div class="metric-subtext">Inactive / Total Subscriptions</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total Subscriptions</div>
+                        <div class="metric-value">${
+                            currentData.subscription_stats.pro_active +
+                            currentData.subscription_stats.studio_active +
+                            currentData.subscription_stats.pro_inactive +
+                            currentData.subscription_stats.studio_inactive
+                        }</div>
+                        <div class="metric-subtext">Active + Inactive</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Active Subscriptions</div>
+                        <div class="metric-value">${currentData.active_subscriptions}</div>
+                        <div class="metric-subtext">Currently paying</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Blended LTV</div>
+                        <div class="metric-value small">€${(
+                            (currentData.ltv_by_tier.pro * currentData.subscription_stats.pro_active +
+                             currentData.ltv_by_tier.studio * currentData.subscription_stats.studio_active) /
+                            Math.max(currentData.active_subscriptions, 1)
+                        ).toFixed(2)}</div>
+                        <div class="metric-subtext">Weighted by tier</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('metrics-content').innerHTML = html;
+        }
+
+        function renderMRRChart() {
+            if (!currentData) return;
+
+            const ctx = document.getElementById('overviewChart');
+            if (!ctx) return;
+
+            if (charts.overview) charts.overview.destroy();
+
+            charts.overview = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pro', 'Studio'],
+                    datasets: [{
+                        data: [
+                            currentData.mrr_by_tier.pro,
+                            currentData.mrr_by_tier.studio
+                        ],
+                        backgroundColor: ['#a855f7', '#26a69a'],
+                        borderColor: [
+                            getComputedStyle(document.documentElement).getPropertyValue('--color-background-primary'),
+                            getComputedStyle(document.documentElement).getPropertyValue('--color-background-primary')
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary'),
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    return '€' + context.parsed.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTierChart() {
+            if (!currentData) return;
+
+            const ctx = document.getElementById('tierChart');
+            if (!ctx) return;
+
+            if (charts.tier) charts.tier.destroy();
+
+            const stats = currentData.subscription_stats;
+            charts.tier = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Pro', 'Studio'],
+                    datasets: [
+                        {
+                            label: 'Active',
+                            data: [stats.pro_active, stats.studio_active],
+                            backgroundColor: '#26a69a'
+                        },
+                        {
+                            label: 'Inactive',
+                            data: [stats.pro_inactive, stats.studio_inactive],
+                            backgroundColor: '#ff9900'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: false,
+                            ticks: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary')
+                            },
+                            grid: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--color-border-tertiary')
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary')
+                            },
+                            grid: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--color-border-tertiary')
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary')
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initial fetch and auto-refresh
+        fetchMetrics();
+        setInterval(fetchMetrics, 30000);
+    </script>
+</body>
+</html>

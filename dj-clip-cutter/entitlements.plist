@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTD/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        Hardened-runtime entitlements voor Clip Live.
+
+        Vereist door Apple notarization. Geeft de gebundelde Python +
+        ffmpeg toestemming om:
+            - JIT/eval te draaien (numba compileert at runtime).
+            - Onsigned dynamic libraries te laden (librosa shared libs).
+            - Netwerk te gebruiken (Stripe-checkout, Supabase, social
+              platform OAuth, watch-folder updates).
+            - Audio in te lezen via systeem-audio APIs.
+        Geen DEBUGGER entitlement — die schakelt sandbox-protecties uit.
+    -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+
+    <key>com.apple.security.network.client</key>
+    <true/>
+
+    <key>com.apple.security.network.server</key>
+    <true/>
+
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+</dict>
+</plist>

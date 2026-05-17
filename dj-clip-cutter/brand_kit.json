@@ -1,0 +1,37 @@
+{
+  "fonts": [],
+  "palette": [
+    {
+      "name": "Amber",
+      "hex": "#e8b766"
+    },
+    {
+      "name": "Copper",
+      "hex": "#cf6b58"
+    },
+    {
+      "name": "Sage",
+      "hex": "#7fb685"
+    },
+    {
+      "name": "Sky",
+      "hex": "#7aa6e0"
+    },
+    {
+      "name": "Paper",
+      "hex": "#f6efe2"
+    }
+  ],
+  "logo": null,
+  "caption_presets": [],
+  "handle": "",
+  "tagline": "",
+  "bpm_stamp": {
+    "enabled": true,
+    "corner": "tr",
+    "format": "bpm_key",
+    "color": "#ffffff",
+    "font_id": null
+  },
+  "updated": 1778520209.344861
+}
