@@ -904,7 +904,7 @@
   }
   .ed-tools .t.on{color:var(--amber-2);border-color:rgba(232,183,102,0.4);background:rgba(232,183,102,0.08)}
 
-  .ed-body{display:grid;grid-template-columns:340px 1fr 88px;gap:0;min-height:480px}
+  .ed-body{display:grid;grid-template-columns:340px 1fr 88px;gap:0;min-height:480px;position:relative}
   .ed-left{
     border-right:1px solid var(--line);padding:18px;overflow:hidden;
     background:linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0));
@@ -1786,7 +1786,7 @@
     color:var(--amber-2);
   }
   .ed-text-drawer{
-    position:absolute;top:0;right:0;bottom:0;
+    position:absolute;top:62px;right:0;bottom:0;
     width:340px;max-width:90vw;
     background:rgba(20,14,8,.96);
     border-left:1px solid var(--line);
@@ -1795,6 +1795,12 @@
     padding:14px 14px 12px;
     box-shadow:-8px 0 24px rgba(0,0,0,.4);
     animation:edTxSlideIn .22s ease-out;
+    /* Override ink tokens — drawer is dark, so text needs to be light */
+    --ink-0:var(--paper);
+    --ink-1:#e8e0d4;
+    --ink-2:#cdc3b0;
+    --ink-3:#a89f93;
+    --ink-4:#7a7570;
   }
   @keyframes edTxSlideIn{
     from{transform:translateX(8%);opacity:0}
@@ -4007,7 +4013,6 @@
               <div class="tl-mini-trim tl-mini-trim-out" id="tl-mini-trim-out" title="Drag to set OUT point"></div>
             </div>
           </div>
-        </div>
 
         <!-- SESSIE 21 — Brand Stack F3: Text-layer drawer. Slides in from
              the right when the editor's "Text" tool-btn is clicked. Holds
@@ -4230,7 +4235,8 @@
                     onclick="editorToggleTrackPanel(false)">Done</button>
           </div>
         </aside>
-      </div>
+        </div><!-- /.editor -->
+      </div><!-- /.canvas -->
     </main>
 
     <main class="view" id="view-style" data-scene="6">
