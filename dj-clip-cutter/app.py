@@ -50,6 +50,9 @@ from auth import (
     signup as auth_signup,
     login as auth_login,
     get_user_from_token as auth_get_user_from_token,
+    refresh_session as auth_refresh_session,
+    log_action as auth_log_action,
+    require_role,
     supabase_admin,
 )
 
@@ -79,6 +82,74 @@ log = logging.getLogger('clip-live')
 
 app = Flask(__name__, static_folder='static')
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024 * 1024  # 20 GB
+
+# ---------------------------------------------------------------------------
+# SESSIE 32 - Rate limiting (flask-limiter).
+# ---------------------------------------------------------------------------
+# Defensieve laag bovenop Supabase's eigen auth-rate-limiting en de quota
+# gate. Beschermt tegen:
+#   - bots die /api/auth/signup of /api/auth/login spammen
+#   - misbruik van /api/billing/checkout (kosten bij abuse)
+#   - bulk-upload door 1 account
+#
+# Backend: in-memory (geen Redis). Limieten resetten bij dev-server-restart;
+# voor een lokaal-draaiende tool prima. Default per-IP; voor authed routes
+# zetten we de key op het access_token-prefix zodat 1 user via IP-rotation
+# niet om de limiet kan.
+#
+# Geen default_limits — alleen routes met @limiter.limit decorator worden
+# beperkt. 429 response wordt als JSON gerendered zodat de frontend hem
+# nicely kan tonen ipv de standaard HTML page.
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+
+    def _rate_limit_key():
+        """Per-user rate limit key voor authed routes; valt terug op IP
+        als er geen token is. Voorkomt dat 1 user via IP-rotation om de
+        per-user limiet kan."""
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.lower().startswith('bearer '):
+            token = auth_header[7:].strip()
+            if token:
+                # Eerste 32 chars van het JWT zijn ruim genoeg om uniek te
+                # zijn per user, en logt het volledige token niet.
+                return f'user:{token[:32]}'
+        return f'ip:{get_remote_address()}'
+
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        storage_uri='memory://',
+        default_limits=[],
+        headers_enabled=True,
+    )
+
+    @app.errorhandler(429)
+    def _rate_limit_response(e):
+        retry = getattr(e, 'retry_after', None)
+        return jsonify({
+            'ok': False,
+            'error': 'Te veel verzoeken - probeer het over een paar minuten opnieuw.',
+            'retry_after_seconds': retry,
+        }), 429
+    log.info('Rate limiter geinitialiseerd (in-memory)')
+except ImportError:
+    # flask-limiter niet geinstalleerd - dev kan doorgaan zonder rate
+    # limiting. Vervang door no-op decorator zodat @limiter.limit(...) niet
+    # crasht.
+    log.warning('flask-limiter niet geinstalleerd - rate limiting UIT. '
+                'Run: pip install "flask-limiter>=3.5"')
+
+    class _NoLimiter:
+        def limit(self, *_a, **_kw):
+            def _decorator(fn):
+                return fn
+            return _decorator
+    limiter = _NoLimiter()
+
+    def _rate_limit_key():
+        return 'noop'
 
 # ---------------------------------------------------------------------------
 # Bucket-D2 large-file pipeline flag (2026-04-26)
@@ -122,11 +193,16 @@ BRAND_KIT_PATH    = os.path.join(BASE_DIR, 'brand_kit.json')
 BRAND_KIT_DIR     = os.path.join(BASE_DIR, 'brand_kit')
 BRAND_FONTS_DIR   = os.path.join(BRAND_KIT_DIR, 'fonts')
 BRAND_LOGO_DIR    = os.path.join(BRAND_KIT_DIR, 'logo')
+# SESSIE 31 — separate folder for the user's watermark image. A watermark
+# is conceptually different from a logo: typically larger, semi-transparent,
+# tiled or repeated. Keeping them apart avoids overwriting either.
+BRAND_WATERMARK_DIR = os.path.join(BRAND_KIT_DIR, 'watermark')
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(BRAND_FONTS_DIR, exist_ok=True)
 os.makedirs(BRAND_LOGO_DIR, exist_ok=True)
+os.makedirs(BRAND_WATERMARK_DIR, exist_ok=True)
 
 # SESSIE 21 — fonttools is optional. When present we can accept WOFF2 uploads
 # and convert them to TTF on the fly (ffmpeg's drawtext only reads TTF/OTF).
@@ -353,6 +429,10 @@ def _append_to_history(job_data):
         'clipCount': len(job_data.get('results', [])),
         'date': time.strftime('%Y-%m-%d'),
         'thumb': None,
+        # SESSIE 28 — user_id stamp so /api/history can filter per signed-in
+        # account. Without this, every user on the same local install saw the
+        # full library across accounts (see SESSIE 28 bug report).
+        'user_id': job_data.get('user_id'),
     }
     results = job_data.get('results', [])
     if results and results[0].get('thumbnail'):
@@ -401,8 +481,16 @@ def _persist_job_snapshot(job_data):
                             job_data['bpm'][k] = v
         except (OSError, json.JSONDecodeError):
             pass
+        # SESSIE 30 - never persist the user's access_token to disk.
+        # It is kept on the in-memory job dict only so background quota
+        # callbacks can route through the update-usage edge function.
+        # Strip on a shallow copy so the live in-memory state stays intact.
+        if isinstance(job_data, dict) and 'access_token' in job_data:
+            sanitised = {k: v for k, v in job_data.items() if k != 'access_token'}
+        else:
+            sanitised = job_data
         with open(snap_path, 'w') as f:
-            json.dump(job_data, f, default=str, indent=2)
+            json.dump(sanitised, f, default=str, indent=2)
     except (OSError, TypeError, ValueError) as e:
         log.warning("Could not persist job snapshot for %s: %s", job_id, e)
 
@@ -679,9 +767,12 @@ def _generate_filmstrip_lazy(video_path, output_dir, num_frames=60, height=80,
 def job_progress_stream(job_id):
     """
     Server-Sent Events stream for real-time job progress.
+    SESSIE 28 — accepts ?token=... query param (EventSource cannot set
+    custom headers).
     """
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
 
     def generate():
         last_sent = None
@@ -731,7 +822,7 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
 
     try:
         _update_job(job_id, status='extracting_audio',
-                    message='Extracting audio from video...')
+                    message='Reading your live DJ set...')
         _update_progress(job_id, stage='extracting_audio', stage_index=0, percent=2,
                          total_clips=0, clips_done=0, completed_indices=[],
                          workers=[], total_thumbs=0, thumbs_done=0)
@@ -744,7 +835,7 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
 
         # --- Stage 2: Detect BPM (8–12%) ---
         _update_job(job_id, status='detecting_bpm',
-                    message='Detecting BPM and beat grid...')
+                    message='Analysing the waveform and beats')
         _update_progress(job_id, stage='detecting_bpm', stage_index=1, percent=9)
         bpm_info = detect_bpm(audio_path, sr=11025)
         _update_job(job_id, bpm=bpm_info)
@@ -753,14 +844,14 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
         # --- Stage 3: Analyze drops/buildups (12–40%) ---
         _update_job(job_id, status='analyzing')
         if use_demucs and HAS_DEMUCS:
-            _update_job(job_id, message='AI source separation (Demucs) + drop detection...')
+            _update_job(job_id, message='Listening for the drops...')
             _update_progress(job_id, stage='analyzing_demucs', stage_index=2, percent=14)
             clips = analyze_with_demucs(
                 audio_path, clip_duration=clip_duration, min_gap=min_gap,
                 sensitivity=sensitivity, bars_before=bars_before, bars_after=bars_after,
             )
         else:
-            _update_job(job_id, message='Analyzing audio (HPSS + bar-aware detection)...')
+            _update_job(job_id, message='Listening for the drops...')
             _update_progress(job_id, stage='analyzing', stage_index=2, percent=14)
             clips = analyze_dj_set(
                 audio_path, clip_duration=clip_duration, min_gap=min_gap,
@@ -852,10 +943,9 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
         total_clips = len(clips)
         if long_set:
             _update_job(job_id,
-                        message=f'Cutting {total_clips} proxy clips '
-                                '(full-quality renders queue lazily)...')
+                        message=f'Cutting your {total_clips} clips...')
         else:
-            _update_job(job_id, message=f'Cutting {total_clips} clips in parallel...')
+            _update_job(job_id, message=f'Cutting your {total_clips} clips...')
         _update_progress(job_id, stage='cutting', stage_index=5, percent=58,
                          total_clips=total_clips, clips_done=0, workers=[])
 
@@ -980,8 +1070,9 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
             j = jobs.get(job_id) or {}
             already_counted = bool(j.get('usage_counted'))
             user_id_for_quota = j.get('user_id')
+            access_token_for_quota = j.get('access_token')
         if user_id_for_quota and not already_counted:
-            new_count = _increment_usage(user_id_for_quota)
+            new_count = _increment_usage(user_id_for_quota, access_token=access_token_for_quota)
             if new_count is not None:
                 _update_job(job_id, usage_counted=True)
 
@@ -1027,6 +1118,7 @@ def api_auth_health():
 
 
 @app.route('/api/auth/signup', methods=['POST'])
+@limiter.limit("5 per hour")
 def api_auth_signup():
     """Register a new user. Body: {email, password, intake?}.
     The handle_new_user trigger creates their profiles row automatically;
@@ -1054,10 +1146,17 @@ def api_auth_signup():
                 'error': 'Missing required intake fields: ' + ', '.join(missing),
             }), 400
     result = auth_signup(email, password, intake=intake)
+    # SESSIE 35 — audit log
+    _audit(
+        'auth.signup',
+        user_id=result.get('user_id'),
+        metadata={'ok': result.get('ok'), 'email': email},
+    )
     return jsonify(result), (200 if result.get('ok') else 400)
 
 
 @app.route('/api/auth/login', methods=['POST'])
+@limiter.limit("10 per 5 minutes")
 def api_auth_login():
     """Sign in existing user. Body: {email, password}.
     Returns access_token + refresh_token on success."""
@@ -1067,6 +1166,31 @@ def api_auth_login():
     if not email or not password:
         return jsonify({'ok': False, 'error': 'Email en wachtwoord zijn verplicht'}), 400
     result = auth_login(email, password)
+    # SESSIE 35 — audit log. user_id is None bij mislukking (onbekende user).
+    _audit(
+        'auth.login' if result.get('ok') else 'auth.login_failed',
+        user_id=result.get('user_id'),
+        metadata={'ok': result.get('ok'), 'email': email},
+    )
+    return jsonify(result), (200 if result.get('ok') else 401)
+
+
+@app.route('/api/auth/refresh', methods=['POST'])
+@limiter.limit("30 per hour")
+def api_auth_refresh():
+    """SESSIE 30b - exchange a refresh_token for a new access_token + a
+    rotated refresh_token. Lets the frontend keep going indefinitely
+    without forcing the user to log in again. The refresh_token MUST be
+    sent in the JSON body (never in a query-string, never logged).
+
+    Body: { refresh_token: "..." }
+    Returns: { ok, access_token, refresh_token, expires_at, user_id, email }
+    """
+    data = request.get_json(silent=True) or {}
+    rt = (data.get('refresh_token') or '').strip()
+    if not rt:
+        return jsonify({'ok': False, 'error': 'refresh_token ontbreekt'}), 400
+    result = auth_refresh_session(rt)
     return jsonify(result), (200 if result.get('ok') else 401)
 
 
@@ -1082,6 +1206,205 @@ def api_auth_me():
     if not user_info:
         return jsonify({'ok': False, 'error': 'Ongeldig of verlopen token'}), 401
     return jsonify({'ok': True, **user_info})
+
+
+@app.route('/api/profile', methods=['POST'])
+def api_profile_update():
+    """SESSIE 30 - update the caller's profile (full_name, artist_name).
+    Sidebar header reads full_name to render "Workstation of: NAME".
+
+    Strategy:
+      1. Prefer supabase_admin when configured (dev) - bypasses RLS.
+      2. Otherwise fall back to the anon client with the caller's JWT,
+         which respects the "users update own row" RLS policy. This is
+         the path taken by the bundled .app where no service_role key
+         is present.
+
+    Whitelisted fields only - never trust the client to set plan, quota,
+    stripe_customer_id, or any other column.
+    """
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    body = request.get_json(silent=True) or {}
+    full_name   = (body.get('full_name')   or '').strip()
+    artist_name = (body.get('artist_name') or '').strip()
+    if not full_name or not artist_name:
+        return jsonify({'ok': False, 'error': 'full_name en artist_name zijn beide verplicht'}), 400
+    payload = {
+        'full_name':   full_name[:120],
+        'artist_name': artist_name[:80],
+    }
+    user_id = user_info['user_id']
+    token   = user_info.get('access_token')
+
+    # Path 1: admin client (dev/server). Bypasses RLS.
+    if supabase_admin is not None:
+        try:
+            supabase_admin.table('profiles').update(payload).eq('id', user_id).execute()
+            return jsonify({'ok': True, 'profile': payload})
+        except Exception as e:
+            log.warning('Profile update via admin failed for %s: %s', user_id, e)
+            return jsonify({'ok': False, 'error': f'profile update failed: {e}'}), 500
+
+    # Path 2: bundled .app fallback - per-call anon client with the
+    # caller's own JWT, relying on a Supabase RLS policy that lets users
+    # update their own profile row. If the policy is missing this will
+    # 401/403 - we surface that so the user can ask support to enable it.
+    try:
+        from supabase import create_client as _create_anon_client
+        from auth import SUPABASE_URL as _SUP_URL, SUPABASE_ANON_KEY as _SUP_ANON
+        anon = _create_anon_client(_SUP_URL, _SUP_ANON)
+        # Inject the user's JWT so RLS sees them as the authenticated caller.
+        anon.postgrest.auth(token)
+        anon.table('profiles').update(payload).eq('id', user_id).execute()
+        return jsonify({'ok': True, 'profile': payload})
+    except Exception as e:
+        log.warning('Profile update via anon client failed for %s: %s', user_id, e)
+        return jsonify({
+            'ok': False,
+            'error': f'profile update failed: {e}. If this persists, '
+                     f'support needs to enable the "users update own profile" '
+                     f'RLS policy on the profiles table.',
+        }), 500
+
+
+# ---------------------------------------------------------------------------
+# SESSIE 29 — Debug log bundle endpoint for beta testers.
+# Reads launcher.log + recent app state and returns a single ZIP that a
+# tester can attach to a support email. PII-sensitive paths (uploads/output
+# file contents) are NEVER included — only diagnostic metadata.
+# ---------------------------------------------------------------------------
+@app.route('/api/debug/logs', methods=['GET'])
+@require_role('admin')  # SESSIE 35 — alleen admins (Sjuul) mogen debug-logs downloaden
+def api_debug_logs():
+    """Return a ZIP archive containing:
+      - launcher.log (from CLIP_LIVE_USER_DATA or fallback)
+      - tail of system info (platform, python, ffmpeg version)
+      - job_history.json (filtered to caller's jobs only)
+      - a summary.txt with the caller's user_id, plan, and timestamps
+
+    Query params:
+      ?format=text  →  returns plain text instead of ZIP (for copy-paste
+                       on machines without download support).
+
+    Auth: required. Only returns the caller's own data — never shows other
+    users' jobs or tokens.
+    """
+    import io as _io
+    import platform as _platform
+    import zipfile
+    from datetime import datetime, timezone
+
+    # SESSIE 35 — access-check gebeurt al via @require_role('admin') decorator.
+    # Tweede call hier alleen om user_info te hebben voor de audit log.
+    user_info, _ = _require_authed_user()
+    _audit('debug.logs_downloaded', user_id=user_info['user_id'] if user_info else None)
+
+    fmt = (request.args.get('format') or 'zip').strip().lower()
+
+    # Locate the launcher.log written by launcher.py — it lives in the
+    # per-OS user data dir set by CLIP_LIVE_USER_DATA. Falls back to common
+    # locations for dev mode (where launcher.py was not the entry point).
+    log_candidates = []
+    env_dir = os.environ.get('CLIP_LIVE_USER_DATA')
+    if env_dir:
+        log_candidates.append(os.path.join(env_dir, 'launcher.log'))
+    home = os.path.expanduser('~')
+    if sys.platform == 'darwin':
+        log_candidates.append(os.path.join(home, 'Library', 'Application Support', 'Clip Live', 'launcher.log'))
+    elif sys.platform == 'win32':
+        appdata = os.environ.get('APPDATA', home)
+        log_candidates.append(os.path.join(appdata, 'Clip Live', 'launcher.log'))
+    else:
+        log_candidates.append(os.path.join(home, '.clip-live', 'launcher.log'))
+
+    launcher_log_text = ''
+    launcher_log_path = ''
+    for cand in log_candidates:
+        try:
+            if cand and os.path.isfile(cand):
+                with open(cand, 'r', encoding='utf-8', errors='replace') as fh:
+                    # Tail last 200 KB only — long-running installs can grow huge.
+                    fh.seek(0, 2)
+                    size = fh.tell()
+                    fh.seek(max(0, size - 200 * 1024))
+                    launcher_log_text = fh.read()
+                launcher_log_path = cand
+                break
+        except Exception as e:
+            launcher_log_text = f'(could not read {cand}: {e!r})'
+
+    # System info — no PII, just versions.
+    try:
+        ffmpeg_version = subprocess.run(
+            ['ffmpeg', '-version'],
+            capture_output=True, text=True, timeout=5
+        ).stdout.splitlines()[0] if subprocess else 'subprocess not available'
+    except Exception as e:
+        ffmpeg_version = f'(ffmpeg not found: {e!r})'
+
+    summary_lines = [
+        f'Clip Live — diagnostic bundle',
+        f'Generated: {datetime.now(timezone.utc).isoformat()}',
+        f'',
+        f'User:     {user_info.get("user_id", "?")}',
+        f'Email:    {user_info.get("email", "?")}',
+        f'Plan:     {(user_info.get("profile") or {}).get("plan") or "free (no profile data — supabase_admin not configured in this bundle)"}',
+        f'',
+        f'Platform: {_platform.platform()}',
+        f'Python:   {sys.version.split()[0]}',
+        f'ffmpeg:   {ffmpeg_version}',
+        f'',
+        f'Launcher log path: {launcher_log_path or "(not found)"}',
+        f'BASE_DIR:          {BASE_DIR}',
+        f'OUTPUT_DIR:        {OUTPUT_DIR}',
+    ]
+    summary_text = '\n'.join(summary_lines)
+
+    # Filter job_history.json to caller's jobs only — never leak others.
+    own_history = []
+    try:
+        if os.path.isfile(HISTORY_PATH):
+            with open(HISTORY_PATH, 'r', encoding='utf-8') as fh:
+                full = json.load(fh) or []
+            caller_id = user_info.get('user_id')
+            for entry in full:
+                if isinstance(entry, dict) and entry.get('user_id') == caller_id:
+                    # Strip filename to just the basename for privacy.
+                    redacted = dict(entry)
+                    if 'filename' in redacted:
+                        redacted['filename'] = os.path.basename(str(redacted['filename']))
+                    own_history.append(redacted)
+    except Exception as e:
+        own_history = [{'_error': f'could not read history: {e!r}'}]
+
+    history_text = json.dumps(own_history, indent=2, ensure_ascii=False)
+
+    if fmt == 'text':
+        # Plain-text combined view for copy-paste support workflows.
+        combined = (
+            f'=== summary.txt ===\n{summary_text}\n\n'
+            f'=== launcher.log (last 200 KB) ===\n{launcher_log_text or "(empty)"}\n\n'
+            f'=== your jobs (job_history.json filtered) ===\n{history_text}\n'
+        )
+        return combined, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
+    # ZIP path — single file, no temp on disk.
+    buf = _io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr('summary.txt', summary_text)
+        zf.writestr('launcher.log', launcher_log_text or '(empty)')
+        zf.writestr('job_history_yours.json', history_text)
+    buf.seek(0)
+    ts = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
+    fname = f'clip-live-diagnostics-{ts}.zip'
+    return send_file(
+        buf,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=fname,
+    )
 
 
 @app.route('/api/quota', methods=['GET'])
@@ -1110,7 +1433,7 @@ def api_quota():
     if not user_info:
         return jsonify({'ok': False, 'error': 'Ongeldig of verlopen token'}), 401
 
-    snap = _get_or_refresh_profile(user_info['user_id'])
+    snap = _get_or_refresh_profile(user_info['user_id'], access_token=token)
     if not snap.get('ok'):
         return jsonify({'ok': False, 'error': snap.get('error', 'profile read failed')}), 500
 
@@ -1160,19 +1483,44 @@ def _parse_pg_timestamp(value):
         return None
 
 
-def _get_or_refresh_profile(user_id):
+def _get_or_refresh_profile(user_id, access_token=None):
     """Read a user's profile via supabase_admin (bypasses RLS), and reset
     the rolling 30-day quota window if it has expired.
+
+    SESSIE 30 - if supabase_admin is None (bundled .app: no service_role key)
+    and an access_token is provided, route through the update-usage edge
+    function with the caller's JWT instead. Same shape on success/failure.
 
     Returns:
       {ok: True, profile, plan, used, limit, remaining, reset_date, reset_in_days}
       {ok: False, error: '...'}
-
-    Reset logic: if `now >= quota_reset_date`, set usage_this_period=0 and
-    advance quota_reset_date by 30 days (or to the next future cycle if the
-    user has been gone for more than one window).
     """
     if supabase_admin is None:
+        if access_token:
+            try:
+                from auth import call_update_usage_edge_function
+                edge = call_update_usage_edge_function(access_token, 'get')
+            except Exception as e:
+                return {'ok': False, 'error': f'edge function call failed: {e}'}
+            if not edge.get('ok'):
+                return {'ok': False, 'error': edge.get('error') or 'edge function failure'}
+            # Normalise limit (edge returns null for studio, we use float inf locally)
+            limit_val = edge.get('limit')
+            if limit_val is None:
+                limit_val = float('inf')
+            remaining_val = edge.get('remaining')
+            if remaining_val is None:
+                remaining_val = float('inf')
+            return {
+                'ok': True,
+                'profile': edge.get('profile') or {},
+                'plan': edge.get('plan') or 'free',
+                'used': int(edge.get('used') or 0),
+                'limit': limit_val,
+                'remaining': remaining_val,
+                'reset_date': edge.get('reset_date'),
+                'reset_in_days': edge.get('reset_in_days'),
+            }
         return {'ok': False, 'error': 'supabase_admin niet geconfigureerd'}
     if not user_id:
         return {'ok': False, 'error': 'user_id ontbreekt'}
@@ -1236,13 +1584,32 @@ def _get_or_refresh_profile(user_id):
     }
 
 
-def _increment_usage(user_id):
+def _increment_usage(user_id, access_token=None):
     """Bump usage_this_period by 1. Called once per successfully completed
     analysis from inside _process_job. Bypasses RLS via supabase_admin.
-    Logs and swallows errors — never raises into the worker thread.
-    Returns the new usage count, or None on failure."""
-    if supabase_admin is None or not user_id:
+    Logs and swallows errors  never raises into the worker thread.
+    Returns the new usage count, or None on failure.
+
+    SESSIE 30 - if supabase_admin is None (bundled .app) and access_token is
+    given, increment via the update-usage edge function instead.
+    """
+    if not user_id:
         return None
+    if supabase_admin is None:
+        if not access_token:
+            return None
+        try:
+            from auth import call_update_usage_edge_function
+            edge = call_update_usage_edge_function(access_token, 'increment')
+        except Exception as e:
+            log.warning('Quota increment edge call raised for %s: %s', user_id, e)
+            return None
+        if not edge.get('ok'):
+            log.warning('Quota increment edge function failed for %s: %s', user_id, edge.get('error'))
+            return None
+        new_val = int(edge.get('used') or 0)
+        log.info('Quota incremented via edge function for %s -> %d', user_id, new_val)
+        return new_val
     try:
         # Read-modify-write. Acceptable race profile for a one-user-per-machine
         # local app. If we go multi-device for a single account, swap this for
@@ -1288,23 +1655,88 @@ def _quota_block_response(snap):
 # Flask only initiates redirects; Stripe and the edge function do the rest.
 # ---------------------------------------------------------------------------
 
-def _require_authed_user():
+def _require_authed_user(allow_query_token=False):
     """Helper: extract Bearer token, validate, return user_info dict.
     On failure returns (None, (json_response, status_code)).
     On success returns (user_info, None).
+
+    SESSIE 28 — when `allow_query_token=True` the helper ALSO accepts a
+    ?token=<jwt> query-string parameter. Needed for media endpoints that
+    are loaded via <img>/<video>/EventSource where the browser cannot set
+    custom headers.
 
     Usage in route:
         user_info, err = _require_authed_user()
         if err: return err
     """
+    token = None
     auth_header = request.headers.get('Authorization', '')
-    if not auth_header.lower().startswith('bearer '):
+    if auth_header.lower().startswith('bearer '):
+        token = auth_header[7:].strip()
+    elif allow_query_token:
+        token = (request.args.get('token') or '').strip()
+    if not token:
         return None, (jsonify({'ok': False, 'error': 'Geen Authorization header'}), 401)
-    token = auth_header[7:].strip()
     user_info = auth_get_user_from_token(token)
     if not user_info:
         return None, (jsonify({'ok': False, 'error': 'Ongeldig of verlopen token'}), 401)
+    # SESSIE 30 - keep the raw access token on the user_info so quota
+    # callers can route through the update-usage edge function when no
+    # service_role key is configured (i.e. the bundled .app).
+    user_info['access_token'] = token
     return user_info, None
+
+
+def _audit(action, user_id=None, metadata=None):
+    """SESSIE 35 — Convenience wrapper rond auth_log_action().
+    Plukt ip_address en user_agent automatisch uit het actieve Flask-request.
+    Fire-and-forget: nooit blocking, nooit raising."""
+    try:
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr or '')
+        # X-Forwarded-For kan een komma-lijst zijn (proxies); neem het eerste adres
+        ip = ip.split(',')[0].strip() if ip else None
+        ua = request.headers.get('User-Agent', '')[:512] or None
+    except Exception:
+        ip, ua = None, None
+    auth_log_action(action, user_id=user_id, ip_address=ip, user_agent=ua, metadata=metadata)
+
+
+def _require_job_access(job_id, allow_query_token=False):
+    """SESSIE 28 — authenticate caller AND verify they own the job_id.
+
+    Returns:
+      (user_info, job, None)        on success
+      (None, None, (response, code)) on auth or ownership failure
+
+    Ownership is determined by:
+      - in-memory job dict: jobs[job_id]['user_id']
+      - falling back to the on-disk job snapshot if not in memory.
+
+    Legacy jobs without a user_id field are inaccessible (private by
+    default — no leak). An admin can re-bind them via the snapshot if
+    needed.
+
+    NB: returns 404 for "not yours" instead of 403, so an attacker
+    cannot probe existence of other users' job IDs.
+    """
+    if not _valid_job_id(job_id):
+        return None, None, (jsonify({'ok': False, 'error': 'Invalid job id'}), 400)
+    user_info, err = _require_authed_user(allow_query_token=allow_query_token)
+    if err:
+        return None, None, err
+    # Try in-memory first (fast path) then on-disk snapshot (cold path).
+    job = None
+    with jobs_lock:
+        job = jobs.get(job_id)
+    if job is None:
+        job = _load_job_snapshot(job_id)
+    if job is None:
+        return None, None, (jsonify({'ok': False, 'error': 'Job not found'}), 404)
+    owner = job.get('user_id')
+    if owner != user_info['user_id']:
+        # Don't reveal existence to other users.
+        return None, None, (jsonify({'ok': False, 'error': 'Job not found'}), 404)
+    return user_info, job, None
 
 
 @app.route('/api/billing/health', methods=['GET'])
@@ -1325,6 +1757,7 @@ def api_billing_config():
 
 
 @app.route('/api/billing/checkout', methods=['POST'])
+@limiter.limit("10 per hour", key_func=_rate_limit_key)
 def api_billing_checkout():
     """Start a Stripe Checkout Session for a paid-plan upgrade.
 
@@ -1353,6 +1786,12 @@ def api_billing_checkout():
     success_url = f"{base}/?billing=success&session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{base}/?billing=cancel"
 
+    # Bij edge-function-modus heeft billing.py de JWT van de user nodig om
+    # de Supabase Edge Function te autoriseren. In dev (lokale Stripe SDK)
+    # wordt deze parameter genegeerd.
+    _auth_header = request.headers.get('Authorization', '')
+    access_token = _auth_header[7:].strip() if _auth_header.lower().startswith('bearer ') else None
+
     result = billing_start_checkout(
         user_id=user_info['user_id'],
         email=user_info['email'],
@@ -1360,11 +1799,19 @@ def api_billing_checkout():
         success_url=success_url,
         cancel_url=cancel_url,
         stripe_customer_id=stripe_customer_id,
+        access_token=access_token,
+    )
+    # SESSIE 35 — audit log
+    _audit(
+        'plan.checkout_started',
+        user_id=user_info['user_id'],
+        metadata={'plan': plan, 'ok': result.get('ok')},
     )
     return jsonify(result), (200 if result.get('ok') else 400)
 
 
 @app.route('/api/billing/portal', methods=['POST'])
+@limiter.limit("10 per hour", key_func=_rate_limit_key)
 def api_billing_portal():
     """Open the Stripe Customer Portal so a paying user can manage their
     subscription (cancel, swap plan, update card, view invoices).
@@ -1389,9 +1836,19 @@ def api_billing_portal():
     base = request.host_url.rstrip('/')
     return_url = f"{base}/?billing=portal-return"
 
+    _auth_header = request.headers.get('Authorization', '')
+    access_token = _auth_header[7:].strip() if _auth_header.lower().startswith('bearer ') else None
+
     result = billing_open_portal(
         stripe_customer_id=stripe_customer_id,
         return_url=return_url,
+        access_token=access_token,
+    )
+    # SESSIE 35 — audit log
+    _audit(
+        'plan.portal_opened',
+        user_id=user_info['user_id'],
+        metadata={'ok': result.get('ok')},
     )
     return jsonify(result), (200 if result.get('ok') else 400)
 
@@ -1641,7 +2098,7 @@ def save_watch_folder():
 
     # Plan-gate — same shape as the upload quota gate so the frontend
     # can re-use its 402 handling to surface the upgrade modal.
-    snap = _get_or_refresh_profile(user_info['user_id'])
+    snap = _get_or_refresh_profile(user_info['user_id'], access_token=user_info.get('access_token'))
     if not snap.get('ok'):
         return jsonify({'ok': False, 'error': snap.get('error', 'profile read failed')}), 500
     if (snap.get('plan') or 'free').lower() not in _WATCH_PAID_PLANS:
@@ -1718,7 +2175,7 @@ def watch_folder_reset_seen():
     user_info, err = _require_authed_user()
     if err:
         return err
-    snap = _get_or_refresh_profile(user_info['user_id'])
+    snap = _get_or_refresh_profile(user_info['user_id'], access_token=user_info.get('access_token'))
     if not snap.get('ok'):
         return jsonify({'ok': False, 'error': snap.get('error', 'profile read failed')}), 500
     if (snap.get('plan') or 'free').lower() not in _WATCH_PAID_PLANS:
@@ -2055,6 +2512,125 @@ def delete_brand_logo():
     return jsonify({'success': True})
 
 
+# --- Brand watermark (SESSIE 31) -------------------------------------------
+# Watermark is a per-export overlay that sits on top of every rendered clip.
+# Stored alongside brand_kit.json under BRAND_WATERMARK_DIR/watermark.<ext>.
+# Settings (corner, opacity, size_pct, enabled) live in brand_kit.json so
+# cutter.py picks them up via _load_brand_assets_for_job.
+_WATERMARK_MAX_BYTES = 2 * 1024 * 1024   # 2 MB
+_WATERMARK_ALLOWED_EXT = {'.png', '.jpg', '.jpeg'}
+
+
+@app.route('/api/brand-kit/watermark', methods=['POST'])
+def upload_brand_watermark():
+    if 'file' not in request.files:
+        return jsonify({'error': 'no file'}), 400
+    f = request.files['file']
+    filename = (f.filename or '').strip()
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in _WATERMARK_ALLOWED_EXT:
+        return jsonify({'error': f'extension {ext} not allowed (use png/jpg)'}), 400
+    head = f.stream.read(8)
+    f.stream.seek(0)
+    if ext == '.png' and head[:4] != b'\x89PNG':
+        return jsonify({'error': 'PNG magic bytes mismatch'}), 400
+    if ext in ('.jpg', '.jpeg') and head[:3] != b'\xff\xd8\xff':
+        return jsonify({'error': 'JPG magic bytes mismatch'}), 400
+
+    # Wipe previous watermark files so the folder doesn't accumulate.
+    for old in os.listdir(BRAND_WATERMARK_DIR):
+        try: os.remove(os.path.join(BRAND_WATERMARK_DIR, old))
+        except Exception: pass
+
+    save_ext = ext if ext != '.jpeg' else '.jpg'
+    final_path = os.path.join(BRAND_WATERMARK_DIR, 'watermark' + save_ext)
+    written = 0
+    with open(final_path, 'wb') as out:
+        while True:
+            chunk = f.stream.read(64 * 1024)
+            if not chunk:
+                break
+            written += len(chunk)
+            if written > _WATERMARK_MAX_BYTES:
+                out.close()
+                try: os.remove(final_path)
+                except Exception: pass
+                return jsonify({'error': f'file exceeds {_WATERMARK_MAX_BYTES // 1024 // 1024}MB limit'}), 413
+            out.write(chunk)
+
+    kit = _load_brand_kit()
+    prev = kit.get('watermark') or {}
+    kit['watermark'] = {
+        'path': final_path,
+        'ext': save_ext.lstrip('.'),
+        'corner':  prev.get('corner') or 'br',
+        'opacity': prev.get('opacity') if isinstance(prev.get('opacity'), (int,float)) else 0.6,
+        'size_pct': prev.get('size_pct') if isinstance(prev.get('size_pct'), (int,float)) else 18,
+        'enabled': True,
+        'uploaded': time.time(),
+        'bytes': written,
+    }
+    kit['updated'] = time.time()
+    _save_json_blob(BRAND_KIT_PATH, kit)
+    log.info("Brand watermark uploaded: %s (%d bytes)", filename, written)
+    return jsonify({'success': True, 'watermark': kit['watermark']})
+
+
+@app.route('/api/brand-kit/watermark', methods=['GET'])
+def serve_brand_watermark():
+    kit = _load_brand_kit()
+    wm = kit.get('watermark') or {}
+    p = wm.get('path')
+    if not p or not os.path.exists(p):
+        return jsonify({'error': 'no watermark set'}), 404
+    ext = (wm.get('ext') or '').lower()
+    mime = 'image/png' if ext == 'png' else 'image/jpeg'
+    return send_file(p, mimetype=mime, max_age=3600, conditional=True)
+
+
+@app.route('/api/brand-kit/watermark', methods=['DELETE'])
+def delete_brand_watermark():
+    kit = _load_brand_kit()
+    wm = kit.get('watermark') or {}
+    p = wm.get('path')
+    try:
+        if p and os.path.exists(p):
+            os.remove(p)
+    except Exception as e:
+        log.warning("Could not remove watermark file %s: %s", p, e)
+    kit['watermark'] = None
+    kit['updated'] = time.time()
+    _save_json_blob(BRAND_KIT_PATH, kit)
+    return jsonify({'success': True})
+
+
+@app.route('/api/brand-kit/watermark/settings', methods=['POST'])
+def update_brand_watermark_settings():
+    """PATCH-like endpoint to flip corner/opacity/size/enabled without
+    re-uploading the image."""
+    body = request.json or {}
+    kit = _load_brand_kit()
+    wm = dict(kit.get('watermark') or {})
+    if not wm.get('path'):
+        return jsonify({'error': 'no watermark uploaded yet'}), 400
+    if 'corner' in body and body['corner'] in ('tl','tr','bl','br','center'):
+        wm['corner'] = body['corner']
+    if 'opacity' in body:
+        try:
+            wm['opacity'] = max(0.0, min(1.0, float(body['opacity'])))
+        except (TypeError, ValueError): pass
+    if 'size_pct' in body:
+        try:
+            wm['size_pct'] = max(5.0, min(60.0, float(body['size_pct'])))
+        except (TypeError, ValueError): pass
+    if 'enabled' in body:
+        wm['enabled'] = bool(body['enabled'])
+    kit['watermark'] = wm
+    kit['updated'] = time.time()
+    _save_json_blob(BRAND_KIT_PATH, kit)
+    return jsonify({'success': True, 'watermark': wm})
+
+
 # --- Per-clip text overlays (used by the editor Text panel) -----------------
 # Stored at output/<job_id>/text_overlays.json. Shape:
 #   { "clips": { "<clip_idx>": [ {id, text, font_id, color, size_pct,
@@ -2068,8 +2644,9 @@ def _job_overlays_path(job_id):
 
 @app.route('/api/clip-overlays/<job_id>', methods=['GET'])
 def get_clip_overlays(job_id):
-    if not re.fullmatch(r'[a-f0-9]{6,32}', job_id or ''):
-        return jsonify({'error': 'bad job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     data = _load_json_blob(_job_overlays_path(job_id), {'clips': {}})
     if 'clips' not in data:
         data['clips'] = {}
@@ -2131,8 +2708,9 @@ def _validate_keyframes_payload(raw):
 
 @app.route('/api/track/<job_id>/<int:clip_idx>', methods=['GET'])
 def get_track(job_id, clip_idx):
-    if not re.fullmatch(r'[a-f0-9]{6,32}', job_id or ''):
-        return jsonify({'error': 'bad job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     p = _job_tracking_path(job_id, clip_idx)
     data = _load_json_blob(p, None)
     if data is None:
@@ -2148,8 +2726,9 @@ def get_track(job_id, clip_idx):
 
 @app.route('/api/track/<job_id>/<int:clip_idx>', methods=['POST'])
 def save_track(job_id, clip_idx):
-    if not re.fullmatch(r'[a-f0-9]{6,32}', job_id or ''):
-        return jsonify({'error': 'bad job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     job_dir = os.path.join(OUTPUT_DIR, job_id)
     if not os.path.isdir(job_dir):
         return jsonify({'error': 'unknown job'}), 404
@@ -2160,12 +2739,20 @@ def save_track(job_id, clip_idx):
         smoothing = max(0.0, min(1.0, float(body.get('smoothing') or 0)))
     except (TypeError, ValueError):
         smoothing = 0.0
+    # SESSIE 30c - crop_mode: 'pan' (default - full height, horizontal
+    # pan only, preserves the whole scene) or 'zoom' (legacy - tightens
+    # around the DJ). Whitelisted so a client can't sneak in other modes.
+    # SESSIE 31 — 'letterbox' added: no crop at all, scale-to-fit with
+    # black bars. Sjuul's "follow horizontally" expectation maps best to
+    # this mode for landscape sources.
+    crop_mode = body.get('crop_mode') if body.get('crop_mode') in ('pan', 'zoom', 'letterbox') else 'pan'
     data = {
         'clip_index':    int(clip_idx),
         'subject':       body.get('subject') or 'primary',
         'keyframes':     keyframes,
         'interpolation': interp,
         'smoothing':     smoothing,
+        'crop_mode':     crop_mode,
         'updated':       time.time(),
     }
     os.makedirs(_job_tracking_dir(job_id), exist_ok=True)
@@ -2212,8 +2799,9 @@ def _resolve_clip_source_for_tracking(job, clip_idx):
 def api_track_auto_start(job_id, clip_idx):
     """Kick off auto-tracking on the given clip. Returns immediately with
     async=True; clients poll /api/track/<job>/<clip>/auto/status until done."""
-    if not re.fullmatch(r'[a-f0-9]{6,32}', job_id or ''):
-        return jsonify({'error': 'bad job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     if _tracking_mod is None:
         return jsonify({
             'ok': False,
@@ -2270,6 +2858,9 @@ def api_track_auto_start(job_id, clip_idx):
 
 @app.route('/api/track/<job_id>/<int:clip_idx>/auto/status', methods=['GET'])
 def api_track_auto_status(job_id, clip_idx):
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     if _tracking_mod is None:
         return jsonify({'done': True, 'error': 'tracking module not loaded'}), 500
     key = f'{job_id}/{int(clip_idx)}'
@@ -2291,13 +2882,28 @@ def api_track_auto_status(job_id, clip_idx):
                 'keyframes': result.get('keyframes', []),
             })
             # Persist to disk so the manual-tracking endpoints see it next load.
+            # SESSIE 30c - preserve the existing crop_mode if the file
+            # already had one; otherwise default to 'pan' (full height,
+            # horizontal pan only - the new default).
             try:
+                existing = {}
+                p_existing = _job_tracking_path(job_id, clip_idx)
+                if os.path.exists(p_existing):
+                    try:
+                        with open(p_existing, 'r') as _f:
+                            existing = json.load(_f) or {}
+                    except Exception:
+                        existing = {}
+                existing_mode = existing.get('crop_mode')
+                if existing_mode not in ('pan', 'zoom', 'letterbox'):
+                    existing_mode = 'pan'
                 _save_json_blob(_job_tracking_path(job_id, clip_idx), {
                     'clip_index':    int(clip_idx),
                     'subject':       'primary',
                     'keyframes':     result.get('keyframes', []),
                     'interpolation': 'linear',
                     'smoothing':     0.4,
+                    'crop_mode':     existing_mode,
                     'updated':       time.time(),
                     'auto':          True,
                     'engine':        result.get('engine'),
@@ -2339,8 +2945,9 @@ def api_track_auto_status(job_id, clip_idx):
 
 @app.route('/api/track/<job_id>/<int:clip_idx>', methods=['DELETE'])
 def delete_track(job_id, clip_idx):
-    if not re.fullmatch(r'[a-f0-9]{6,32}', job_id or ''):
-        return jsonify({'error': 'bad job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     p = _job_tracking_path(job_id, clip_idx)
     try:
         if os.path.exists(p):
@@ -2356,8 +2963,9 @@ def delete_track(job_id, clip_idx):
 # happy with clip-N's tracking and wants THAT to be the canonical signature).
 @app.route('/api/job/<job_id>/subject-signature', methods=['GET'])
 def api_subject_signature_get(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'bad job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     with jobs_lock:
         job = jobs.get(job_id) or {}
         sig = job.get('subject_signature')
@@ -2376,8 +2984,9 @@ def api_subject_signature_get(job_id):
 
 @app.route('/api/job/<job_id>/subject-signature', methods=['DELETE'])
 def api_subject_signature_clear(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'bad job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     snapshot_target = None
     with jobs_lock:
         j = jobs.get(job_id)
@@ -2398,8 +3007,9 @@ def api_subject_signature_set(job_id):
     """Override the auto-saved signature with one computed from a specific
     clip's keyframes. Body: { clip_index } — we look up that clip's tracking
     JSON and recompute the signature."""
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'bad job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     body = request.get_json(silent=True) or {}
     try:
         clip_idx = int(body['clip_index'])
@@ -2430,8 +3040,9 @@ def api_subject_signature_set(job_id):
 
 @app.route('/api/clip-overlays/<job_id>', methods=['POST'])
 def save_clip_overlays(job_id):
-    if not re.fullmatch(r'[a-f0-9]{6,32}', job_id or ''):
-        return jsonify({'error': 'bad job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     job_dir = os.path.join(OUTPUT_DIR, job_id)
     if not os.path.isdir(job_dir):
         return jsonify({'error': 'unknown job'}), 404
@@ -2608,22 +3219,48 @@ def _history_entry_is_loadable(jid):
 
 @app.route('/api/history')
 def job_history():
-    # Bug-fix 1b — filter at request-time so sidebar entries reflect
-    # what's actually openable now, even if /tmp/dj-clip-cutter/output
-    # got cleaned between server starts (rehydrate runs only at boot).
+    # SESSIE 28 — auth + user-scoped filter. Before, this returned every job
+    # on disk to every caller, so a second account on the same local install
+    # saw the first account's library. Anonymous callers now get an empty
+    # list; signed-in callers see only their own jobs.
+    #
+    # Backfill heuristic: entries without user_id are treated as legacy /
+    # pre-multi-user state. They're invisible to all accounts going forward
+    # (private by default — no leak). They're left on disk so an admin can
+    # still rescue them.
+    auth_header = request.headers.get('Authorization', '')
+    user_id = None
+    if auth_header.lower().startswith('bearer '):
+        token = auth_header[7:].strip()
+        user_info = auth_get_user_from_token(token)
+        if user_info:
+            user_id = user_info['user_id']
+    if not user_id:
+        return jsonify([])
     return jsonify([h for h in _load_history()
-                    if _history_entry_is_loadable(h.get('id'))])
+                    if h.get('user_id') == user_id
+                    and _history_entry_is_loadable(h.get('id'))])
 
 
 @app.route('/api/history/<job_id>', methods=['DELETE'])
 def job_history_delete(job_id):
-    """Remove a single entry from job history (and any orphan output dir)."""
+    """Remove a single entry from job history (and any orphan output dir).
+    SESSIE 28 — auth + ownership check. Only the user who owns the entry
+    can delete it."""
     if not _valid_job_id(job_id):
         return jsonify({'error': 'Invalid job id'}), 400
+    user_info, err = _require_authed_user()
+    if err:
+        return err
     history = _load_history()
-    new_history = [h for h in history if h.get('id') != job_id]
-    if len(new_history) == len(history):
+    # Find target entry first so we can check ownership before mutating.
+    target = next((h for h in history if h.get('id') == job_id), None)
+    if target is None:
         return jsonify({'error': 'Not in history'}), 404
+    if target.get('user_id') != user_info['user_id']:
+        # Don't reveal existence to other users — return same 404 as missing.
+        return jsonify({'error': 'Not in history'}), 404
+    new_history = [h for h in history if h.get('id') != job_id]
     _save_history(new_history)
     # Best-effort cleanup of output dir if it exists
     out_dir = os.path.join(OUTPUT_DIR, job_id)
@@ -2638,6 +3275,7 @@ def job_history_delete(job_id):
 
 
 @app.route('/api/upload', methods=['POST'])
+@limiter.limit("20 per hour", key_func=_rate_limit_key)
 def upload():
     # Phase 3: auth + quota gate runs BEFORE file save. Anonymous calls or
     # expired tokens get 401, plan limit reached gets 402 — neither writes
@@ -2646,7 +3284,7 @@ def upload():
     if err:
         return err
     user_id = user_info['user_id']
-    snap = _get_or_refresh_profile(user_id)
+    snap = _get_or_refresh_profile(user_id, access_token=user_info.get('access_token'))
     if not snap.get('ok'):
         return jsonify({'ok': False, 'error': snap.get('error', 'profile read failed')}), 500
     if snap['used'] >= snap['limit']:
@@ -2765,6 +3403,7 @@ def upload():
             'filename': safe_name,
             'video_path': video_path,
             'user_id': user_id,                # Phase 3: who to bill for this set
+            'access_token': user_info.get('access_token'),  # SESSIE 30: routed through update-usage edge function when no service_role
             'usage_counted': False,            # Phase 3: idempotency for increment
             'status': 'queued',
             'message': 'Upload complete, starting analysis...',
@@ -2789,6 +3428,13 @@ def upload():
     )
     thread.daemon = True
     thread.start()
+
+    # SESSIE 35 — audit log
+    _audit(
+        'file.upload',
+        user_id=user_id,
+        metadata={'job_id': job_id, 'filename': safe_name},
+    )
 
     return jsonify({'job_id': job_id})
 
@@ -2843,6 +3489,7 @@ def upload_local_scan():
 
 
 @app.route('/api/upload-local', methods=['POST'])
+@limiter.limit("20 per hour", key_func=_rate_limit_key)
 def upload_local():
     """Register an existing on-disk video path as a job WITHOUT copying.
     Designed for huge sets (10h 4K60 ≈ 250–470 GB) where streaming the bytes
@@ -2869,7 +3516,7 @@ def upload_local():
     if err:
         return err
     user_id = user_info['user_id']
-    snap = _get_or_refresh_profile(user_id)
+    snap = _get_or_refresh_profile(user_id, access_token=user_info.get('access_token'))
     if not snap.get('ok'):
         return jsonify({'ok': False, 'error': snap.get('error', 'profile read failed')}), 500
     if snap['used'] >= snap['limit']:
@@ -2944,6 +3591,7 @@ def upload_local():
             'video_path': raw_path,           # SOURCE LIVES IN PLACE — do not delete on cleanup
             'no_copy': True,
             'user_id': user_id,                # Phase 3: who to bill for this set
+            'access_token': user_info.get('access_token'),  # SESSIE 30: routed through update-usage edge function when no service_role
             'usage_counted': False,            # Phase 3: idempotency for increment
             'status': 'queued',
             'message': 'Local source registered — starting analysis...',
@@ -3070,10 +3718,9 @@ def api_render_clip(job_id):
 
     Body: { clip_index, formats?: ['vertical','landscape'] }
     """
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
-    if not _job_exists(job_id):
-        return jsonify({'error': 'Job not found'}), 404
+    _user, _job, err = _require_job_access(job_id)
+    if err:
+        return err
     data = request.json or {}
     try:
         clip_index = int(data.get('clip_index', 0))
@@ -3135,8 +3782,9 @@ def api_render_clip(job_id):
 
 @app.route('/api/status/<job_id>')
 def job_status(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if snap is None:
         return jsonify({'error': 'Job not found'}), 404
@@ -3198,8 +3846,9 @@ def job_waveform_clip(job_id, clip_index):
     waveform renderer (Task #7). Cached on disk under <job>/wave_cache/.
     Query params: bins (default 600).
     """
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if snap is None:
         return jsonify({'error': 'Job not found'}), 404
@@ -3250,8 +3899,9 @@ def job_waveform_clip(job_id, clip_index):
 
 @app.route('/api/waveform/<job_id>')
 def job_waveform(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if snap is None:
         return jsonify({'error': 'Job not found'}), 404
@@ -3260,10 +3910,9 @@ def job_waveform(job_id):
 
 @app.route('/api/recut/<job_id>', methods=['POST'])
 def recut(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
-    if not _job_exists(job_id):
-        return jsonify({'error': 'Job not found'}), 404
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
 
     data = request.json or {}
     try:
@@ -3387,10 +4036,9 @@ def recut(job_id):
 
 @app.route('/api/add-marker/<job_id>', methods=['POST'])
 def add_marker(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
-    if not _job_exists(job_id):
-        return jsonify({'error': 'Job not found'}), 404
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
 
     data = request.json or {}
     try:
@@ -3446,10 +4094,9 @@ def add_marker(job_id):
 
 @app.route('/api/favorite/<job_id>', methods=['POST'])
 def toggle_favorite(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
-    if not _job_exists(job_id):
-        return jsonify({'error': 'Job not found'}), 404
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     data = request.json or {}
     try:
         clip_index = int(data.get('clip_index', 0))
@@ -3493,10 +4140,9 @@ def api_rename_clip(job_id):
     snapshot. Returned via /api/status as `clip.custom_label` after enrichment.
     SPEC (2026-04-26): right-click any clip name → inline edit → POST here.
     """
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
-    if not _job_exists(job_id):
-        return jsonify({'error': 'Job not found'}), 404
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     data = request.json or {}
     try:
         clip_index = int(data.get('clip_index', 0))
@@ -3524,6 +4170,122 @@ def api_rename_clip(job_id):
     return jsonify({'success': True, 'clip_index': clip_index, 'label': safe})
 
 
+def _derive_with_tracking(job_id, target, ratio, source_video_path, tracking_path,
+                          job_output_dir):
+    """SESSIE 30c - render a 1:1 or 4:5 variant FROM THE ORIGINAL SOURCE
+    with the tracked crop applied. Used when the clip has tracking
+    keyframes so the DJ stays in frame (instead of getting their head
+    centre-cropped off).
+    """
+    from cutter import _build_tracked_vertical_crop, get_video_info, detect_hw_encoder
+    # Load tracking data.
+    with open(tracking_path, 'r') as f:
+        track = json.load(f) or {}
+    keyframes = track.get('keyframes') or []
+    crop_mode = track.get('crop_mode') or 'pan'
+    if crop_mode not in ('pan', 'zoom', 'letterbox'):
+        crop_mode = 'pan'
+    # SESSIE 31 — letterbox doesn't need keyframes; pan/zoom still do.
+    if crop_mode != 'letterbox' and not keyframes:
+        raise RuntimeError('tracking file present but has no keyframes')
+
+    # Resolve source dimensions + clip start/end.
+    video_info = get_video_info(source_video_path)
+    src_w = video_info.get('width')  or 0
+    src_h = video_info.get('height') or 0
+    if src_w <= 0 or src_h <= 0:
+        raise RuntimeError('could not read source video dimensions')
+    start = float(target.get('start') or 0)
+    end   = float(target.get('end')   or (start + (target.get('duration') or 10)))
+    duration = max(0.5, end - start)
+
+    if ratio == 'square':
+        out_w, out_h = 1080, 1080
+        target_ratio = 1.0   # w / h
+    elif ratio == 'portrait45':
+        out_w, out_h = 1080, 1350
+        target_ratio = 4.0 / 5.0   # 0.8
+    else:
+        raise RuntimeError(f'unsupported ratio {ratio}')
+
+    # The pan/zoom helper outputs a crop sized to the keyframe metrics;
+    # we then scale+pad to the target out_w x out_h. Pass a custom
+    # target_ratio so the pan-mode pre-builds a window of the right
+    # aspect for this output.
+    crop_expr = _build_tracked_vertical_crop(
+        keyframes, src_w, src_h, crop_mode=crop_mode, target_aspect=target_ratio,
+    )
+    if not crop_expr:
+        raise RuntimeError('tracking crop expression empty')
+
+    # SESSIE 31 — letterbox: no crop, just scale-to-fit + pad with black bars.
+    if crop_expr == '__LETTERBOX__':
+        vf = (
+            f"scale={out_w}:{out_h}:force_original_aspect_ratio=decrease,"
+            f"pad={out_w}:{out_h}:(ow-iw)/2:(oh-ih)/2:black"
+        )
+    else:
+        vf = (
+            crop_expr + ","
+            f"scale={out_w}:{out_h}:force_original_aspect_ratio=decrease,"
+            f"pad={out_w}:{out_h}:(ow-iw)/2:(oh-ih)/2"
+        )
+
+    encoder, quality_args = detect_hw_encoder()
+    base = os.path.splitext(os.path.basename(source_video_path))[0]
+    out_name = f"{base}_clip{int(target.get('index') or 0):02d}_{target.get('type') or 'drop'}_{ratio}.mp4"
+    out_path = os.path.join(job_output_dir, out_name)
+
+    cmd = [
+        'ffmpeg', '-y',
+        '-ss', str(start),
+        '-i', source_video_path,
+        '-t', str(duration),
+        '-vf', vf,
+        '-c:v', encoder, *quality_args,
+        '-c:a', 'aac', '-b:a', '192k',
+        '-movflags', '+faststart',
+        out_path,
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
+        if proc.returncode != 0:
+            # Retry with libx264 in case VideoToolbox is unavailable.
+            log.warning('Tracked derive %s primary encoder failed, retrying with libx264. stderr=%s',
+                        ratio, (proc.stderr or '')[-300:])
+            cmd2 = list(cmd)
+            for i, a in enumerate(cmd2):
+                if a == '-c:v':
+                    cmd2[i+1] = 'libx264'
+                    break
+            proc = subprocess.run(cmd2, capture_output=True, text=True, timeout=300)
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'tracked derivation timed out', 'reason': 'timeout'}), 504
+    if proc.returncode != 0 or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+        raise RuntimeError(f'ffmpeg failed: {(proc.stderr or "")[-300:]}')
+
+    # Persist onto the job + snapshot.
+    clip_index = int(target.get('index') or 0)
+    with jobs_lock:
+        for coll_name in ('results', 'clips'):
+            for r in jobs[job_id].get(coll_name, []) or []:
+                if r.get('index') == clip_index:
+                    r.setdefault('files', {})[ratio] = out_path
+    try:
+        snap = _get_snapshot(job_id)
+        if snap:
+            _persist_job_snapshot(snap)
+    except Exception as e:
+        log.warning('tracked derive persist failed: %s', e)
+    return jsonify({
+        'success': True,
+        'filename': out_name,
+        'cached': False,
+        'tracked': True,
+        'crop_mode': crop_mode,
+    })
+
+
 @app.route('/api/derive/<job_id>', methods=['POST'])
 def api_derive_ratio(job_id):
     """Derive a 1:1 (square) or 4:5 (portrait) variant of a clip from the
@@ -3534,10 +4296,9 @@ def api_derive_ratio(job_id):
     SPEC (2026-04-26): generated lazily when the user clicks 1:1 / 4:5 in
     the editor's ratio rail.
     """
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
-    if not _job_exists(job_id):
-        return jsonify({'error': 'Job not found'}), 404
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     data = request.json or {}
     try:
         clip_index = int(data.get('clip_index', 0))
@@ -3548,25 +4309,47 @@ def api_derive_ratio(job_id):
         return jsonify({'error': 'unsupported ratio'}), 400
 
     with jobs_lock:
-        results = list(jobs[job_id].get('results') or jobs[job_id].get('clips') or [])
+        job_blob = jobs.get(job_id) or {}
+        results = list(job_blob.get('results') or job_blob.get('clips') or [])
+        source_video_path = job_blob.get('video_path') or job_blob.get('source_path')
     target = next((r for r in results if r.get('index') == clip_index), None)
     if not target:
         return jsonify({'error': 'clip not found'}), 404
 
     files = target.get('files') or {}
-    if files.get(ratio):
+    # Force rebuild parameter so a re-track can refresh the 1:1/4:5 variants.
+    force_rebuild = bool(data.get('force'))
+    if files.get(ratio) and not force_rebuild:
         return jsonify({'success': True, 'filename': os.path.basename(files[ratio]), 'cached': True})
+
+    # SESSIE 30c - if this clip has tracking, derive the new ratio FROM
+    # THE ORIGINAL SOURCE with the tracked crop applied. The legacy
+    # behaviour center-cropped from the already-cut vertical/landscape,
+    # which sliced the DJ's head off whenever the tracked area was not
+    # in the centre. We only fall back to the centre-crop path when
+    # there is no tracking file or the source video is missing.
+    job_output_dir = os.path.join(OUTPUT_DIR, job_id)
+    tracking_path = os.path.join(job_output_dir, 'tracking', f'clip_{int(clip_index):03d}.json')
+    has_tracking = os.path.exists(tracking_path)
+    if has_tracking and source_video_path and os.path.exists(source_video_path):
+        try:
+            return _derive_with_tracking(
+                job_id, target, ratio, source_video_path, tracking_path,
+                job_output_dir,
+            )
+        except Exception as e:
+            log.warning('Tracked derive failed for %s clip %s ratio %s: %s; '
+                        'falling back to centre-crop', job_id, clip_index, ratio, e)
 
     # Source = vertical for portrait45 (narrow crop), landscape for square (center crop).
     src = files.get('vertical') if ratio == 'portrait45' else files.get('landscape')
     src = src or files.get('landscape') or files.get('vertical')
     if not src or not os.path.exists(src):
-        return jsonify({'error': 'no source variant available — re-cut the clip first'}), 409
+        return jsonify({'error': 'no source variant available - re-cut the clip first'}), 409
 
-    job_output_dir = os.path.join(OUTPUT_DIR, job_id)
     base = os.path.splitext(os.path.basename(src))[0]
     # Strip any existing _vertical/_landscape suffix so the new file lands
-    # cleanly: …_clip07_drop_square.mp4
+    # cleanly: ..._clip07_drop_square.mp4
     for suffix in ('_vertical', '_landscape', '_square', '_portrait45'):
         if base.endswith(suffix):
             base = base[:-len(suffix)]
@@ -3658,10 +4441,9 @@ def api_derive_ratio(job_id):
 
 @app.route('/api/reorder/<job_id>', methods=['POST'])
 def reorder_clips(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
-    if not _job_exists(job_id):
-        return jsonify({'error': 'Job not found'}), 404
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     data = request.json or {}
     new_order = data.get('order', [])
 
@@ -3684,8 +4466,9 @@ def reorder_clips(job_id):
 
 @app.route('/api/clip/<job_id>/<filename>')
 def serve_clip(job_id, filename):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     filename = os.path.basename(filename)
     job_output_dir = os.path.join(OUTPUT_DIR, job_id)
     return send_from_directory(job_output_dir, filename)
@@ -3711,8 +4494,9 @@ _SOURCE_MIME_BY_EXT = {
 
 @app.route('/api/source/<job_id>')
 def serve_source(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if snap is None:
         return jsonify({'error': 'Job not found'}), 404
@@ -3731,8 +4515,9 @@ def serve_source(job_id):
 
 @app.route('/api/thumbnail/<job_id>/<filename>')
 def serve_thumbnail(job_id, filename):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     filename = os.path.basename(filename)
     job_output_dir = os.path.join(OUTPUT_DIR, job_id)
     return send_from_directory(job_output_dir, filename)
@@ -3740,8 +4525,9 @@ def serve_thumbnail(job_id, filename):
 
 @app.route('/api/filmstrip/<job_id>/<filename>')
 def serve_filmstrip(job_id, filename):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     filename = os.path.basename(filename)
     filmstrip_dir = os.path.join(OUTPUT_DIR, job_id, 'filmstrip')
     return send_from_directory(filmstrip_dir, filename)
@@ -3749,8 +4535,9 @@ def serve_filmstrip(job_id, filename):
 
 @app.route('/api/download-all/<job_id>')
 def download_all(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if snap is None:
         return jsonify({'error': 'Job not found'}), 404
@@ -3787,8 +4574,9 @@ def _dir_has_any_mp4(root):
 
 @app.route('/api/download-favorites/<job_id>')
 def download_favorites(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if snap is None:
         return jsonify({'error': 'Job not found'}), 404
@@ -3848,8 +4636,9 @@ def download_favorites(job_id):
 
 @app.route('/api/csv/<job_id>')
 def download_csv(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if snap is None:
         return jsonify({'error': 'Job not found'}), 404
@@ -3865,8 +4654,9 @@ def download_csv(job_id):
 
 @app.route('/api/upload-social/<job_id>', methods=['POST'])
 def upload_social(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if snap is None:
         return jsonify({'error': 'Job not found'}), 404
@@ -3907,8 +4697,9 @@ def upload_social(job_id):
 @app.route('/api/export-preset/<job_id>', methods=['POST'])
 def api_export_preset(job_id):
     """Apply an export preset (tiktok/instagram_reel/youtube_shorts/facebook_post/source)."""
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if not snap:
         return jsonify({'error': 'Job not found'}), 404
@@ -3956,8 +4747,9 @@ def api_export_preset(job_id):
 @app.route('/api/clip-filmstrip/<job_id>/<int:clip_index>')
 def clip_filmstrip(job_id, clip_index):
     """Generate/return filmstrip frames for a specific cut clip (editor timeline)."""
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if not snap:
         return jsonify({'error': 'Job not found'}), 404
@@ -3993,8 +4785,9 @@ def clip_filmstrip(job_id, clip_index):
 # opens are instant.
 @app.route('/api/spectrogram/<job_id>/<int:clip_index>')
 def clip_spectrogram(job_id, clip_index):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id, allow_query_token=True)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if not snap:
         return jsonify({'error': 'Job not found'}), 404
@@ -4043,10 +4836,9 @@ def clip_spectrogram(job_id, clip_index):
 @app.route('/api/split-clip/<job_id>', methods=['POST'])
 def api_split_clip(job_id):
     """Split an existing clip at a given time into two new clips."""
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
-    if not _job_exists(job_id):
-        return jsonify({'error': 'Job not found'}), 404
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
 
     data = request.json or {}
     try:
@@ -4092,8 +4884,9 @@ def api_split_clip(job_id):
 
 @app.route('/api/snap-to-beat/<job_id>', methods=['POST'])
 def snap_beat(job_id):
-    if not _valid_job_id(job_id):
-        return jsonify({'error': 'Invalid job id'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     snap = _get_snapshot(job_id)
     if snap is None:
         return jsonify({'error': 'Job not found'}), 404
@@ -4143,12 +4936,14 @@ def api_apply_style(job_id):
     """Persist a per-job style preset (caption preset, accent, overlays).
     Stub: stores into the job dict and returns ok. Real renderer should
     consume this when burning captions."""
-    with jobs_lock:
-        job = jobs.get(job_id)
-    if not job:
-        return jsonify({'error': 'job not found'}), 404
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     body = request.get_json(silent=True) or {}
     with jobs_lock:
+        job = jobs.get(job_id)
+        if job is None:
+            return jsonify({'error': 'job not found'}), 404
         job['style'] = body
     return jsonify({'ok': True, 'style': body})
 
@@ -4449,6 +5244,9 @@ def api_export_start(job_id):
     """Start a real render queue for all clips in this job.
     Spawns a background thread that ffmpegs each clip with the requested
     codec/fps/resolution. Status is polled via /api/export/<job_id>/status."""
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     with jobs_lock:
         job = jobs.get(job_id)
 
@@ -4553,12 +5351,23 @@ def api_export_start(job_id):
     t = threading.Thread(target=_run_export_job, args=(job_id, cfg), daemon=True)
     t.start()
 
+    # SESSIE 35 — audit log
+    _u_info, _ = _require_authed_user()
+    _audit(
+        'clip.export_started',
+        user_id=_u_info['user_id'] if _u_info else None,
+        metadata={'job_id': job_id, 'clip_count': len(queue), 'codec': cfg.get('codec', 'match')},
+    )
+
     return jsonify({'ok': True, 'count': len(queue), 'cfg': cfg})
 
 
 @app.route('/api/export/<job_id>/status', methods=['GET'])
 def api_export_status(job_id):
     """Report the real render-queue progress, mutated by _run_export_job."""
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     with jobs_lock:
         job = jobs.get(job_id)
 
@@ -4584,10 +5393,9 @@ def api_publish(job_id):
     """Publish a job's clips to the requested destinations.
     Stub: validates and acknowledges. Real implementation should hand off
     to per-platform connectors."""
-    with jobs_lock:
-        job = jobs.get(job_id)
-    if not job:
-        return jsonify({'error': 'job not found'}), 404
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     body = request.get_json(silent=True) or {}
     destinations = body.get('destinations') or []
     if not destinations:
@@ -4612,6 +5420,9 @@ def api_schedule_batch():
         return jsonify({'error': 'jobId required'}), 400
     if not destinations:
         return jsonify({'error': 'destinations required'}), 400
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     items = _load_schedules()
     entry = {
         'id': f'sched_{int(time.time()*1000)}',
@@ -4640,7 +5451,14 @@ def api_list_exports():
     """List every rendered export across all jobs, newest first.
     Walks OUTPUT_DIR/<job>/exports/ and returns mp4/mov files annotated
     with size, mtime, source set name (from snapshot), and a thumbnail
-    derived from the clip-index in the filename when available."""
+    derived from the clip-index in the filename when available.
+
+    SESSIE 28 — user-scoped: only jobs owned by the signed-in user are
+    enumerated. Anonymous callers get an empty list."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    caller_id = user_info['user_id']
     items = []
     if not os.path.isdir(OUTPUT_DIR):
         return jsonify({'exports': []})
@@ -4654,18 +5472,24 @@ def api_list_exports():
         exports_dir = os.path.join(OUTPUT_DIR, job_id, 'exports')
         if not os.path.isdir(exports_dir):
             continue
-        # Best-effort source-set name + favorites set from snapshot
-        # (falls back to id / empty set).
+        # Best-effort source-set name + favorites set + ownership check
+        # from snapshot (falls back to id / empty set).
         set_name = job_id
         favorites_set = set()
         try:
             snap = _load_job_snapshot(job_id)
             if snap:
+                # Ownership filter — skip jobs that aren't this user's.
+                if snap.get('user_id') != caller_id:
+                    continue
                 if snap.get('filename'):
                     set_name = snap['filename']
                 favorites_set = set(snap.get('favorites', []) or [])
+            else:
+                # No snapshot → cannot verify ownership → skip.
+                continue
         except Exception:
-            pass
+            continue
         try:
             entries = os.listdir(exports_dir)
         except OSError:
@@ -4748,6 +5572,9 @@ def _safe_export_path(job_id, filename):
 def api_reveal_export(job_id, filename):
     """Open Finder with this export selected (macOS-only).
     Quietly no-ops on platforms without `open`."""
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     fp = _safe_export_path(job_id, filename)
     if not fp:
         return jsonify({'error': 'file not found'}), 404
@@ -4763,6 +5590,9 @@ def api_copy_export(job_id, filename):
     """Copy an existing export file to a user-chosen folder.
     Used by the per-card "Export to…" button so the user doesn't need to
     re-render — the mp4 already exists in OUTPUT_DIR. Body: {output_dir}."""
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     fp = _safe_export_path(job_id, filename)
     if not fp:
         return jsonify({'error': 'file not found'}), 404
@@ -4786,6 +5616,9 @@ def api_copy_export(job_id, filename):
 @app.route('/api/exports/<job_id>/<path:filename>', methods=['DELETE'])
 def api_delete_export(job_id, filename):
     """Permanently delete an exported file. UI confirms before calling."""
+    _u, _j, err = _require_job_access(job_id)
+    if err:
+        return err
     fp = _safe_export_path(job_id, filename)
     if not fp:
         return jsonify({'error': 'file not found'}), 404
@@ -4910,6 +5743,122 @@ def api_pick_folder():
         return jsonify({
             'ok': False, 'cancelled': False, 'path': path,
             'error': 'Picked path is not a directory.',
+            'platform': sys.platform,
+        }), 400
+
+    return jsonify({
+        'ok': True, 'cancelled': False, 'path': path,
+        'platform': sys.platform,
+    })
+
+
+def _pick_file_macos(prompt, default_dir=None):
+    """Open a native file-picker on macOS via AppleScript.
+    Returns (absolute_path_or_None, error_or_None).
+    Works for any file size — no bytes are read, just the path is returned."""
+    safe_prompt = (prompt or 'Choose a DJ set to analyse').replace('"', '')
+    if default_dir and os.path.isdir(default_dir):
+        safe_default = default_dir.replace('"', '')
+        default_clause = f' default location (POSIX file "{safe_default}")'
+    else:
+        default_clause = ''
+    script = (
+        'try\n'
+        f'  set chosen to choose file with prompt "{safe_prompt}"{default_clause}\n'
+        '  return POSIX path of chosen\n'
+        'on error number -128\n'
+        '  return ""\n'
+        'end try'
+    )
+    try:
+        result = subprocess.run(
+            ['osascript', '-e', script],
+            capture_output=True, text=True, timeout=300
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return None, f'osascript failed: {e}'
+    if result.returncode != 0:
+        return None, (result.stderr or 'osascript returned non-zero').strip()
+    path = (result.stdout or '').strip()
+    return (path or None), None
+
+
+def _pick_file_tk(prompt, default_dir=None):
+    """Windows / Linux fallback for native file picker.
+    Uses tkinter.filedialog.askopenfilename — ships with stdlib CPython."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+    except Exception as e:
+        return None, f'tkinter not available: {e}'
+    initial = default_dir if (default_dir and os.path.isdir(default_dir)) else os.path.expanduser('~')
+    root = None
+    try:
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            root.attributes('-topmost', True)
+        except Exception:
+            pass
+        path = filedialog.askopenfilename(
+            title=prompt or 'Choose a DJ set',
+            initialdir=initial,
+            filetypes=[
+                ('Video / Audio files',
+                 '*.mp4 *.mov *.mkv *.avi *.webm *.m4v *.flv *.wmv *.mp3 *.aac *.wav *.flac *.ogg *.m4a'),
+                ('All files', '*.*'),
+            ],
+        )
+    except Exception as e:
+        return None, str(e)
+    finally:
+        if root is not None:
+            try:
+                root.destroy()
+            except Exception:
+                pass
+    return (path or None), None
+
+
+@app.route('/api/pick-file', methods=['POST'])
+def api_pick_file():
+    """Open a native file-picker dialog and return the absolute path of the
+    chosen file. Works for any file size — no bytes are read or copied,
+    the path is simply returned to the frontend which then calls
+    /api/upload-local to register it in-place.
+
+    Body (JSON, all optional):
+      { prompt: str, default_dir: str }
+    Response: { ok, cancelled, path, platform }
+    """
+    body = request.get_json(silent=True) or {}
+    prompt = body.get('prompt') or 'Choose a DJ set to analyse'
+    default_dir = body.get('default_dir')
+
+    if sys.platform == 'darwin':
+        path, err = _pick_file_macos(prompt, default_dir)
+    else:
+        path, err = _pick_file_tk(prompt, default_dir)
+
+    if err and path is None:
+        return jsonify({
+            'ok': False,
+            'cancelled': False,
+            'path': None,
+            'error': err,
+            'platform': sys.platform,
+        }), 500
+
+    if not path:
+        return jsonify({
+            'ok': True, 'cancelled': True, 'path': None,
+            'platform': sys.platform,
+        })
+
+    if not os.path.isfile(path):
+        return jsonify({
+            'ok': False, 'cancelled': False, 'path': path,
+            'error': 'Picked path is not a file.',
             'platform': sys.platform,
         }), 400
 
