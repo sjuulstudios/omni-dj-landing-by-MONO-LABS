@@ -1,2550 +1,2880 @@
-# Clip Live — HANDOVER
+# Omni DJ (voorheen Clip Live) — HANDOVER
 
 > **Lees dit altijd als eerste.** Update dit bestand na elke significante stap.
-> Laatste update: 2026-05-17 (SESSIE 26 — Wise bankrekening setup, signup wizard fixes, Stripe betaalflow end-to-end geverifieerd ✅)
-
-> **STATUS NA SESSIE 26:**
->
-> - Wise Business account actief (Sjuul Studios, eenmanszaak, BSN als fiscaal ID)
-> - Wise geeft een Belgisch IBAN (BE) — in Stripe "Belgium" als land van bankrekening selecteren, niet Nederland
-> - Stripe uitbetalingsrekening = Wise BE IBAN ✅
-> - Signup wizard: 4 bugs gefixed in `static/index.html` (progress bar, scrollbare secties, hover-knop, email-veld stap 4)
-> - Stripe betaalflow volledig geverifieerd in testmodus: checkout → webhook → Supabase profiel update ✅
-> - Test-account `test@test.com` heeft actief Pro-abonnement (`sub_1TY7LnA5DKhJaSAFEEphH3mZ`, `cus_UXBj3w9DhPo5Dm`)
-> - Supabase profiel van test@test.com: `plan: pro`, `stripe_customer_id` + `stripe_subscription_id` correct opgeslagen
-> - Server draait op http://127.0.0.1:5555 (herstart indien nodig via `./start.sh`)
-> - Alle SESSIE 24/25 features intact — geen code-regressies
-
-> **STATUS NA SESSIE 25:**
->
-> - Server draait nog op http://127.0.0.1:5555 (pid 72143 uit Sessie 24)
-> - `static/index.html` = 574836 bytes (identiek aan Sessie 24-eindstand) — rollback bevestigd via grep (0 pulse-markers) en Chrome MCP (`getElementById('ed-pulse-btn')` → null, `typeof bindBeatPulse` → undefined)
-> - Backup `static/index.html.pre-sessie25.bak` blijft staan voor de zekerheid — niet gewist
-> - **Supabase DNS-blip onderzocht en opgelost (transient, geen actie nodig):** tijdens de B1 live-test gaf de server `ConnectError: nodename nor servname provided`. Onderzoek: DNS resolveert prima vanuit Mac shell (`104.18.38.10` Cloudflare IP), `socket.getaddrinfo` werkt vanuit een verse Python, curl naar `https://lbabsffxefkrxwzkbzar.supabase.co/auth/v1/health` geeft 401 in 0.23s (Supabase bereikbaar). Re-test van `/api/auth/login` van Sjuul's pid 72143 → HTTP 200 met JWT + user_id + refresh_token. Browser-login getest, dashboard opent met jobId 94d6c9c7 automatisch geladen. Conclusie: korte transient DNS-hiccup tijdens m'n eerdere call, httpx-resolver heeft zichzelf hersteld. **Niets te fixen.**
-> - Alle Sessie 24 deps + features volledig intact (B1 stretch+tracking, B2 preview-crop, B3 subject-signature)
-
-> **STATUS NA SESSIE 25 — optie C B1 **GEBOUWD EN DAARNA TERUGGEDRAAID**. Pulse-feature werkte technisch (RAF-loop synced met synth-beat-grid uit `clip.bpm`+`clip.bar_duration`, bar-accent op clip.start, decay tau=0.11s, persist in localStorage), maar Sjuul oordeelde dat het geen user-waarde toevoegde. `static/index.html` is gerestored vanuit `static/index.html.pre-sessie25.bak` — file size terug naar 574836 bytes, JS syntax-validated, browser-side bevestigd dat de Pulse-knop weg is en bestaande Track/Text/Export-knoppen werken. Backup-file blijft op disk als reference. **Geen wijzigingen actief** in de codebase vanuit Sessie 25. B3 speed-ramp is niet aangeraakt. Pulse-feature werkte technisch (RAF-loop synced met synth-beat-grid uit `clip.bpm`+`clip.bar_duration`, bar-accent op clip.start, decay tau=0.11s, persist in localStorage), maar Sjuul oordeelde dat het geen user-waarde toevoegde. `static/index.html` is gerestored vanuit `static/index.html.pre-sessie25.bak` — file size terug naar 574836 bytes, JS syntax-validated, browser-side bevestigd dat de Pulse-knop weg is en bestaande Track/Text/Export-knoppen werken. Backup-file blijft op disk als reference. **Geen wijzigingen actief** in de codebase vanuit Sessie 25. B3 speed-ramp is niet aangeraakt.)
-
-> **STATUS NA SESSIE 25:**
->
-> - Server draait nog op http://127.0.0.1:5555 (pid 72143 uit Sessie 24)
-> - `static/index.html` = 574836 bytes (identiek aan Sessie 24-eindstand) — rollback bevestigd via grep (0 pulse-markers) en Chrome MCP (`getElementById('ed-pulse-btn')` → null, `typeof bindBeatPulse` → undefined)
-> - Backup `static/index.html.pre-sessie25.bak` blijft staan voor de zekerheid — niet gewist
-> - **Supabase DNS-blip onderzocht en opgelost (transient, geen actie nodig):** tijdens de B1 live-test gaf de server `ConnectError: nodename nor servname provided`. Onderzoek: DNS resolveert prima vanuit Mac shell (`104.18.38.10` Cloudflare IP), `socket.getaddrinfo` werkt vanuit een verse Python, curl naar `https://lbabsffxefkrxwzkbzar.supabase.co/auth/v1/health` geeft 401 in 0.23s (Supabase bereikbaar). Re-test van `/api/auth/login` van Sjuul's pid 72143 → HTTP 200 met JWT + user_id + refresh_token. Browser-login getest, dashboard opent met jobId 94d6c9c7 automatisch geladen. Conclusie: korte transient DNS-hiccup tijdens m'n eerdere call, httpx-resolver heeft zichzelf hersteld. **Niets te fixen.**
-> - Alle Sessie 24 deps + features volledig intact (B1 stretch+tracking, B2 preview-crop, B3 subject-signature)
-
-> **STATUS NA SESSIE 24 — alles werkend (ongewijzigd):**
->
-> - Server draait op http://127.0.0.1:5555 (laatste pid 72143 na restart via `_restart.sh`)
-> - debug=False (productie-mode)
-> - Alle SESSIE-21/22-deps geïnstalleerd: `fonttools[woff]`, `pyobjc-framework-Vision`, `opencv-python`, `ultralytics`
-> - `homebrew-ffmpeg/ffmpeg/ffmpeg` actief met `--enable-libfreetype` → drawtext-filter aanwezig
-> - YOLOv8n weights al lokaal in `models/`
-> - Supabase migration `add_intake_columns_to_profiles` is live
-> - 4 jobs op disk: `ac7373ae` (Lisa pre-fix, 26 clips, 72 BPM stamp), `94d6c9c7` (Franky, 151 proxy clips, 129 BPM, **subject_signature** locked uit clip 1), `00abd848` (Lisa post-fix, 30 clips, 144 BPM stamp), oude Ediine `46716f96` + `3a4eb44d`
-> - Findings rapport: `SESSIE-24-FINDINGS.md` met bug-shortlist + groen-vinkjes-tabel + addendum 2 (B1/B2/B3 details)
-> - Backups Sessie 24: `analyzer.py.pre-sessie24.bak`, `app.py.pre-sessie24.bak`, `tracking.py.pre-sessie24.bak`, `static/index.html.pre-sessie24.bak`
 
 ---
 
-## START PROMPT — paste dit aan het begin van de volgende chat
+## ⚡ START HIER — sessie 59 briefing
 
-> Plak dit letterlijk in een nieuwe Claude-chat (NIEUWSTE — Sessie 26 afgerond):
+**Project:** Omni DJ — DJ-set → vertical/landscape clip generator
+**Eigenaar:** MONO LABS
+**Branch actief:** `feature/auto-mode-and-brand-redesign` (sessies 57+58 NOG NIET committed)
+**Bundle:** `/Applications/Clip Live.app` (sessie 56 versie, sessies 57+58 alleen op disk)
+**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh` → http://127.0.0.1:5555
 
-Lees /Users/sjuulsmits/Documents/Claude/Projects/Clip Live/HANDOVER.md. SESSIE 26 (17 mei 2026) heeft drie dingen afgerond: (1) **Wise bankrekening setup** — Wise Business account actief voor Sjuul Studios (eenmanszaak), BSN gebruikt als fiscaal identificatienummer, Wise Advanced (€60 eenmalig) nodig voor echte IBAN. Wise geeft een Belgisch IBAN (BE); in Stripe daarom "Belgium" als land van bankrekening selecteren (niet Nederland) — dit is legaal en werkt. (2) **Signup wizard fixes** — 4 bugs opgelost in `static/index.html`: progress bar balkjes nu alleen gevuld bij afgeronde stappen (geen half-fill op actieve stap), secties zijn scrollbaar gemaakt (overflow-x:hidden + overflow-y:auto op viewport, position top/left/right zonder bottom op secties, dynamische track-hoogte via requestAnimationFrame), Next-knop hover goud houden door expliciete background in .btn-primary:hover, scroll reset bij elke stap-navigatie. (3) **Stripe betaalflow end-to-end geverifieerd** — test-account test@test.com heeft Pro-abonnement aangemaakt (sub_1TY7LnA5DKhJaSAFEEphH3mZ, cus_UXBj3w9DhPo5Dm), Supabase profiel correct bijgewerkt naar plan:pro via webhook. Volledige keten werkt: Stripe checkout → Supabase Edge Function webhook → profiel update. Server draait op http://127.0.0.1:5555 (herstart via ./start.sh indien nodig). Volgende sessie kan kiezen uit: (a) **Stripe live mode** — overschakelen van test- naar live-keys, live Wise IBAN koppelen, DNS verificatie voor pre-launch, (b) **B3 speed-ramp** (cutter.py: chained setpts+atempo rond drop-positie), (c) **Brand Stack v2** add-ons (end-card / intro-still / lower-third templates), of (d) andere features. Begin met opties + aanbeveling, wacht op "ja", dan los werken.
+### Status na sessie 58
 
-> Plak dit letterlijk in een nieuwe Claude-chat (NIEUWSTE — Sessie 25 afgerond, met rollback):
+Sessie 58 deed live smoketest + security audit + UI/a11y van sessies 56-57 features. **8 fixes direct doorgevoerd, 6 open items voor Sjuul's review**. Lees `SESSIE58-AUTONOMOUS-LOG.md` voor alle details.
 
-Lees /Users/sjuulsmits/Documents/Claude/Projects/Clip Live/HANDOVER.md. SESSIE 25 (12 mei 2026) heeft het B1-deel van optie C **gebouwd en daarna teruggedraaid**. Het beat-pulse preview-effect in de editor was technisch klaar en algoritmisch geverifieerd (synth-beat-grid uit `clip.bpm`+`clip.bar_duration`, bar-accent vuurde correct op `clip.start`, decay 1.000→0.018 binnen één beat-interval, persist in localStorage), maar Sjuul oordeelde dat het geen user-waarde toevoegde en heeft het laten teruggedraaien. `static/index.html` is gerestored vanuit `static/index.html.pre-sessie25.bak`: 574836 bytes, JS syntax-validated, browser-side bevestigd dat alle pulse-markup en -functies weg zijn en bestaande Track/Text/Export-knoppen ongewijzigd werken. **Geen actieve code-wijzigingen uit deze sessie.** B3 speed-ramp is niet aangeraakt. Side-note: Supabase auth bleek deze sessie niet bereikbaar vanaf de server (`ConnectError: nodename nor servname provided`) — DNS/upstream, niet aan onze kant; even checken voor productie. Server draait nog op http://127.0.0.1:5555 (pid 72143). Volgende sessie kan kiezen uit: (a) **B3 speed-ramp** (cutter.py: chained `setpts`+`atempo` rond drop-positie, ramp-curve presets subtle/medium/aggressive, drawtext rebase voor stamps die niet mee-rampen, recut payload + UI — ~2-3u, server-restart nodig), (b) **Stripe live mode + DNS** voor pre-launch infra, (c) **Brand Stack v2** add-ons (end-card / intro-still / lower-third templates), of (d) **B3 face-embedding upgrade** als de position+size heuristiek uit Sessie 24 in productie te zacht blijkt. Begin met opties + aanbeveling, wacht op "ja", dan los werken.
+**Belangrijkste fixes deze sessie:**
+1. Login-scherm opgeschoond: logo+balk-achtergrond+DJ-set studio sublabel weg, vervangen door "Omni DJ" wordmark, active-tab pill werkt nu
+2. Bug A: `v2-modal-bg` lekte als pagina-element in legacy-mode → CSS-fix toegevoegd
+3. Bug B: Escape sloot v2-modals niet → globale keydown-handler toegevoegd
+4. 4 user-zichtbare "Clip Live" copy → "Omni DJ" (sidebar brand-row + browser title BEWUST uit scope voor aparte rebrand-sessie)
+5. 4 em-dashes verwijderd uit user-copy (Brand hero, Auto-mode hero, Calendar sub, YouTube title default)
+6. Security audit groen op XSS (escapeHtml werkt op alle brand-velden), geen service_role in frontend, geen eval()
+7. UI/a11y: 51 focusable in Brand, tekst-contrast AAA
 
-> Plak dit letterlijk in een nieuwe Claude-chat (oude prompt — Sessie 24):
+### Volgende stap voor Sjuul (in volgorde)
 
-Lees /Users/sjuulsmits/Documents/Claude/Projects/Clip Live/HANDOVER.md. SESSIE 24 (12 mei 2026) heeft optie a (end-to-end test) afgerond op twee verse uploads + drie polish-fixes + volledige optie B (tracking edge cases + DJ-centered preview + subject-signature persistence) uitgevoerd. **Lisa Korver x Hör Berlin** (1u, 444 MB) en **Franky Rizardo Peru Set** (3:54u, 7.8 GB) beiden door volledige pipeline: analyzer → BPM/Key detect → cutting → BPM stamp → manual keyframe tracking → 4-codec export. Lisa: 26 clips in 3 min, BPM 71.8 (later 143.6 na fix 14), key 4B, alle 4 codec-varianten ffprobe-geverifieerd (match h264, h265_vt hevc, h264_vt h264, prores). Franky: 151 drops in 3.5 min analyzer + 2 min proxy cutting, BPM 129.2 correct, key 12A, LARGE_FILE_PIPELINE auto-getriggered (>7200s threshold), lazy `/api/render-clip` levert 1080p L+V in 5s. **Geen blockers** — large-file hang en duplicate clips uit CLAUDE.md beiden NIET gereproduceerd. Plus drie polish-fixes: (14) **BPM half-tempo fix** — `_maybe_double_tempo()` helper in `analyzer.py`: tempo in [60,90) ∧ doubled in [120,180] → verdubbel tempo + densify beat_times via midpoint-insertion. Lisa's 71.8 → 143.6 met internal-consistente bar-grid (bar_duration 3.34→1.67). Stamp toont nu "144 BPM · 4B" in nieuwe job `00abd848`. (15) **Export chevron** — `static/index.html`: 9px tekst-▾ vervangen door 14px SVG left-pointing polyline in amber-2, hover/open transitions. (16) **Playhead draggable + IN-bind** — top van playhead is nu een echt DOM-element `.playhead-knob` met cursor:grab + pointer-events:auto; mousedown enters scrub mode met body.is-scrubbing class. Plus `_editorSnapPlayheadToInIfOutside()` helper die op play-trigger naar `STATE.trim.inSec` springt als currentTime buiten [inSec, outSec) ligt — zowel `editorTogglePlay()` als stage-click roepen 'm aan. Detecteert source-swap mode (S4.2) en gebruikt set-time vs clip-time correct. Backups: `analyzer.py.pre-sessie24.bak`, `static/index.html.pre-sessie24.bak`, `tracking.py.pre-sessie24.bak`, `app.py.pre-sessie24.bak`. Twee server-restarts uitgevoerd via `_restart.sh` (laatste pid 72143). Optie B-resultaten: **B1** stretch+tracking combined geverifieerd op Franky clip 5 (geen fix nodig, bestaande pipeline werkt). **B2** nieuwe "Preview crop" toggle in Track drawer — swap't naar landscape source + dynamische `object-position` via `_trackedObjectPosition()` cover-formule, DJ blijft live centered tijdens playback zonder recut. **B3** subject-signature persistence — pragmatisch alternatief voor face-embedding via `_pick_primary` position+size bias. `/api/job/<job>/subject-signature` GET/POST/DELETE. Lock-row in drawer met "🎯 Subject locked / from clip N · cx X% · cy Y%". Live geverifieerd: signature van Franky clip 1 (cx=52%, cy=55%) → auto-track clip 10 levert avg cx=51%, cy=57% (binnen 2% van locked). **Werk zelfstandig**: Claude in Chrome MCP, test-account `business+wftest17@sjuulstudios.com` / `WatchTest17!`. Server draait. Volgende sessie kan kiezen uit: **optie C** (B1 beat-pulse + B3 speed-ramp uit Sessie 22 deferred — RAF-loop + chained setpts/atempo), **Stripe live mode + DNS** voor pre-launch, **Brand Stack v2** (end-card / intro-still / lower-third templates), of **B3 upgrade** naar echte face-embedding (dlib/OpenCV DNN) als position+size heuristiek in productie te zacht blijkt. Begin met opties + aanbeveling, wacht op "ja", dan los werken.
+1. **Visuele finale check** (5-10 min): open dev-server in Chrome, v2-flag aan, doorloop alle 9 views
+2. **Git commit** alle wijzigingen zitten in `static/index.html` + `SESSIE58-AUTONOMOUS-LOG.md`
+3. **PyInstaller rebuild** als alles groen is (`./build_macos.sh dmg`)
+4. **Rebrand-pass** sidebar brand-row + browser title + bundle metadata (aparte sessie 59+ van 4-6u samen met Claude)
 
-> Plak dit letterlijk in een nieuwe Claude-chat (oude prompt — voor de volledigheid):
+Volledige stap-voor-stap commando's staan in `SESSIE58-AUTONOMOUS-LOG.md` onder "Wat Sjuul nu moet doen".
 
-Lees /Users/sjuulsmits/Documents/Claude/Projects/Clip Live/HANDOVER.md. SESSIE 23 (11 mei 2026) heeft de trim/stretch handle UX overhaul gedaan: zeven fixes (F1–F7) op de Sessie-21/22 timeline, plus een `_ffmpeg_has_drawtext()` guard in cutter.py voor builds zonder libfreetype. F1 beefy handles met grip + copper "in-stretch" state; F2 pronounced trim-band met live duration pill; F3 dimmed stretch zones met centered "EXTEND · 60S AVAIL" pills + hatched pattern; F4 video blijft op `/api/source/<job>` na stretch-mouseup (was: jump-to-zero); F5 analyzer-cut markers — dashed pearl ticks op original clip.start/clip.end; F6 mini-map trim-band krijgt zelfde gold-gradient intensity; F7 crosshair cursor + title-tooltip op stretch zones. Plus `_persist_job_snapshot` BPM-merge fix zodat een handmatig gepatched `key`-veld niet wordt overschreven door in-memory state zonder dat veld. Alleen `static/index.html` + paar regels in cutter.py + app.py gewijzigd, geen restart of pip-install nodig. Backup: `static/index.html.pre-sessie23.bak` (540KB → 551KB). Live-test in Chrome geslaagd: drag IN-handle naar -10.88s → `.in-stretch=true`, duration pill 34.2s→45.1s live update, mouseup → video blijft op source-set bij 224.93s, recut levert correct 45s vertical mp4. **Werk zelfstandig**: gebruik Claude in Chrome MCP, test-account `business+wftest17@sjuulstudios.com` / `WatchTest17!`. Server draait al op http://127.0.0.1:5555 in productie-mode (debug=False). Volgende sessie kan kiezen uit: (a) **End-to-end test op een verse upload** — analyzer→detect_key→render→stamp→tracking pipeline op een nieuwe DJ-set in plaats van de pre-SESSIE-22 Ediine; (b) **Tracking edge cases + TR3** — tracking + stretch combined, camera-pan auto-track, multi-clip face-embedding persistence; (c) **B1 beat-pulse + B3 speed-ramp** — afronding van Sessie-22 deferred items; (d) **Stripe live mode + landing-page DNS verificatie** vóór launch; (e) **Brand Stack v2 add-ons** — end-card, intro-still, lower-third template. Begin met opties + aanbeveling, wacht op "ja", dan los werken.
+### Open items uit sessie 58 (niet kritisch, voor latere sessies)
 
-> Plak dit letterlijk in een nieuwe Claude-chat (oude prompt — voor de volledigheid):
+- Logo-upload size cap (2MB enforce in FileReader-flow)
+- Brand-pack export data-URL strip (handmatig verifiëren)
+- Auth `?token=` URL-pattern vervangen voor omnidj.com productie
+- Backend route-audit sessie 56-57 write-routes
+- Tier-bypass server-side check voor multi-tenant Supabase
+- Insights mock-data inconsistentie (Best clip vs Published count)
+- Responsive cross-check op 980px + <700px
+- Cross-browser Safari check
 
-Lees /Users/sjuulsmits/Documents/Claude/Projects/Clip Live/HANDOVER.md (begin met de RESTART-CHECKLIST bovenaan — herstart server + pip install fonttools[woff] voor je verdergaat). SESSIE 21 (11 mei 2026) heeft Brand Stack v1 autonoom afgerond: (a) Style Room → Brand Stack rename + nieuwe HTML-secties (palette manager, fonts uploader, logo uploader, identity inputs), (b) brand_kit.json schema-uitbreiding met fonts/palette/logo/caption_presets/handle/tagline, (c) 12 nieuwe API endpoints in `app.py`: `/api/brand-kit/{fonts,logo,presets}` GET/POST/DELETE, `/api/clip-overlays/<job>` GET/POST. Fonts accepteren TTF/OTF native + WOFF/WOFF2 via `fonttools[woff]` (optional dep — server start zonder, WOFF uploads krijgen dan 422 met install-instructie). (d) Editor: nieuwe "Text" tool-btn onder Trim opent rechter-drawer met layer-list, "+ Add text", per-layer editor (textarea, font picker uit Brand Stack + system, palette swatches, size/weight/x/y sliders, show-from/hide-at, animation), live HTML-preview overlay op #ed-video die meebeweegt met playback. Save preset → opslaan in Brand Stack. (e) cutter.py: `_build_text_layer_filters` bouwt drawtext chain met textfile= (bulletproof unicode), font_id lookup naar brand_kit absolute path, fontsize uit size_pct van frame-width, x/y in single-quoted expressions, fade/slide-up animaties via alpha/y-expr, hard cap 8 layers per clip. Logo overlay via filter_complex met `movie=` source filter (geen extra `-i`). `process_clips` + `recut_clip` (en hun callers `_process_single_clip`, `cut_clip_landscape/_vertical`) lezen `text_overlays.json` + `brand_kit.json` per render. **HERSTART NODIG** — backend wijzigingen pikken niet auto op. Backups: `app.py.pre-sessie21.bak` (162KB → 181KB), `cutter.py.pre-sessie21.bak` (47KB → 65KB), `static/index.html.pre-sessie21.bak` (417KB → 467KB). Frontend live geverifieerd via Chrome MCP (Brand Stack page rendert volledig, Text-panel opent, "+Add text" creëert layer met "Caption here" live-preview op (50%,80%)). Backend nog niet live getest — wacht op restart. Volgende sessie kan kiezen uit: (a) End-to-end live test van Brand Stack (upload font + logo, render clip met tekst, verifieer mp4); (b) Brand Stack v2: BPM/Key stamp, end-card, intro-still, lower-third — DJ-specifieke add-ons; (c) export_with_preset / split_clip_at ook tekst-aware maken (nu alleen recut + initial-render dragen tekst); (d) Stripe live mode + DNS — pre-launch. **Werk zelfstandig**: gebruik Claude in Chrome MCP, test-account `business+wftest17@sjuulstudios.com` / `WatchTest17!`. Begin met opties + aanbeveling, wacht op "ja", dan los werken.
+### Toestemmingen al doorgegeven (lopen door)
+✅ Computer-use voor app management
+✅ Bash terminal voor dev-server, builds, tests
+✅ File-access op heel `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/`
+✅ Supabase migration-files schrijven (geen `db push`)
+✅ `pip install watchdog` in venv
+✅ Git commits + branch werk
 
----
-
-## SESSIE 26 — Wise setup + Signup wizard fixes + Stripe betaalflow verificatie (2026-05-17)
-
-### 1 — Wise bankrekening setup
-
-- Wise Business account actief onder naam Sjuul Studios (eenmanszaak)
-- Wise Advanced (€60 eenmalig) nodig voor echte IBAN + account details
-- Fiscaal identificatienummer = BSN (niet BTW-nummer of KVK)
-- Wise geeft een **Belgisch IBAN (BE)** — Wise is in België geregistreerd
-- In Stripe → Settings → Bank accounts: "Belgium" als land selecteren (niet NL), anders foutmelding "country NL does not match BE"
-- Dit is legaal: bedrijfslocatie (NL) en bankrekening-land (BE) mogen verschillen
-
-### 2 — Signup wizard fixes (`static/index.html`)
-
-Vier bugs opgelost:
-
-| Bug | Oorzaak | Fix |
-|---|---|---|
-| Progress bar balkjes half gevuld op actieve stap | `is-current::after { scaleX(.5) }` | CSS-regel verwijderd; `is-current` class niet meer gezet in JS |
-| Next-knop verdwijnt op stap 2 (reasons) | `position:absolute;inset:0` forceert 340px hoogte, content overflowt | Viewport `overflow-x:hidden; overflow-y:auto; max-height:480px`; secties `top/left/right` zonder `bottom` |
-| Velden verdwijnen op stap 3 (who you are) | Zelfde overflow-oorzaak | Zelfde fix + scroll reset naar top bij elke stap-navigatie |
-| Next-knop donker/onleesbaar bij hover | `.btn:hover` overschreef gouden achtergrond van `.btn-primary` | `.btn-primary:hover` geeft nu expliciet `background` + `border-color` mee |
-| Email-veld ontbreekt op stap 4 | Sectie startte niet bovenaan door overflow/scroll-state | Opgelost door scroll reset + dynamische track-hoogte via `requestAnimationFrame` |
-
-### 3 — Stripe betaalflow end-to-end geverifieerd (testmodus)
-
-- Test-account `test@test.com` (artist: Eddy) aangemaakt via signup wizard
-- Pro-abonnement afgerond met testkaartnummer 4242 4242 4242 4242
-- Stripe: `sub_1TY7LnA5DKhJaSAFEEphH3mZ`, status `active`, plan Pro (`price_1TUoYNA5DKhJaSAF6xynooY9`)
-- Supabase profiel: `plan: pro`, `stripe_customer_id: cus_UXBj3w9DhPo5Dm`, `stripe_subscription_id` correct opgeslagen
-- Webhook (Supabase Edge Function) heeft correct gefired na checkout
-- Volledige keten bevestigd: Stripe checkout → webhook → Supabase profiel update ✅
-
----
-
-## SESSIE 24 — End-to-end pipeline test + 3 polish-fixes (2026-05-12)
-
-Optie a (end-to-end test op verse upload) afgerond op TWEE sets — daarna drie polish-fixes voor Sjuul. Volledige bevindingen in **`SESSIE-24-FINDINGS.md`** in project-root.
-
-### Optie a — end-to-end test op verse uploads
-
-| Set | Duur | Pipeline | Outcome |
-|---|---|---|---|
-| Lisa Korver x Hör Berlin | 1u, 444 MB | Eager 1080p cuts | 26 drops in 3 min, 26×2=52 files, alle 4 codec-exports geverifieerd |
-| Franky Rizardo Peru Set | 3:54u, 7.8 GB | LARGE_FILE_PIPELINE (>7200s) | 151 drops in 3.5 min analyzer + 2 min proxy cutting; lazy 1080p L+V in 5s/clip |
-
-**Pipeline-componenten met groen vinkje** (volledige tabel in SESSIE-24-FINDINGS.md):
-- `/api/upload-local` no-copy register ✓
-- Analyzer drop-detection (unieke clips, geen duplicaten) ✓
-- `detect_musical_key()` Camelot output ✓
-- Cutting parallel ✓
-- LARGE_FILE_PIPELINE auto-trigger ✓
-- `/api/render-clip` lazy full-quality ✓
-- BPM/Key stamp drawtext-overlay ✓
-- `/api/track/<job>/<clip>` save+load ✓
-- `recut_clip` met keyframes-lookup (pan-effect visueel correct) ✓
-- 4 codec-varianten (match/h265_vt/h264_vt/prores) ffprobe-geverifieerd ✓
-
-**Bekende issues uit CLAUDE.md die NIET zijn opgetreden:**
-- Duplicate clips bug (alle 26 + 151 clips unieke start/end/peak)
-- Large-file pipeline hang (3:54 u liep door)
-- UI regressie (geen layout-breaks)
-
-### Drie polish-fixes na optie a
-
-#### Fix 14 — BPM half-tempo doubling (`analyzer.py`)
-
-`_maybe_double_tempo()` helper toegevoegd direct boven `detect_bpm`. Heuristiek:
-
-```
-if 60 <= tempo < 90 AND 120 <= 2*tempo <= 180:
-    doubled = tempo * 2
-    densified_beats = insert midpoints between every adjacent beat
-    return doubled, densified_beats, was_doubled=True
-```
-
-Conservatief gekozen range — nooit up-temposen van legit downtempo / hip-hop / dub (60-100 BPM, blijven). Sjuul's product is dance-muziek, daar zit tempo nooit onder 100.
-
-Densification (midpoint-insert) houdt `bar_duration` / `bar_times` / downstream bar-snapping intern consistent. Anders zou de BPM stamp "144" zeggen maar de bar-aligned cutter nog op 72 BPM grid werken — verwarrend.
-
-Nieuwe return-fields: `bpm_raw` (origineel librosa output, alleen gezet bij doubling), `bpm_doubled` (bool).
-
-Edge-case suite (8 cases) standalone unit-getest:
-- 89 → 178 (doubles), 90 → 90 (boundary, no double)
-- 75 → 150 (doubles), 50 → 50 (doubles to 100, below dance, NO double)
-- 95 → 95 (in range, NO double), 140 → 140 (in range, NO)
-- 60 → 120 (boundary lower, doubles), 65 → 130 (doubles)
-
-Live verificatie op verse Lisa-job `00abd848`: bpm 71.8 → **143.6**, bpm_doubled=true, bar_duration 3.34→1.67. Stamp in rendered clip 1 vertical toont "**144 BPM · 4B**" — visueel bevestigd via frame-extract. Franky `94d6c9c7` blijft 129.2 BPM — heuristiek triggert niet.
-
-Side-effect: 30 clips ipv 26 op dezelfde source — finere bar-grid produceert meer bar-aligned drop windows; clip-duur 30s→15s want 9 bars op 144 BPM is half zo lang als op 72.
-
-Backup: `analyzer.py.pre-sessie24.bak`.
-
-#### Fix 15 — Export chevron (`static/index.html`)
-
-Het was: `<span class="caret">▾</span>` — 9px tekst-character met opacity 0.7. Te subtiel voor first-time users. Plus pijl wees naar beneden terwijl de dropdown naar LINKS uitvouwt (`right: calc(100% + 8px)`).
-
-Nu: inline SVG polyline (left-chevron) in 14px, color `var(--amber-2)`, hover/open-state animaties (translateX(-2px) tijdens open richting menu). Hit-area expansion via ::after pseudo zodat makkelijker te klikken op trackpad.
-
-DOM-verified: `<svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"></polyline></svg>` met computed color `rgb(244, 207, 138)`.
-
-#### Fix 16 — Playhead draggable + start-at-IN (`static/index.html`)
-
-Twee aspecten:
-
-**(a) Knob draggable.** De `::before` pseudo-element die de gouden driehoek tekende is vervangen door een echt DOM-element `.playhead-knob` (id `tl-playhead-knob`). `pointer-events:auto`, `cursor:grab`, hit-area expansion via ::after. `bindPlayheadScrub()` registreert mousedown→mousemove→mouseup lifecycle:
-- mousedown enters scrub mode (body.is-scrubbing class, video pauseert, knob.is-grabbing)
-- mousemove update v.currentTime via dezelfde `pxToVirtSec`-conversie als trim-handles
-- mouseup cleart drag state + classes
-- Dubbelklik-shortcut springt naar inSec ("back to start")
-
-**(b) Play-restart bij IN-handle.** Nieuwe helper `_editorSnapPlayheadToInIfOutside()`. Bij play-trigger (`editorTogglePlay()` of stage-click): als v.currentTime buiten [inSec, outSec) ligt → seek naar inSec voor `v.play()`. Detecteert source-swap mode (S4.2) door inspectie van `v.src` en gebruikt set-time (`clipStart + inSec`) ipv clip-time daar.
-
-Binnen het bereik blijft currentTime ongemoeid — user's eigen scrub-positie wordt gerespecteerd.
-
-Live getest via simulated MouseEvents in MCP-tab (zie SESSIE-24-FINDINGS.md "Addendum"):
-- Scrub door tracks → currentTime updates correct + clamps aan duration
-- v.currentTime=0 + trim.inSec=5 + `editorTogglePlay()` → springt naar 5, dan v.play() → na 300ms staat hij op 5.22s ✓
-
-Backup: `static/index.html.pre-sessie24.bak`.
-
-### Server restart
-
-Voor fix 14 wel — analyzer.py change. Uitgevoerd via `_restart.sh` osascript-bridge (pid 70201). Voor 15+16 alleen browser hard-refresh nodig.
-
-### Optie B (tracking edge cases + DJ-centered preview) — VOLLEDIG AFGEROND in zelfde sessie (12 mei)
-
-Volledige details in `SESSIE-24-FINDINGS.md` (Addendum 2). Kort:
-
-- **B1 — Stretch + tracking combined**: getest op Franky clip 5 (IN-stretch -3s + 3 manual keyframes). Recut levert 19.72s output met correcte pan inclusief gestrechte zone. PASS — bestaande pipeline werkt, geen fix nodig.
-
-- **B2 — Auto-track live preview**: nieuwe "Preview crop" toggle in Track drawer. ON → swap `<video>.src` naar landscape source + dynamische `object-position` via `_trackedObjectPosition()` formule (cover-cropping math die werkt voor alle stage-aspecten). DJ blijft visueel centered tijdens playback zonder recut. Sample t=1.25/5/10/15 toont object-position 14.52%→55.31%→64.96%→55.55%. Badge "PREVIEW · DJ-tracked crop" linksboven. Toggle OFF → vertical restore + state reset.
-
-- **B3 — Subject-signature persistence**: pragmatisch alternatief voor face-embedding (dlib/OpenCV DNN) gekozen om heavy deps te vermijden. `_pick_primary()` in tracking.py kreeg derde param `prior_signature: {cx,cy,w,h}` die first-frame position+size bias toepast. `compute_subject_signature(keyframes)` helper. Nieuwe `/api/job/<job>/subject-signature` endpoints (GET/POST/DELETE). Auto-track endpoint leest job-level signature, geeft door, en bij eerste succesvolle run wordt 'm auto-gepersist. Frontend: lock-row in Track drawer met "🎯 Subject locked / from clip N · cx X% · cy Y%" + Clear + "Lock to this clip" buttons. Live getest: signature van Franky clip 1 (cx=52%, cy=55%) → auto-track clip 10 levert avg cx=51%, cy=57% (binnen 2% van locked) terwijl zonder bias andere crowd-members gekozen zouden kunnen worden.
-
-Backups: `tracking.py.pre-sessie24.bak`, `app.py.pre-sessie24.bak`. Server-restart uitgevoerd (pid 72143).
-
-### Volgende sessie — wat is er over?
-
-- **Optie C** (B1 beat-pulse + B3 speed-ramp) — Sessie 22 deferred items. RAF-loop synced naar bar_times voor beat-pulse, chained setpts/atempo orchestration in ffmpeg voor speed-ramp. ~2-3u.
-- **Stripe live mode + landing-page DNS** — pre-launch infra.
-- **Brand Stack v2** — end-card, intro-still, lower-third templates.
-- **B3 upgrade naar echte face-embedding** als de position+size heuristiek in productie te zacht blijkt (kan dan dlib of OpenCV DNN integreren).
+### Toestemmingen NIET doorgegeven
+❌ Stripe live-mode toggle
+❌ Supabase `db push` of dashboard-mutaties
+❌ DNS / Cloudflare wijzigingen
+❌ Email versturen via SMTP
+❌ `git push` naar remote
+❌ App-Store / DMG distributie
 
 ---
 
-## SESSIE 23 — Trim/stretch handle redesign + ffmpeg-drawtext guard (2026-05-11)
+## ⚡ ARCHIVED — sessie 58 briefing (oorspronkelijke opdracht)
 
-Visual + interaction overhaul van de Sessie-21/22 trim-UX, plus een graceful-degradation guard voor ffmpeg-builds zonder libfreetype. Alleen `static/index.html` aangeraakt + één klein cutter.py + app.py snippet voor de drawtext-probe + capabilities surface (al opgenomen in SESSIE 22 hot-fix). Geen restart vereist voor F1-F7 — Sjuul reloadt browser, klaar.
+**Project:** Omni DJ — DJ-set → vertical/landscape clip generator
+**Eigenaar:** MONO LABS
+**Branch actief:** `feature/auto-mode-and-brand-redesign` (afgesplitst van main in sessie 57, nog niet gemerged)
+**Bundle:** `/Applications/Clip Live.app` (sessie 56 versie — sessie 57 wijzigingen NIET in bundle, alleen in `static/index.html` op disk)
+**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh` → http://127.0.0.1:5555
 
-### Online research vooraf
+### EERSTE TAAK SESSIE 58 — VOLLEDIGE AUTONOME SMOKETEST + SECURITY + UI
 
-Premiere / DaVinci / FCP / CapCut conventions gescand:
-- **Trim handles zitten op de RAND van de clip, met grip-affordances (grooves/dots) + hit-area >> visuele area** (pro-conventie).
-- **Cursor verandert context-sensitive** bij hover op handle / stretch zone.
-- **Selected range MUST stand out** met duidelijke gouden/blauwe gradient band.
-- **Apple/Premiere Rate-Stretch tool is speed-change, niet wat wij doen** — onze "stretch" is feitelijk "extended trim beyond analyzer-cut". Term EXTEND past beter dan STRETCH.
+> **Claude moet deze taak ZELFSTANDIG uitvoeren bij sessie-start. Niet eerst aan Sjuul vragen wat te doen. Niet wachten op input. Pas stoppen om te overleggen als er een blocker is die alleen Sjuul kan oplossen (bijv. niet-werkende auth, ontbrekende env-vars, productie-data wijzigingen).**
 
-### Bugs gevonden tijdens debug (en gefixt)
+**Sessie 57 leverde 3 nieuwe fases code-side op (zie hieronder) maar zonder live verificatie. Sessie 58 moet die verificatie alsnog doen, plus een brede security + UI audit, voordat Sjuul kan committen en rebuilden.**
 
-1. **Video-jump na stretch-mouseup**: `v.currentTime=0` na release sloeg de gebruiker terug naar het eerste frame, terwijl ze net naar t=229s gedragged hadden. Verwarrend.
-2. **Handles waren 14px goud lijntjes zonder grip** — niet vindbaar voor first-time users.
-3. **Geen visueel onderscheid tussen analyzer-cut en stretch-zones** — filmstrip + waveform spanden uniform de hele vDur, gebruiker wist niet waar de analyzer-grens lag.
-4. **Trim-band was bijna onzichtbaar** (0.08 opacity gold) — geen duidelijke "selected range" signaal.
-5. **Stretch-zone labels piepklein in de hoek** ("STRETCH ←60s") in plaats van uitnodigend pill in het midden.
-6. **Mini-map trim-band onleesbaar** — zelfde lage opacity.
+#### Vereiste tools
 
-### Wat ik gefixt heb
+Laad via ToolSearch wat nodig is:
+- `chrome` keyword → alle `mcp__Claude_in_Chrome__*` tools
+- `computer-use` keyword → alle `mcp__computer-use__*` tools (alleen voor zien wat er op scherm staat, niet voor klikken — Chrome zit op read-tier)
+- `TaskCreate`, `TaskUpdate`, `TaskList`
 
-| Fix | Wat het doet | Bewijs in live test |
-|---|---|---|
-| **F1** Beefy handles | Spine 14→6px + 22px hit-area, three-line grip patroon, drop-shadow op hover, `.in-stretch` class flipt spine van gold→copper bij drag past edge | Class-toggle gevalideerd via JS in Chrome: `inStretchOnIn: true` bij `inSec=-10.88` |
-| **F2** Pronounced trim-band | Opacity 0.08→0.22 met top/bottom borders, inset glow, floating duration pill | "45.1s" pill live update tijdens drag bevestigd |
-| **F3** Dim stretch zones + EXTEND pills | `backdrop-filter: brightness(0.5) saturate(0.55)` op de zones + hatched pattern, centered pill "← EXTEND · 60S AVAIL" | Visueel verschil in screenshot duidelijk: clip-area heldergouden, stretch zones gedimd |
-| **F4** Keep source-set video after stretch-release | Was: clip-cache restore + currentTime=0. Nu: blijf op `/api/source/<job>`, seek naar `clip.start + new_inSec` | `videoSrcType: "source-set"` + `videoTime: 224.93` na mouseup bevestigd — geen jump-to-zero meer |
-| **F5** Analyzer-cut markers | Twee dunne dashed lijntjes op original `clip.start` / `clip.end` posities, met "analyzer cut" labels die fade-in op timeline-hover | Visueel zichtbaar in screenshot — pearl-grey ticks bij 13s en 20s |
-| **F6** Mini-map trim-band rendering | Opacity 0.12→0.28 met gold-gradient, borders, inset glow — matched main band | Mini-map duidelijk band zichtbaar in alle screenshots |
-| **F7** Cursor + tooltip system | `cursor: crosshair` op stretch zones, `title` attribute met instructie ("Drag the gold IN handle leftward to include up to 60s before the analyzer-detected start") | Visible in DOM inspection |
+#### Plan in 4 blokken — werk ze in volgorde af
 
-### Bonus — `_ffmpeg_has_drawtext` guard (cutter.py)
+##### BLOK 1 — Dev-server starten + live UI-check (Chrome MCP) [60-90 min]
 
-Tijdens debug ontdekt dat Sjuul's homebrew ffmpeg geen `libfreetype` had → drawtext filter ontbrak → BPM stamp + text-overlays crashten met "No such filter". Toegevoegd:
-- `_ffmpeg_has_drawtext()` probe (cached) in cutter.py
-- Graceful skip in `_build_text_layer_filters`, `_build_bpm_stamp_filter`, `_build_overlay_filter`
-- `/api/capabilities` surface `ffmpeg.drawtext` boolean
-- Sjuul heeft `homebrew-ffmpeg/ffmpeg/ffmpeg` geïnstalleerd → drawtext nu beschikbaar, BPM stamp werkt live ("129 BPM · 7A" renderde in TR corner van vertical export).
+1. Check of `/Applications/Clip Live.app` draait → quit 'm met `mcp__computer-use__open_application` + `osascript -e 'tell application "Clip Live" to quit'` of via bash
+2. Start dev-server via bash: `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && nohup ./start.sh > /tmp/devserver.log 2>&1 &` — wacht ~5s tot Flask listening op 5555
+3. Verifieer met `curl -s http://127.0.0.1:5555/ | head -50` dat de page laadt
+4. Navigeer via Chrome MCP naar `http://127.0.0.1:5555`
+5. **Login indien nodig** — Sjuul's account is `business@sjuulstudios.com` (testen via Profile-card). Als auth-overlay verschijnt, log Sjuul in (vraag wachtwoord als nodig). Of test als anonymous user — voor UI-check is auth niet vereist.
+6. Console: `localStorage.setItem('clipLiveRedesignV2','1'); location.reload();` via Chrome MCP `javascript_tool`
+7. **Loop alle views door en maak screenshot/text-dump van elke view:**
 
-Plus mini fix in `_persist_job_snapshot`: BPM-dict merge-preserve zodat een handmatig gepatched `key` veld niet wordt overschreven door in-memory state zonder dat veld (relevant voor pre-SESSIE-22 jobs).
+| View | Check |
+|---|---|
+| Analyse | Drop-zone, "Continue editing" als history aanwezig, 3 intake-tiles (Watch/Dropbox/Drive) |
+| Library | Projects-tab (4-koloms grid), Exports-tab — klik project → opent Clips-view |
+| **Brand** (NIEUW) | Sticky top met "Brand-pack: Artist name ▼" dropdown, dan 9 cards: Brand Kit / Watermark / Caption Presets / Clip Templates (met 4 built-ins) / Hooks / CTAs / Caption Copy (5 platform-velden) / Hashtag Sets / Stickers + extras. Klik dropdown — menu opent. Klik "+ New preset" — modal opent. Sluit modal. Upload een logo (kan dummy data-URL zijn). Check accent-color picker werkt. |
+| Social | 4 account-cards met "Postiz soon" badges, recent-posts feed |
+| Calendar | Month-view, klik dag → schedule-modal opent. Sluit modal. Klik week-toggle. |
+| Insights | KPI-cards, line-chart, top-clips, donut. Klik 7d/30d/90d range. |
+| **Sidebar divider + Auto-mode** (NIEUW) | Direct onder Insights moet een dun crème lijntje zijn (rgba 220,200,170 @ 22%). Daaronder Auto-mode entry met klok-icoon. |
+| **Auto-mode** (NIEUW) | Free user → paywall-overlay met grote Upgrade-knop. Set tier via console: `STATE.tier='studio'` + reload. Dan: pipeline 6-staps grid (Publish heeft lock-ico voor Studio+), watch-folders card, brand-defaults card, publish-schedule grid, queue+recent, safety. Klik "Quick-enable: Review mode" → 5 stappen worden ON. Klik "+ Add folder" → modal opent. Set tier `studio_plus` + reload → schedule-grid wordt klikbaar. Klik conservative-preset → 3 tiktok-slots active. |
+| Settings | Local-first hero, Watch folder card, Profile card (Sjuul wilde Profile hier laten), Workspace card, Diagnostics. **Profile MOET hier nog staan** — niet verhuisd. |
 
-### Verificatie
+8. **Regressie-check:** zet v2-flag UIT (`localStorage.setItem('clipLiveRedesignV2','0')` + reload) — oude UI moet 100% intact zijn, geen layout-breuk.
+9. **Console-errors monitoren tijdens hele check** via Chrome MCP `read_console_messages`. Alle echte errors loggen in `SESSIE58-AUTONOMOUS-LOG.md`.
 
-- `node --check` extracted JS → OK
-- `python3 -c "import ast; ast.parse(open('cutter.py').read())"` → OK
-- DOM-id scan: 261 unique, 0 duplicates. Nieuwe ids: `tl-trim-band-label`, `tl-anal-mark-l`, `tl-anal-mark-r`
-- File-size: `static/index.html` 540.412 → 551.120 (+10.708 bytes voor het hele redesign — bescheiden)
+**Output van Blok 1:** lijst van bevindingen per view (✅ werkt / ⚠️ werkt maar issue / ❌ kapot). Screenshots optioneel maar handig voor lange-termijn referentie.
 
-### Backup
+##### BLOK 2 — Security audit [60-90 min]
 
-```
-static/index.html.pre-sessie23.bak  (540.412 bytes)
-```
+Doel: voordat sessie 57's nieuwe Brand + Auto-mode flow productie raakt, scannen op de gebruikelijke web-app-issues.
 
-### Live test results (Chrome MCP, post-deps-install + post-homebrew-ffmpeg-rebuild)
+1. **XSS in user-input velden** — alle plekken waar `innerHTML` met user-data wordt gevuld:
+   - Brand-pack name (gebruikt in dropdown + selector)
+   - Caption-preset name + tekst-content
+   - Hook + CTA tekstvelden
+   - Hashtag-set naam + tags
+   - Watch-folder pad
+   - Sticker label
+   - Test: zet `<img src=x onerror=alert(1)>` in elk veld, sla op, render opnieuw → mag GEEN alert tonen
+   - Fix gebruikt `escapeHtml()` — controleer dat ALLE user-input-injecties dat helper doorlopen
+2. **Brand-pack JSON import sanitization** — test of import met `{"name":"<script>alert(1)</script>"}` wordt afgewezen (we regex-checken op `<script`, `<iframe`, `javascript:` — verifieer dat dat werkt)
+3. **localStorage data-URL groei** — kijk hoeveel MB localStorage gebruikt na 5 logo-uploads. Cap moet 5-10MB blijven; bij overshoot oudere assets purgen of waarschuwing tonen.
+4. **Tier-bypass check** — zet `STATE.tier='free'` maar probeer via console direct `OmniBrand.create('hack')` aan te roepen. De helper `packCap(tier)` moet de paywall enforcen in de UI; maar in code is `create()` zelf niet tier-gated. Beslissing: of `create()` ook tier-checken, of accepteren dat dat alleen UX is (vergt OK van Sjuul).
+5. **Backend endpoints scan** — `grep` `app.py` voor recent toegevoegde endpoints (sessie 56-57). Check op:
+   - `@require_auth` decorator op alle data-routes
+   - Rate-limiting op write-routes (sessie 32 fix-pattern)
+   - RLS-policy bestaan voor nieuwe tables in `supabase/migrations/` (zijn die er al voor brand_packs / auto_mode_configs? Of zit alles in localStorage v1?)
+6. **CSP / inline scripts** — check of inline `<script>` blocks geen `eval()` of `Function()` gebruiken (snel `grep`)
+7. **Brand-pack export** — bevestig dat data-URLs gestript worden (logo, watermark image, stickers) — anders kunnen exports >25MB gigantisch zijn
+8. **Supabase keys in frontend** — `grep` op `service_role` of `SUPABASE_SERVICE_KEY` in static/ — mag niet voorkomen. Anon key is OK want public.
+9. **Auth-token in URLs** — check dat geen auth-tokens in query-params worden gezet (alleen in headers of cookies)
+10. **File-upload validation** — Brand Kit logo accepteert PNG/JPG/WebP/SVG. SVG kan XSS bevatten. Beslissing: of SVG strippen aan client, of accepteer met `dangerouslySetInnerHTML`-vermijding (SVG wordt nu via `<img src>` getoond, dus geen execute-context — OK).
 
-- Volledige stretch-drag flow: IN handle 80px naar links → `inSec=-10.72s` → `.in-stretch` class actief → "45.0s" duration pill → bandWidth=29.25%
-- Mouseup → video blijft op source-set, `currentTime=224.93s` (geen jump-to-zero)
-- Visuele screenshots bevestigen alle 7 fixes (zie sessie-conversatie)
-- Trim + recut export: 34.23s vertical mp4 (matcht expected stretched range)
+**Output van Blok 2:** security-rapport in `SESSIE58-AUTONOMOUS-LOG.md` met severity-levels (🔴 critical / 🟡 medium / 🟢 low / ✅ no issue). Fixes voor 🔴 direct doorvoeren met code-edit + commit-instructie. 🟡 + 🟢 alleen documenteren voor Sjuul's review.
 
-### VOLGENDE SESSIE — kies één
+##### BLOK 3 — UI-quality check [60 min]
 
-1. **Tracking edge cases** — tracking + stretch combined, camera-pan auto-track, multi-clip face-embedding persistence (TR3 uit eerder plan).
-2. **B1 beat-pulse + B3 speed-ramp** — afronding van Sessie 22 deferred items.
-3. **End-to-end test op een verse upload** — zodat we de full analyzer→detect_key→render→stamp pipeline op een nieuwe set zien doorlopen (huidige Ediine set is pre-SESSIE-22).
-4. **Stripe live mode + landing-page DNS** — pre-launch.
+Diepere UX-pass op de 3 nieuwe fases:
 
----
+1. **Brand-page interactie-pass:**
+   - Tab-volgorde door alle form-velden (a11y) — alle inputs reachable met Tab?
+   - Color-pickers responsive op kleine viewports (980px breakpoint)?
+   - Cards padden mooi af op mobile (<700px viewport)?
+   - Modal-editor sluit met Escape-toets?
+   - Empty-states tonen helpful copy (geen "No data" maar "Save your first preset from the editor")?
+   - Loading-states bij upload (logo, sticker)? Of toont 'ie freezed UI tijdens FileReader?
+2. **Auto-mode interactie-pass:**
+   - Pipeline-stappen ON/OFF visueel duidelijk (kleur + tekst)?
+   - Quick-enable knoppen geven feedback (toast)?
+   - Watch-folder modal sluit netjes?
+   - Schedule-grid scrollt horizontaal op mobile?
+   - Paywall-overlay (Free/Pro) — knop "Upgrade" leidt naar correcte upgrade-modal?
+   - Status-pill kleur klopt met state (Off=grey, Running=green, Paused=grey, Locked=grey)?
+3. **Cross-browser snel-check** — als computer-use beschikbaar: test ook in Safari (op de Mac). v2-CSS gebruikt veel `:has()`, `aspect-ratio`, `gap` — die werken in Safari ≥15.4, maar verifieer.
+4. **Accessibility** — color-contrast op v2-cards (Brand Kit titel `var(--v2-text)` op `var(--v2-bg-elevated-1)`) — moet WCAG AA halen
+5. **Dark-mode consistency** — alle nieuwe sections gebruiken v2-CSS-variabelen, geen hardcoded colors die in light-mode broken zijn (we hebben geen light-mode maar voor de toekomst)
+6. **Empty-state per view bij verse install:** wis localStorage `omnidj.*` keys + brand_packs, reload — moet auto-seed werken zonder errors
 
-## SESSIE 22 — Polish + tracking + signup wizard (2026-05-11, uitgevoerd)
+**Output Blok 3:** UI-bevindingen in `SESSIE58-AUTONOMOUS-LOG.md` als ✅ / ⚠️ / ❌. Quick-wins direct fixen (≤30 min werk).
 
-Zes blokken (A, E, Q, B, C, D) uitgevoerd in één autonome sessie. Backend + frontend allebei aangeraakt. Backups + ID-uniciteit verifieerd; live test wacht op restart van de server. Debug-mode tijdelijk aan tijdens de sessie, teruggezet op `False`.
+##### BLOK 4 — Rapport + aanbevelingen voor Sjuul [30 min]
 
-### A — Text-panel polish (Sessie 21 follow-up)
+1. `SESSIE58-AUTONOMOUS-LOG.md` aanmaken met:
+   - Samenvatting per blok (Blok 1 / 2 / 3)
+   - Alle bevindingen gesorteerd op severity
+   - Lijst van fixes die Claude direct heeft doorgevoerd
+   - Lijst van open items voor Sjuul's review
+2. `HANDOVER.md` updaten met sessie 58 status (deze sessie wordt dan ARCHIVED, nieuwe START HIER voor sessie 59)
+3. **NIET doen zonder Sjuul's OK:**
+   - PyInstaller rebuild
+   - Git commits/merges (alleen documenteren wat moet gebeuren)
+   - Supabase migraties uitvoeren (alleen SQL-files schrijven)
+   - Productie-toggles wijzigen
 
-`static/index.html` — CSS + HTML + JS, alleen aangeraakt in `.ed-tx-*` scope.
+#### Toestemmingen die al doorgegeven zijn (sessie 57)
 
-- `::placeholder { color: var(--ink-4); font-style: italic }` — empty textarea = grijs italic.
-- `.ed-tx-field label` kleur van `var(--ink-3)` → `var(--amber-2)` met letter-spacing en weight bump (10.5px, 500). Veel beter leesbaar.
-- Drag-on-preview: `mousedown` → `mousemove` → live update `x_pct`/`y_pct` met clamp 0..100 + slider-readout sync. Shift held bij drag-start = constrain naar dominante as.
-- Corner-resize-handles (TL/TR/BL/BR) op de actieve layer. Drag diagonal → diagonal scale van `size_pct` (2..40). Mid-handles overgeslagen — geen non-uniform stretch op tekst.
-- Alignment buttons in Premiere-stijl SVG (6 stuks, 3 horizontal + 3 vertical) onder X/Y sliders. Klik snapt naar 5/50/95% met padding tegen edge-collision.
-- `_etxDrag` global state, `_onEditorTextOverlayPointerDown`/`Move`/`Up` handlers — alle bindings idempotent.
+✅ Computer-use voor app management
+✅ Bash terminal voor dev-server, builds, tests
+✅ File-access op heel `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/`
+✅ Supabase migration-files schrijven (geen `db push`)
+✅ `pip install watchdog` in venv
+✅ Git commits + branch werk
 
-### E — Export settings dropdowns + (deferred) verification
+#### Toestemmingen NIET doorgegeven
 
-`static/index.html` — nieuwe modal `#export-settings-modal` (reuses .aspect-back/.aspect-card patroon) met:
+❌ Stripe live-mode toggle
+❌ Supabase `db push` of dashboard-mutaties
+❌ DNS / Cloudflare wijzigingen
+❌ Email versturen via SMTP
+❌ `git push` naar remote
+❌ App-Store / DMG distributie
 
-- Codec dropdown: Match source / H.265 HW / H.264 HW / ProRes 422
-- Frame rate dropdown: Match source / 24 / 30 / 60
-- Resolution dropdown: Source / 1080×1920 / 4K 9:16 / 1920×1080 / 4K 16:9 / 1080×1080
-- Inline note die wisselt op codec-keuze ("Match source stream-copies…" / "ProRes 422 produces .mov…" etc.)
-- LocalStorage onthoudt laatste keuze in `clipLive.exportSettings`.
+#### Sessie 57 context (KORT — voor details lees `SESSIE57-AUTONOMOUS-LOG.md`)
 
-`pickExportSettings(label)` returnt Promise<{codec, fps, resolution}>; `startExport()` roept 'm aan vóór de folder-picker en plumbst de waarden naar `/api/export/<job>` body. Backend route was al klaar (sinds SESSIE 4-ish): `_run_export_job` → `export_clip_with_settings(codec=, fps=, resolution=)` → ffmpeg switch op `EXPORT_CODEC_MAP`.
+Sjuul gaf akkoord op `PLAN-AUTO-MODE-2026-05-28.md`. Claude bouwde **autonoom** terwijl Sjuul sportte:
 
-**Verification (echte ffprobe-run) was deferred** omdat ik de modal niet live kon klikken zonder server-restart. Plan voor de volgende sessie: render dezelfde clip 4× met elke codec-keuze, `ffprobe -show_streams` controleren dat codec_name daadwerkelijk verschilt (h264 / hevc / prores).
+- **Fase A** — Brand-page herontwerp deel 1 (Brand Kit, Watermark, Caption-presets met modal-editor). Brand mapt nu naar eigen `#view-brand` ipv Settings-fallback. Profile blijft in Settings.
+- **Fase B** — Brand-page deel 2 (Clip Templates + 4 built-ins, Hooks/CTAs, Caption-copy per platform, Hashtag-sets, Stickers + Lower-thirds + Intro/Outro, Export/Import als JSON)
+- **Fase C** — Auto-mode (sidebar divider + entry, 6-staps pipeline, watch-folders lokaal + DBX/Drive UI-only, brand-defaults, publish-schedule, queue + runs, safety controls, paywall Free/Pro, Studio+ feature-flag voor publish)
 
-### Q — Pre-signup questionnaire wizard
+Verificatie (jsdom):
+- Fase A: 20/20 OK
+- Fase B: 22/22 OK
+- Fase C: 25/25 OK
+- Regressie: 28/28 OK
 
-**Supabase migration** uitgevoerd via MCP `apply_migration` op project `lbabsffxefkrxwzkbzar`:
+Bestand: `dj-clip-cutter/static/index.html` 1.083.979 bytes (+133K vs backup). Backup: `static/index.html.pre-sessie57-faseA.bak` (950K).
 
-```sql
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS referral_source     text,
-  ADD COLUMN IF NOT EXISTS referral_other      text,
-  ADD COLUMN IF NOT EXISTS use_reasons         jsonb DEFAULT '[]'::jsonb,
-  ADD COLUMN IF NOT EXISTS artist_name         text,
-  ADD COLUMN IF NOT EXISTS full_name           text,
-  ADD COLUMN IF NOT EXISTS instagram_url       text,
-  ADD COLUMN IF NOT EXISTS tiktok_url          text,
-  ADD COLUMN IF NOT EXISTS streaming_url       text,
-  ADD COLUMN IF NOT EXISTS intake_completed_at timestamptz;
-CREATE INDEX IF NOT EXISTS idx_profiles_referral_source ON public.profiles (referral_source) WHERE referral_source IS NOT NULL;
-```
+**Live verificatie NIET gedaan in sessie 57** — sandbox-Flask kon niet bij host-Chrome. Dat is precies wat Blok 1 hierboven moet doen.
 
-**Backend** (`auth.py` + `app.py`):
-- `signup(email, password, intake=None)` — na succesvolle `auth.sign_up` patcht service_role-client de profile-row met whitelisted intake-fields. Soft-fail op patch-error (account werkt nog steeds).
-- `_persist_intake(user_id, intake)` — accepteert alleen geldige slugs voor `referral_source` + `use_reasons`; clip text-lengtes; sets `intake_completed_at`.
-- `/api/auth/signup` accepteert `intake` dict in body. Valideert `artist_name`/`full_name`/`referral_source` als required.
-
-**Frontend** (`static/index.html`):
-- Nieuwe `.auth-wizard` als alternatief voor `.auth-form` — toggle via `setAuthTab('signup')`.
-- 4 secties + 1 success-splash. CSS `.wiz-progress` 4-segment bar met scaleX-transitie + `.is-done`/`.is-current` states. Smooth slide-left/right via `transform:translateX` op `.wiz-section`.
-- Sectie 1: 9 single-select bubbles + Other-input met max-height transition.
-- Sectie 2: 4 multi-select bubbles (col-layout omdat antwoorden lang zijn).
-- Sectie 3: Artist*/Full*/IG/TT/Streaming inputs met required-field highlight bij Next-zonder-invul.
-- Sectie 4: email + password + confirm. Live `wiz-pass-match` indicator (✓ groen / ✗ rood). Password ≥ 8 chars validatie.
-- Splash: "Let's clip some live DJ-sets!" met scale-pop animatie, daarna 900ms timer → `hideAuthOverlay()` + `postLoginBoot()`.
-- State persist in `sessionStorage.clipLive.wizardState` zodat refresh halverwege niets wist; cleared op success.
-
-### B — BPM/Key stamp (B2 only — B1 + B3 deferred)
-
-**Analyzer** (`analyzer.py`):
-- `detect_musical_key(audio_path=None, sr, y_audio=None)` via `librosa.feature.chroma_cqt` + Krumhansl-Schmuckler templates voor major en minor. Output: `{tonic, mode, camelot, confidence}`.
-- `_KEY_PROFILE_MAJOR`/`_KEY_PROFILE_MINOR` constants, `_CAMELOT_MAJOR`/`_CAMELOT_MINOR` lookups.
-- `detect_bpm()` roept `detect_musical_key()` aan op dezelfde geladen audio-window (geen dubbele IO) en voegt `key`, `key_tonic`, `key_mode`, `key_confidence` toe aan zijn return.
-
-**Cutter** (`cutter.py`):
-- `_build_bpm_stamp_filter(bpm_cfg, clip_data, target_w, target_h, brand_fonts, system_font)` → drawtext filter string met `129 BPM · 7A` formattering (configurabele via `format`: bpm/key/bpm_key), corner positioning, optional brand-font, box met 0.45 alpha.
-- `_build_clip_data_for_stamp(clip, job_bpm_info)` — minimale dict met clip-level vs set-level fallback.
-- `_load_set_bpm_info_for_job(job_id, output_dir)` — leest `output/<job>/job.json` voor set-level BPM+key.
-- `_maybe_compose_brand_vf` accepteert nu `bpm_cfg` + `clip_data`; appended na drawtext-layers, vóór logo-overlay.
-- Plumbed via `_process_single_clip` + `recut_clip` (en hun retry-paths).
-- `_load_brand_assets_for_job` returnt nu 4-tuple inclusief `bpm_cfg`.
-
-**Frontend** (`static/index.html`):
-- Nieuwe Brand Stack sectie "BPM & Key stamp" met On/Off toggle, corner-picker (4 buttons, reuse `.bs-corner-pick` styling), format-dropdown.
-- `_renderBrandBpmStamp(cfg)`, `brandBpmStampUpdate(patch)` — partial update via `/api/brand-kit` POST.
-
-**B1 beat-pulse en B3 speed-ramp:** **deferred naar v2**. Reden: beat-pulse vereist een runtime RAF-loop met beat-grid sync die conflicteert met het bestaande playback-state-management, en speed-ramp vereist gekoppelde setpts/atempo orchestration (atempo's 0.5..2.0 cap = chained filter, plus rebase van alle volgende `t`-expressions in drawtext). Beide significant niet-triviaal — losse sessie waardig.
-
-### C — TR1 Manual keyframe tracking
-
-**Backend** (`app.py`):
-- `/api/track/<job_id>/<clip_idx>` GET/POST/DELETE — persist in `output/<job>/tracking/clip_NNN.json`.
-- `_validate_keyframes_payload(raw)` — clamp 0..100, source-whitelist (`manual`/`auto`/`smoothed`), sort by time, cap 50 keyframes.
-
-**Cutter** (`cutter.py`):
-- `_load_keyframes_for_clip(job_id, output_dir, clip_index)` — leest tracking-JSON.
-- `_build_tracked_vertical_crop(keyframes, src_w, src_h)` — bouwt dynamic `crop` filter met geneste `if(lt(t,T_n), val, …)` expressie voor x/y; single-quoted zodat commas niet als filter-separators worden geparsed; ≤8 keyframes lerp, daarboven cap met warning.
-- `_build_keyframe_lerp_exprs(kfs)` — recursive nested if() build voor x én y axes.
-- `_build_vertical_cmd` accepteert `track_keyframes`; vervangt static centre-crop door tracked-crop wanneer aanwezig. Scale+pad steps blijven hetzelfde → output blijft 1080×1920.
-- Plumbed via `cut_clip_vertical` + `_process_single_clip` + `recut_clip` (en retry-paths).
-
-**Frontend** (`static/index.html`):
-- Track tool-btn in editor right-rail (target-icoon SVG) tussen Text en Export.
-- `.ed-track-drawer` (reuse `.ed-text-drawer` styling) met layer-list, "+ Add keyframe at playhead", Clear-all, Auto-track, Done.
-- `.ed-track-overlay-root` binnen `#ed-stage` met `.ed-track-box` — gold dashed outline, draggable + 4-corner resizable. Live interpolated positie via `timeupdate` listener.
-- State in `STATE.editorTrack = {keyframes, selectedIdx, jobId, clipIdx}`.
-- `_interpKeyframeAtTime(t)` — linear interp voor live preview (matcht cutter's expressie 1:1).
-- `editorTrackAddKeyframe()` — neemt interpolated positie als startpunt voor nieuwe KF, sort by time, auto-persist.
-- `editorTrackSelect(idx)` — seek video naar KF.t en repaint box.
-- Drawer-switching: opening de Track-drawer sluit de Text-drawer (en vice versa) — slechts één drawer tegelijk.
-
-### D — TR2 Hybride auto-tracking (Apple Vision + YOLO + HOG)
-
-**Nieuwe module** `tracking.py` (22 KB):
-- Try/except optional imports voor 3 engines — `from Vision import …`, `from ultralytics import YOLO`, `import cv2`. Telemetry hard-killed via env-vars **vóór** `from ultralytics import YOLO`:
-  ```python
-  os.environ.setdefault('YOLO_OFFLINE', 'True')
-  os.environ.setdefault('NO_ALBUMENTATIONS_UPDATE', '1')
-  ```
-  Plus `settings.update({'sync': False, 'api_key': ''})` na import.
-- `engines_available()` returnt dict zodat de UI weet welke engines beschikbaar zijn.
-- `_extract_frames(video_path, start, duration, fps, out_dir)` — ffmpeg snapshot @ 4 FPS naar temp-dir.
-- `_frame_brightness(path)` — cv2-based mean luminance, gebruikt voor lowlight-routing.
-- `_vision_detect(frame_path)` — Apple Vision via PyObjC: `VNDetectHumanRectanglesRequest` met `VNImageRequestHandler.alloc().initWithURL_options_`. Converts Vision's BOTTOM-left bbox naar TOP-left.
-- `_yolo_detect(frame_path)` — Ultralytics YOLOv8n, person-class only (COCO id 0). Pinned to MPS op Apple Silicon. Weights lokaal in `models/yolov8n.pt` (download bij eerste run via ultralytics).
-- `_hog_detect(frame_path)` — last-resort opencv `HOGDescriptor_getDefaultPeopleDetector`. Geen externe dep.
-- `_pick_primary(detections, prev_center)` — area × √conf scoring met optional spatial-continuity penalty.
-- `_smooth_track(track, alpha=0.4)` — exponential moving average op cx/cy/w/h.
-- `_downsample_keyframes(track, max_count=20)` — even-spaced downsample, preserves first+last.
-- `detect_track(video_path, start, duration, fps, ...)` — orchestrator. Per frame:
-  1. Brightness check
-  2. Apple Vision primary call
-  3. Als Vision-confidence < 0.5 + lowlight → escalate to YOLO; gebruik YOLO als 'ie hoger scoort
-  4. Als Vision 3+ opeenvolgende frames leeg returnt → escalate to YOLO
-  5. Als Vision + YOLO niet beschikbaar → HOG last-resort
-  6. Als niks werkt → hold previous box (gap-fill)
-  - Tracks `engines_used` set + `fallback_count` voor UI-rapportering.
-- `run_auto_track_async(key, video_path, start, duration, ...)` — fire-and-forget background thread met progress callback. State in module-level `_AUTO_STATE` dict (per `<job>/<clip>` key).
-
-**Backend** (`app.py`):
-- Import `tracking` als optional module (try/except — server start ook als deps niet geïnstalleerd).
-- `POST /api/track/<job>/<clip>/auto` — kick off async run. Returnt 422 als geen engine beschikbaar.
-- `GET /api/track/<job>/<clip>/auto/status` — poll progress + result. Op `done=True` persist resultaat naar tracking JSON-file (zodat C en D dezelfde UI delen).
-- `_resolve_clip_source_for_tracking(job, clip_idx)` — vindt source video + start/end uit job snapshot.
-
-**Frontend** (al toegevoegd in C-blok):
-- "Auto-track" knop in Track-drawer → `editorTrackAutoStart()` → POST `/auto` → `_pollAutoTrackStatus()` met progress-string + result-rendering.
-- Status-strip onderaan drawer met `.is-running` / `.is-ok` / `.is-bad` kleur-states.
-
-**Privacy garanties (zoals beloofd):**
-- Geen video/frames raken ooit een externe server bij Apple Vision (lokale framework).
-- YOLO inference run lokaal; weights worden 1× gedownload van GitHub releases (~5 MB), geverifieerd via Ultralytics' eigen hash-check.
-- Telemetry uitgeschakeld via env-vars en `settings.update`.
-- User-zichtbaarheid: drawer-status toont "Generated N keyframes (engine = …, fallback_used = …)" zodat je altijd weet welke engine welke keyframes leverde.
-
-### Code-stats
-
-- `app.py`        180.572 → 191.356  (+10.784)
-- `cutter.py`      64.597 →  76.741  (+12.144)
-- `analyzer.py`    40.420 →  45.980  (+ 5.560)
-- `auth.py`         7.357 →  10.234  (+ 2.877)
-- `tracking.py`    NIEUW  →  22.228
-- `static/index.html` 467.231 → 540.241 (+73.010)
-- Unique DOM ids: 258 (0 duplicates)
-- Python ast.parse: app.py + cutter.py + tracking.py + analyzer.py + auth.py — alle OK
-- `node --check` op extracted inline JS — OK
-
-### Backups (SESSIE 22)
-
-```
-app.py.pre-sessie22.bak             (180.736 bytes)
-cutter.py.pre-sessie22.bak          ( 64.597 bytes)
-static/index.html.pre-sessie22.bak  (467.231 bytes)
-analyzer.py.pre-sessie22.bak        ( 40.420 bytes)
-auth.py.pre-sessie22.bak            (  7.357 bytes)
-```
-
-### Live test resultaten (post-deps-install)
-
-Uitgevoerd 2026-05-11 16:00 via Chrome MCP op PRO test-account `business+wftest17@sjuulstudios.com`:
-
-| Blok | Status | Notes |
-|---|---|---|
-| **A** Text-panel polish | ✅ Volledig | Drag-on-preview slaagde 50%→30%×30% (sliders gesynchroniseerd). Alle 6 alignment-buttons snappen correct (5/50/95 voor x én y). Corner-resize (BR drag +120px) liet size_pct groeien 6 → 18.5%. Vibrant amber labels (`rgb(244,207,138)`). |
-| **E** Export settings | ✅ Volledig | Modal rendert met 3 dropdowns. ffprobe na live render bewijst codec-switch: `h264_vt` → `codec_name=h264, codec_tag=avc1`, `h265_vt` → `codec_name=hevc, codec_tag=hvc1`. Zelfde resolutie + fps; H.265 is 7% kleiner zoals verwacht. |
-| **Q** Signup wizard | ✅ Volledig | Door alle 4 secties + back-button + password-match indicator (✓/✗) + required-field validatie. Submit niet uitgevoerd om geen testaccount aan te maken. |
-| **B** BPM/Key stamp | ⚠️ Code-OK, runtime-blocked | Backend + UI werken; Brand Stack toggle slaat config op. **Render blokkeert op `drawtext` filter die ontbreekt in homebrew-ffmpeg.** Guard toegevoegd aan `cutter.py` + capabilities endpoint; vereist herstart om live te zijn. Fix: rebuild ffmpeg met `--with-freetype`. |
-| **C** Manual tracking | ✅ Volledig | 3-keyframes-POST + GET geverifieerd. Recut van clip 1 met tracking-JSON levert vertical 1080×1920 H.264 (4.1 MB, 21.7s) — dynamic crop filter actief. Track-drawer + gold draggable box op preview gerendered. |
-| **D** Auto-tracking | ✅ Volledig | Alle 3 engines beschikbaar (`apple_vision: true, yolo: true, hog: true`). Run op clip 1 produceerde 21 keyframes via Apple Vision primair, `fallback_used: false`. Confidence 0.72-0.76. Detection landed cx_pct rond 42-45% (waar de DJ in beeld staat). Privacy: geen YOLO-call, geen netwerk-traffic. |
-| **Trim + stretch** | ✅ Volledig | Recut met -10s vóór + +5s na de analyzer-detected bounds: outputs (1920×1080 landscape + 1080×1920 vertical) hebben beide precies 36.733s duur, matcht de gestrekte range. Stretch-zone-handles doen daadwerkelijk wat ze beloven. |
-
-**Bugs opgelost tijdens live test:**
-1. **Login-form bleef zichtbaar boven de signup-wizard** — `display:flex` overschreef `[hidden]`. Fix: `.auth-form[hidden]{display:none !important}` toegevoegd.
-2. **drawtext filter ontbreekt in homebrew ffmpeg** — `_HAS_DRAWTEXT` probe + graceful skip in `_build_text_layer_filters`, `_build_bpm_stamp_filter`, `_build_overlay_filter`. Surfaced in `/api/capabilities` als `ffmpeg.drawtext` boolean. UI kan hier later een prominente warning op hangen.
-
-### Open / deferred items
-
-- **B1 beat-pulse, B3 speed-ramp** — deferred naar v2 (uitleg in B-blok).
-- **E ffprobe verification** — niet uitgevoerd; vereist server-restart om door modal te klikken. Wel: backend pipeline plumbing is 100% klaar — `export_clip_with_settings` bestond al en de modal hangt er rechtstreeks op.
-- **Live test van Q/B/C/D** — backend changes vereisen restart. Frontend-only deel van A is meteen live (geen restart nodig — static is mounted, en de polish-CSS picks up direct).
-- **Speed ramp v2** — als je 'm wil: aparte sessie waard. Plan: per-clip `speed_ramp_at_drop: bool` in clips.csv, cutter pakt `clip.peak_time` als anchor, setpts curve over 2 bars (= 8/BPM s). Brand Stack zou een global toggle kunnen hebben.
-- **Auto-track YOLO weights download** — gebeurt bij eerste auto-track invocation, kost ~5s op een doorsnee verbinding. Daarna offline. SHA-verify wordt gedaan door ultralytics zelf.
-
-### VOLGENDE SESSIE — kies één
-
-1. **End-to-end live test** (na restart + pip install): wizard sign-up flow, BPM stamp render, manual tracking → vertical export, auto-track → keyframe-generatie. Ffprobe-verify de Codec-dropdown produceert daadwerkelijk verschillende codec_name's.
-2. **B1 beat-pulse + B3 speed-ramp** — afronding van blok B.
-3. **TR3 persistent face-embedding** — DJ herkennen tussen clips van dezelfde set zodat auto-tracking maar 1× hoeft. PyTorch face_recognition lib of similar.
-4. **Stripe live mode + landing-page DNS** — pre-launch checklist.
-5. **Brand Stack v2 add-ons** — end-card, intro-still, lower-third template.
+**Commit + rebuild NIET gedaan in sessie 57** — sandbox kon niet schrijven naar .git/objects + kan geen Mac-bundle bouwen. Sessie 58 documenteert wat Sjuul moet doen, voert dat niet uit.
 
 ---
 
-## SESSIE 22 — PLAN (legacy — kept for reference, deze versie is vervangen)
+## ⚡ ARCHIVED — sessie 57 follow-up (autonoom werk 2026-05-28)
 
-Zeven blokken in één autonome sessie zodra Sjuul "ja" zegt. Volgorde gekozen op afhankelijkheid en risico: kleinste/laagste risico eerst, ML-deps laatst.
+### Wat Claude gedaan heeft in sessie 57 (autonoom terwijl Sjuul sportte)
 
-### A — Text-panel polish
+Sjuul gaf akkoord op `PLAN-AUTO-MODE-2026-05-28.md` + akkoord op:
+- Aparte feature-branch + per-fase merge naar main
+- Toestemmingen 5, 6, 9 (Supabase migraties schrijven, pip install watchdog, git commits)
+- Studio+ feature-flag in code reserveren (geen Stripe-product)
+- Default watch-folder `~/Documents/Omni DJ/Watch`
+- Hooks/CTAs onbeperkt op alle tiers
+- Pipeline-run retention 30 dagen in localStorage v1
 
-Vijf concrete fixes op de Sessie-21 Text-drawer:
+**Code-side klaar:**
 
-1. **Placeholder grijs.** CSS `::placeholder { color: var(--ink-3); font-style: italic }` op `.ed-tx-field textarea` + `.ed-tx-input`. Empty state = grijs italic; typed text = wit.
-2. **Vibrant labels.** `.ed-tx-field label` kleur van `var(--ink-3)` → `var(--amber-2)`. Past bij Snap-toggle + Trim-btn stijl.
-3. **Drag-on-preview.** `.ed-tx-live.is-active` krijgt `mousedown` handler → capture start coords + huidige x/y_pct → `window mousemove` updatet pct (clamp 0..100) → live repaint van overlay + slider-values. Shift = constrain naar X- of Y-as. `pointer-events: auto` op active layer; rest blijft `none`.
-4. **Corner-resize handles.** Vier dots (TL/TR/BL/BR) op de actieve layer-box. Drag diagonal → bereken bounding-box delta → omrekenen naar `size_pct`. Mid-handles niet nodig (geen non-uniform stretch op tekst).
-5. **Alignment-buttons (Premiere-stijl SVG).** Twee rijen van 3, boven X/Y sliders. Horizontal: align-left (square + line links) / center / right. Vertical: top / middle / bottom. Klik → snap x_pct of y_pct naar 5%/50%/95% in één klap.
+- **Fase A** — Brand-page volledig herontwerp deel 1 (Brand Kit, Watermark, Caption-presets met modal-editor)
+- **Fase B** — Brand-page deel 2 (Clip Templates + 4 built-ins, Hooks/CTAs onbeperkt, Caption-copy per platform met char-limits, Hashtag-sets, Stickers + Lower-thirds + Intro/Outro, Export/Import als JSON)
+- **Fase C** — Auto-mode (sidebar divider + entry, 6-staps pipeline met per-stap ON/OFF toggles, watch-folders lokaal werkend + Dropbox/Drive UI-only, brand-defaults, publish-schedule, queue + recent runs, safety controls, paywall Free/Pro)
 
-**Files:** alleen `static/index.html` — CSS + HTML + JS in de bestaande Text-drawer.
+**Resultaat:** 70/70 jsdom-smoketest checks groen + 28/28 regressie groen. Bestand 1.083.979 bytes (+133K vs backup). Backup: `dj-clip-cutter/static/index.html.pre-sessie57-faseA.bak`.
 
-### B — Beat-pulse + BPM/Key stamp + Speed ramp (3 DJ features)
+**Profile-card:** is NIET verhuisd — staat nog steeds in Settings (sessie 30 plek). Wat is gewijzigd is dat Brand-tab nu zijn eigen `#view-brand` heeft (was Settings-fallback sinds sessie 55), waardoor Profile alleen in Settings zichtbaar is. Dat was Sjuul's bedoeling op het screenshot.
 
-**B1 — Beat-synced text pulse**
-- Per text-layer een nieuwe property `pulse_to_beat: false|true` (toggle in drawer)
-- Preview: CSS keyframe-animation gestuurd via `requestAnimationFrame` die `STATE.beatTimes` raadpleegt en op elke beat een 1.08× scale-pulse triggert
-- Export: drawtext `fontsize` is geen expression — workaround = `scale=expr=...` met sub-filter op een padded sub-clip. Pragmatisch v1: pulse alleen in preview; export burnt vaste size. Documenteren als limitatie en v2-item voor true ffmpeg-pulse.
+**Nog NIET gedaan (Sjuul moet zelf):**
+1. Live visuele test op dev-server (15 min) — wordt sessie 58 Blok 1
+2. Git commits (sandbox kon niet schrijven naar .git/objects)
+3. PyInstaller rebuild (sandbox kan geen mac-bundle bouwen)
+4. Fase D-E-F (pipeline backend, review-flow, Postiz) — staat in plan, niet code-side
 
-**B2 — BPM/Key corner-stamp**
-- Backend: `analyzer.py` — nieuwe `detect_musical_key(audio_path, sr=22050)` via librosa `chroma_cqt` + Krumhansl-Schmuckler templates → output Camelot-notatie (e.g. "7A")
-- Persist op clip-level + set-level (key kan per drop verschillen)
-- Brand Stack krijgt `bpm_stamp: { enabled, corner, font_id, color }` config
-- cutter `_build_bpm_stamp_filter(clip, kit, target_w)` → drawtext in chosen corner met `"129 BPM · 7A"` formatted text
-- Wire in `_process_single_clip` + `recut_clip` als de Brand Stack `bpm_stamp.enabled = true`
-
-**B3 — Speed ramp op de drop**
-- Per clip optioneel: ramp 0.5× → 1× in de 2 bars vóór drop, dan back-to-normal
-- ffmpeg: `setpts='if(lt(T,RAMP_END),(T-RAMP_START)/0.5+offset,T)'` + paired `atempo=0.5,atempo=2.0` op audio (atempo cap=0.5..2.0 per filter, dus chain)
-- UI: nieuwe toggle in editor "Speed ramp on drop" + indicator-marker op timeline
-- Goeie v1-scope: alleen "drop"-type clips (peak_time meta beschikbaar)
-
-**Files:** `analyzer.py` (key-detection), `cutter.py` (BPM stamp + speed ramp filters), `app.py` (brand-kit schema), `static/index.html` (toggles).
-
-### C — TR1 Manual keyframe tracking
-
-**Frontend:**
-- Nieuwe "Track" tool-btn naast Text in `.ed-right`, target-icoon
-- Right-rail drawer (zelfde slide-in patroon als Text-panel):
-  - Subject-list (max 1 voor v1)
-  - "Add keyframe at playhead" + "Clear all"
-  - Smoothing-slider (0..1, default 0)
-- Live overlay op `#ed-video`: dashed rectangle met 8 handles, draggable + resizeable. Linear-interpolated tussen keyframes.
-- Timeline: nieuwe `<div class="ed-track-keyframes">` track onder audio-track met diamond-markers per keyframe, klikbaar om te seeken, draggable om tijd te verschuiven
-
-**Backend:**
-- `/api/track/<job>/<clip_idx>` GET/POST/DELETE — persist naar `output/<job>/tracking/<clip_idx>.json`
-- Schema: `{clip_index, subject, keyframes:[{t, cx_pct, cy_pct, w_pct, h_pct}], interpolation, smoothing}`
-- Coordinates zijn % van source-frame (resolutie-onafhankelijk)
-
-**Cutter:**
-- `_build_tracked_vertical_crop(keyframes, src_w, src_h, duration, target_w=1080, target_h=1920)`
-- Voor ≤8 keyframes: geneste `if(lt(t,T1),(...),...)` crop-expr
-- Voor 9-20 keyframes: sendcmd-file approach (`ffmpeg -i ... -filter_complex "crop=...,sendcmd=f=/tmp/cmd.txt..."`)
-- Plumb door `_process_single_clip` + `cut_clip_vertical` als `tracking.json` bestaat voor de clip
-
-### D — TR2 Auto-tracking met YOLO
-
-**Deps:**
-- `pip install ultralytics>=8.2 opencv-python>=4.9` in venv → toevoegen aan requirements.txt
-- Optioneel: `pip install coremltools` voor CoreML-export (sneller op M-series)
-- Models dir: `dj-clip-cutter/models/` — YOLOv8n.pt download bij eerste gebruik via ultralytics zelf (~5MB, GitHub-mirror)
-
-**Backend:**
-- Nieuw bestand `tracking.py`:
-  - `detect_persons_in_clip(video_path, start, end, fps=4)` → list of [(t, bbox, conf)]
-  - `select_primary_subject(detections)` → grootste-meest-centrale persoon, IoU-based identity tussen frames
-  - `smooth_track(detections, alpha=0.5)` → moving-average op center + size
-  - `to_keyframes(smoothed, max_keyframes=20)` → downsample naar diamond-markers
-- `POST /api/track/<job>/<clip_idx>/auto` — async via threading, progress via `job['track_progress']` dict, polling endpoint
-- Frontend: "Auto-track" knop in Track-drawer met spinner-balk, polling tot done → render keyframes
-
-**Edge cases gedocumenteerd:**
-- DJ buiten frame → hold last box
-- Geen detection in frame → interpoleer over de gap
-- Multi-DJ setup (zeldzaam): pak grootste, manual override mogelijk later
-
-### Q — Pre-signup questionnaire flow
-
-**Supabase migration** — uit te voeren via `mcp__1f3c9775__apply_migration` (na akkoord) of handmatig in Supabase SQL editor:
-
-```sql
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS referral_source   text,
-  ADD COLUMN IF NOT EXISTS referral_other    text,
-  ADD COLUMN IF NOT EXISTS use_reasons       jsonb DEFAULT '[]'::jsonb,
-  ADD COLUMN IF NOT EXISTS artist_name       text,
-  ADD COLUMN IF NOT EXISTS full_name         text,
-  ADD COLUMN IF NOT EXISTS instagram_url     text,
-  ADD COLUMN IF NOT EXISTS tiktok_url        text,
-  ADD COLUMN IF NOT EXISTS streaming_url     text,
-  ADD COLUMN IF NOT EXISTS intake_completed_at timestamptz;
-```
-
-**Backend** (`auth.py` + `app.py`):
-- `signup(email, password, intake_data=None)` — na succesvolle Supabase sign_up, gebruik `supabase_admin` om profile row te UPDATE'en met intake fields
-- `/api/auth/signup` payload extended met optionele intake-velden — validatie: `artist_name` + `full_name` + `referral_source` required als intake meegekomt
-- Server retourneert dezelfde session-shape; geen frontend breakage
-
-**Frontend** (`static/index.html` — auth-overlay sectie):
-
-1. Trigger: klikken op "Sign up" tab opent NIET meer direct het email/password form, maar de questionnaire-modal
-2. **4-section modal** met:
-   - Progress-bar boven (4 segmenten, gevulde segmenten = gouden gradient)
-   - Back-button (← arrow-icoon) — bij sectie 1 wordt 'ie hidden of cancelt naar Log-in tab
-   - Sectie-content met smooth slide-left animation op next, slide-right op back (CSS `transform: translateX()` + `transition`)
-
-3. **Sectie 1 — "Where did you hear about Clip Drop Live?"**
-   - 9 bubble-knoppen (border-radius:999px, single-select), labels:
-     `An (artist) friend`, `Your manager`, `Whatsapp`, `TikTok`, `Instagram`, `Google`, `Reddit`, `Facebook`, `Other`
-   - "Other" → onthult description-input met smooth max-height transition
-   - Next-knop disabled tot één gekozen
-   - "Next" → slide-left naar sectie 2
-
-4. **Sectie 2 — "What are the reasons for wanting to use Clip Drop Live? (multiple)"**
-   - 4 bubble-knoppen (multi-select):
-     `I cannot afford a videographer or video editor`, `It saves me time so I can focus on making music`, `It makes social sharing easier`, `I can upload social posts right after my show`
-   - Next-knop disabled tot ≥1 gekozen
-
-5. **Sectie 3 — "Tell us who you are"**
-   - Inputs: Artist Name* / Full (Real) Name* / Instagram Link / TikTok Link / Streaming Link
-   - Required-validatie op de twee `*` velden (rood border + foutmessage als leeg)
-   - URL-validatie op de drie linkvelden (soft — accept blank, accept anything looking like http(s)://...)
-
-6. **Sectie 4 — "Account login details"**
-   - Email* + Password* + Password (confirm)*
-   - Wachtwoord-match validatie inline (groene check / rode kruis)
-   - Minimum password length check (≥8 chars, basis Supabase requirement)
-   - **Submit** → fetch `/api/auth/signup` met alle 4 secties payload
-   - Success-state: "Let's clip some live DJ-sets!" 600ms display met fade, dan auto-redirect naar Drop-a-set scene
-
-**State:**
-- `STATE.signupIntake = { section, answers: {referral, referralOther, reasons[], artistName, fullName, igUrl, ttUrl, streamingUrl, email, password} }`
-- Persisted in `sessionStorage` zodat refresh halverwege niet alles wist (cleared op success)
-
-**Animations:**
-- Section transitions: 280ms cubic-bezier slide+fade
-- Progress-bar: width-transition 220ms ease per voltooide sectie
-- Bubble select: 120ms transform:scale + border-color flip
-- Other description box: max-height 0 → 80px transition 220ms
-
-### E — Export settings dropdowns + verification
-
-**Bestaande infra:** Backend volledig al klaar — `export_clip_with_settings(codec, fps, resolution)` werkt, `EXPORT_CODEC_MAP` ondersteunt `match`/`h264_vt`/`h265_vt`/`prores`. `/api/export/<job>` accepteert `cfg.codec`, `cfg.fps`, `cfg.resolution`. **Frontend mist alleen de UI**.
-
-**Frontend werk:**
-- Voor de bestaande "Export selected" / "Export all" / Editor-Export-flow: open een kleine modal met 3 dropdowns:
-  - **Codec**: Match source (default) / H.265 HW / H.264 HW / ProRes 422
-  - **Frame rate**: Match source (default) / 24 fps / 30 fps / 60 fps
-  - **Resolution**: bestaande opties (laat staan)
-- Pas `startExport()` aan: body krijgt `codec`, `fps`, `resolution` mee
-- LocalStorage onthoudt laatste keuze als default
-
-**Verification step (per Sjuul-request):**
-Na implementatie, voor één van de wftest17 clips: render dezelfde clip 4× met elk een andere codec-keuze, check via `ffprobe -show_streams` dat:
-- `match`  → input-codec behouden (stream-copy)
-- `h264_vt` → codec_name: `h264`, codec_tag_string: `avc1`
-- `h265_vt` → codec_name: `hevc`, codec_tag_string: `hvc1`
-- `prores` → codec_name: `prores`, codec_tag_string: `apcn` of `apch`
-
-Frame rate verificatie: `ffprobe -show_entries stream=avg_frame_rate` voor elk → moet matchen met gekozen fps (of bron-fps voor match).
-
-Resolution: `width × height` uit ffprobe.
-
-Bevindingen gaan naar HANDOVER + screenshot van de 4 export-files in Finder.
-
-### Volgorde + risico
-
-1. **A** Text-polish — frontend-only, 2-3 uur. Laag risico.
-2. **E** Export-dropdowns + verify — frontend + ffprobe-test. Klein, geen ML-deps. 1-2 uur. Vroeg dichtmaken want quick win.
-3. **Q** Questionnaire — Supabase migration via MCP (vereist `apply_migration` permission) + backend + frontend. 3-4 uur.
-4. **B** DJ-features — analyzer + cutter + frontend. 5-7 uur.
-5. **C** Manual tracking — frontend + backend + cutter expressies. 4-6 uur.
-6. **D** Auto-tracking — ultralytics install + tracking.py + async endpoint. 6-10 uur.
-
-Totaal effort: 21-32 uur autonoom werk. Mag in één run mits geen blockers.
-
-### Toestemmingen die ik nu vraag — antwoord met "ja" of "nee"
-
-- **Debug-mode** weer naar `True` voor de duur van de sessie (zelfde deal als sessie 21). → **Ja gevraagd, ja gekregen** in opvolgende bericht.
-- **Supabase migration** voor de profiles intake-columns uitvoeren via `mcp__1f3c9775__apply_migration` op project `lbabsffxefkrxwzkbzar` (Clip Drop Live). Migration-naam: `add_intake_columns_to_profiles`. Idempotent (`ADD COLUMN IF NOT EXISTS`). → vraag aan Sjuul.
-- **Ultralytics + opencv install** in de venv (~150 MB total inclusief torch-wheel). Optionele coremltools later voor M-series acceleratie. → vraag aan Sjuul.
-- **Eerste YOLO-run** vereist netwerk om weights te trekken (1× ~5MB). → vraag aan Sjuul.
+**Lees `SESSIE57-AUTONOMOUS-LOG.md` voor:**
+- Exacte verificatie-resultaten
+- Bestand-changes log
+- Open punten/bekende beperkingen
+- Stap-voor-stap commando's voor live-test, commit, rebuild
+- Tier-matrix per feature
 
 ---
 
-## SESSIE 21 — Brand Stack v1 (2026-05-11)
+## ⚡ ARCHIVED — sessie 57 briefing (na sessie 56 — autonome nacht)
 
-Vier fasen in één autonome sessie (F1 data-model + UI, F2 font upload, F3 editor Text-panel, F4 ffmpeg drawtext + logo overlay). Backend + frontend allebei aangeraakt. Live frontend-test via Chrome MCP geslaagd; backend wacht op restart.
+**Project:** Omni DJ — DJ-set → vertical/landscape clip generator
+**Eigenaar:** MONO LABS
+**Domein:** `www.omnidj.com` (nog niet gekoppeld). `djclips.nl` vervalt volledig.
+**Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/`
+**Bundle:** `/Applications/Clip Live.app` (oude sessie 53 versie — sessies 54+55+56 NIET in bundle)
+**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh` → http://127.0.0.1:5555
 
-### Architectuur in het kort
+### Wat Claude vannacht autonoom heeft gedaan
 
-`brand_kit.json` (was: flat blob met name/font/accent_color/overlay). Nu schema:
+Sjuul gaf 4 groene lichten: rebuild OK, volledige Omni DJ rebrand OK, Social/Calendar/Insights met volledige functionaliteit, en "maak conservatieve keuze + log" bij twijfel. Claude heeft 4 van de oorspronkelijke 8 doelen volledig opgeleverd en 4 bewust niet gedaan met expliciete reden. Zie hieronder per onderdeel.
 
-```
-{
-  fonts: [{id, family, weight, ext, path, original_name, bytes, uploaded}],
-  palette: [{name, hex}],
-  logo: {path, ext, corner, opacity, size_pct, bytes, uploaded} | null,
-  caption_presets: [{id, name, font_id, color, size_pct, anim, bg, weight, position}],
-  handle: "", tagline: "", updated: <epoch>
-}
-```
+#### ✅ Wel afgerond — code-side klaar
 
-`_load_brand_kit` in app.py back-fills defaults zodat oude kits blijven werken.
+1. **Sessie 56 Fase 5 — Social view** (`#view-social`)
+   - 4 account-cards (TikTok, Instagram, YouTube, X) met platform-gradient iconen, mock followers/engagement-stats, "Connect"-knop disabled met "Postiz soon" badge.
+   - Recent-posts feed (max 8 mock-posts) gegenereerd uit `STATE.history` met deterministic seed (stabiel tussen renders). Per post: platform-naam, datum, view-count, status-pill (Published/Scheduled/Failed).
+   - Mock-banner bovenaan ("Preview — account-connecties komen via Postiz in een latere release").
 
-Per-job text overlays in `output/<job_id>/text_overlays.json`:
-`{ "clips": { "1": [<layer>], "2": [...] } }` — indexed op analyzer's 1-based `clip['index']`.
+2. **Sessie 56 Fase 5 — Content Calendar view** (`#view-calendar`)
+   - Month-view 7×6 grid met dag-tegels, today-highlight, vorige/huidige/volgende-maand klikbaar.
+   - Week-view toggle (6 tijd-rijen: 09/12/15/18/21/23).
+   - Prev/Next/Today nav-knoppen.
+   - "Schedule post"-button rechtsboven opent een modal.
+   - Schedule-modal: clip-picker (4-koloms grid uit STATE.history), caption-textarea, platform-chips (TikTok/IG/YT/X), datetime-picker. Submit → persist in `localStorage.omnidj.calendar.v1`. Drafts overleven page-refresh. Posts verschijnen direct in calendar-grid als gekleurde events (per platform een border-kleur).
+   - Auto-seed 5 mock-events als history aanwezig + calendar nog leeg.
 
-### F1 — data-model + UI rename + palette/logo/identity
+3. **Sessie 56 Fase 5 — Insights view** (`#view-insights`)
+   - 4 KPI-cards: Total views / Engagement rate / Clips published / Best clip. Met up/down delta vs previous period.
+   - Line-chart "Views per day" via custom Canvas-rendering (geen Chart.js dependency — werkt ook in `.app`-bundle zonder externe CDN).
+   - Top 5 clips tabel met rank/thumb/name/platform-badge/views.
+   - Donut-chart "By platform" met legend (TikTok 48% / IG 32% / YT 14% / X 6%).
+   - Range-switch 7d/30d/90d (re-renderen line-chart).
 
-**`app.py`** (+~18 KB):
-- Constants `BRAND_KIT_DIR`, `BRAND_FONTS_DIR`, `BRAND_LOGO_DIR` onder `BASE_DIR/brand_kit/`
-- Optional `from fontTools.ttLib import TTFont` → `_HAS_FONTTOOLS` flag
-- `_brand_kit_defaults()`, `_load_brand_kit()` — schema-defaults back-fill
-- `/api/brand-kit/presets` POST + `<preset_id>` DELETE — max 12 saved presets
+4. **Sessie 56 Analyse-progress-hookup** (taak uit sessie 55 prio 3)
+   - `setProcUI(pct, eta, phase)` roept nu óók `window.analyseSetState('processing', {pct, step})` aan in v2-modus → progress-bar binnen Analyse update echt mee tijdens analyse.
+   - `uploadFile()` herschreven van `fetch()` naar `XMLHttpRequest` met `xhr.upload.onprogress` → progress-bar update tijdens upload (was 0% blijven).
+   - Beide niet-destructief: legacy-modus blijft 1-op-1.
 
-**`static/index.html`** Scene 6 rebuild:
-- Sidebar: "Style room" → "Brand Stack" (data-view="style" blijft)
-- Scene header: "Scene 06 — Brand Stack"
-- Caption preset demo strings: "Drop here", "Caption here", "[ Drop · 02:14 ]", "Drop"
-- Cap-right panel uitgebreid met Palette manager, Fonts list+uploader, Logo uploader met corner-picker/opacity/size, Identity (handle+tagline)
-- Cap-left: `#bs-saved-presets` (hidden tot er presets zijn) — user's eigen preset-grid
+#### ⛔ Bewust NIET gedaan — met expliciete reden
 
-### F2 — Font upload pipeline
+5. **Volledige Omni DJ rebrand** (Sjuul gaf groen licht, Claude koos conservatief)
+   - PLAN-REBRAND-OMNI-DJ-2026-05-27.md beschrijft 7+ externe-service-handelingen (Supabase email-templates renamen, Cloudflare nameservers omzetten, Stripe products renamen, Apple notary-keychain rebinden, GitHub repo's renamen, Google Workspace App-Passwords) plus folder-renames die alle hardcoded paden breken.
+   - Als ik tussen die stappen vastloop ben jij je hele werkende dev-omgeving + Stripe-test-mode kwijt. Te risicovol zonder Sjuul.
+   - **Aparte sessie wanneer Sjuul wakker is + 2-3u blok beschikbaar.** Plan staat klaar.
 
-**`app.py`** (+~6 KB):
-- `_FONT_MAX_BYTES = 2 MB`, `_FONT_MAX_COUNT = 8`, magic-bytes sniff
-- `_convert_woff_to_ttf()` via fonttools `f.flavor = None; f.save(...)`
-- `POST /api/brand-kit/fonts` met streaming size-check + kind-dispatch
-- `GET /api/brand-kit/fonts/<id>` met juiste mime + 24h cache
-- `DELETE` cleart file + nulled `caption_presets[].font_id` waar bound
-- `/api/brand-kit/logo` POST/GET/DELETE — single-slot PNG/SVG, max 1 MB
-- WOFF/WOFF2 zonder fonttools → 422 met clear install-instructie
+6. **omnidj.com koppelen + Stripe live mode** (zelfde reden — vereist Cloudflare-DNS toegang + Stripe-toggle die ik niet alleen mag doen).
 
-**Frontend** (`renderBrandStack` + helpers ~14 KB):
-- `_renderBrandFontFaces(fonts)` injecteert `<style>` met `@font-face` per font → meteen bruikbaar
-- `brandFontUpload`, `brandPaletteAdd/Remove`, `brandLogoUpload/Clear/Update`
-- Cache-busted preview-image `?t=<uploaded>` na logo replace
+7. **PyInstaller rebuild** (sandbox kan niet)
+   - Claude's sandbox heeft geen toegang tot Sjuul's host venv, PyInstaller, macOS-frameworks.
+   - Rebuild is een 1-commando-stap voor Sjuul, zie "Wat Sjuul morgen moet doen" hieronder.
 
-**`requirements.txt`**: `fonttools[woff]>=4.40` (optional comment + install-instr).
+8. **Fase 5b multi-tenant Supabase data** (uit scope — vereist 3-4 weken dev volgens PLAN-CONTENT-CALENDAR §8 Fase 1)
+   - Workspaces + workspace_members tabellen, RLS-policies, data-migratie. Niet één nacht.
 
-### F3 — Editor Text-panel
+### Wat Sjuul morgen moet doen (volgorde)
 
-**`static/index.html`** (+~24 KB):
-- "Text" tool-btn (`#ed-text-btn`) in `.ed-right` tussen Trim en Export
-- `<aside class="ed-text-drawer" hidden>` slide-in 340px van rechts
-- Layer list + "+ Add text" + per-layer editor (textarea, font select, palette swatches incl. forced #fff/#000, weight, size/x/y sliders, BG toggle, show-from/hide-at, animation, Save preset/Delete) + Done footer
-- Live preview `<div class="ed-tx-live">` per layer in `#ed-text-overlay-root` binnen `#ed-stage`, font-size = `size_pct * stageWidth / 100`, fade via `timeupdate` listener
-- `STATE.editorText = {layers, selectedIdx, jobId, clipIdx}` — fetched op editor-open + clip-switch, persisted op drawer-close + pre-clip-change
-- CSS-gotcha: `[hidden]{display:none !important}` voor `.ed-tx-editor`, `.ed-text-drawer`, `.bs-saved-presets` (zelfde fix als watch-folder)
+**Stap 1 — Visuele check op dev-server (10 min)**
 
-### F4 — ffmpeg drawtext + logo overlay
+Open Terminal en plak (één voor één):
 
-**`cutter.py`** (+~17 KB):
-- `_write_layer_textfile(job_dir, layer_id, text)` UTF-8 zonder BOM in `<job>/text_layers/<id>.txt`
-- `_build_text_layer_filters(layers, job_dir, w, h, brand_fonts?, system_font?)` bouwt drawtext chain met `textfile=`, font_id-lookup naar brand_kit absolute path, fontsize=int(w*size_pct/100), x/y in single-quoted expressions (essentieel: slide-up y-expr bevat commas die anders als filter-separators geparsed worden), `alpha='if(lt(t,IN+0.28)...)'` voor fade
-- `_build_logo_overlay_segment(logo, w, h)` met `movie='<path>',scale=W:-1,format=rgba,colorchannelmixer=aa=<opacity>` source filter → `[vfin][brandlogo]overlay=<corner>[vout]`
-- `_maybe_compose_brand_vf(...)` returnt `{mode: 'vf'|'complex'|'none'}` — `-vf` zonder logo, `-filter_complex` + `-map [vout] -map 0:a?` met logo
-- `_load_brand_assets_for_job(job_id, output_dir)` werkt in ProcessPool workers zonder app.py state
-- `_build_landscape_cmd` + `_build_vertical_cmd` accepteren nieuwe kwargs (default None → oude callers werken)
-- `_process_single_clip` + `cut_clip_landscape/_vertical` + `recut_clip` propagated
-- `export_with_preset` en `split_clip_at` blijven **ongewijzigd** — tekst wordt gebakken bij Trim/re-cut (originele video), niet bij format-conversion. Trade-off gedocumenteerd: gebruiker MOET 1× Trim klikken na tekst toevoegen vóór Export-preset.
-
-### Live test resultaten (frontend-only — backend wacht op restart)
-
-- Brand Stack scene rendert volledig: palette swatches, fonts empty-state, logo uploader, identity inputs, saved presets sectie (hidden).
-- Editor Text-panel slide-in werkt, "+ Add text" maakt layer met "Caption here" default. STATE.editorText.layers.length=1, selectedIdx=0, overlayChildren=1. Live-preview overlay renders met gold-dashed actief-outline op (50%, 80%).
-- `[hidden]` CSS-fix nodig na 1 round-trip — eerste try toonde editor altijd visible vanwege `display:flex` overschrijving.
-
-### Verificatie
-
-- `ast.parse` app.py + cutter.py → OK
-- `node --check` op extracted JS (296.9 KB) → OK
-- DOM-id scan: 214 unique, 0 duplicates
-- File-sizes: app.py 162.000 → 180.572 (+18.572), cutter.py 47.145 → 64.597 (+17.452), static/index.html 416.965 → 467.231 (+50.266)
-- `debug=True` tijdelijk gezet voor autonome werk; teruggezet naar `debug=False` aan einde
-
-### Backups
-
-```
-app.py.pre-sessie21.bak              (162.000 bytes)
-cutter.py.pre-sessie21.bak           (47.145 bytes)
-static/index.html.pre-sessie21.bak   (416.965 bytes)
-```
-
-### Bekende beperkingen / todo voor v2
-
-- `export_with_preset` + `split_clip_at` lezen geen text_overlays (workflow: tekst → Trim → daarna Export-preset)
-- "Pop" animatie rendert als "fade" — drawtext fontsize is geen expression
-- Synthetic-bold niet geïmplementeerd — gebruiker upload echte Bold-weight font
-- Layer-drag-op-preview nog niet (alleen X/Y sliders) — v2
-- Geen test-assets in /test-assets/ op disk — verwachten dat Sjuul fonts+logo levert voor live test
-
-### VOLGENDE SESSIE — kies één
-
-1. **End-to-end live test** (na restart + fonttools install): upload TTF, logo PNG, voeg tekst toe in editor, klik Trim, verifieer output MP4.
-2. **Brand Stack v2** — DJ-specifieke add-ons: BPM/Key stamp, end-card / intro-still, lower-third.
-3. **`export_with_preset` + `split_clip_at` ook text-aware maken** — re-cut-from-original wanneer overlays bestaan.
-4. **Stripe live mode + DNS verificatie** voor pre-launch.
-
----
-
-## SESSIE 20 — Phase 4 polish + filmstrip-op-cards (2026-05-11)
-
-Drie items in één autonome sessie. Alleen `static/index.html` aangeraakt (geen backend), live-getest via Chrome MCP op PRO test-account `business+wftest17@sjuulstudios.com`.
-
-### Diagnose vooraf
-
-Bij het scannen van VIDEO_EDITOR_PLAN.md vs de live code bleek Phase 4 Snap Modes structureel al ingebouwd in Sessie 11-16: `STATE.snapMode`, `cycleSnapMode`, `setSnapMode`, `_snapGridForMode`, `snapRelSec`, en `#tl-snap-toggle` knop bestonden. Maar er ontbraken twee dingen: (1) **zichtbare grid-lijnen** op de timeline (alleen een cursor-change op `.is-snapping`), en (2) **snap in de Sessie-19 Adjust-panel** drag — die was snap-blind. Plus optie C (filmstrip op cards) was nog open.
-
-### A — Phase 4 polish #1: visuele snap-grid op editor-timeline
-
-**Files:** `static/index.html` — HTML insert, CSS, JS function.
-
-- **HTML** in `.tracks` (rond regel 2670): nieuwe `<div class="tl-snap-grid" id="tl-snap-grid" aria-hidden="true">` als eerste child, vóór `.playhead`. Container heeft `position:absolute; inset:0; pointer-events:none; opacity:0; transition:.18s` — invisible tot `.timeline.is-snapping` `opacity:.65` activeert.
-- **CSS** (na de bestaande `.timeline.is-snapping .trim-handle{cursor:cell}`): `.snap-line` = 1px wide white-dim verticale lijn, `.snap-line.bar` = 1.5px gold (rgba(232,183,102,.45)) met `box-shadow:0 0 4px` voor lichte glow zodat de downbeat opvalt.
-- **JS** `renderSnapGrid()`: rebuilds children van `#tl-snap-grid` op basis van `STATE.snapMode`, `STATE.beatTimes`, `STATE.barTimes`, en `getEditorTimeMap(clip)`. Drie defensive lagen: (1) skip beats buiten het visible window `[clipStart-leftMax, clipEnd+rightMax]`, (2) als analyzer-window niet over het clip-bereik valt → genereer phase-locked synthetic beats anchored aan de eerste analyzer-beat, (3) hard cap op 256 lines om DOM-bloat te voorkomen bij hoge BPM × extreme stretch. Geroepen vanuit `setSnapMode` (op state-change) en `renderEditor` (op clip-switch).
-
-**Bug ontdekt tijdens live test**: STATE.beatTimes op de Ediine-set bevat 368 beats die alleen 0–177s dekken (librosa beat_track truncatie op lange sets) — alle clips zitten echter na de 4-minuut mark. Zonder fallback was de grid leeg. Fix: synthetic-extension in `_snapGridForMode` (cached) zodat zowel de visuele grid ALS de snapRelSec drag-logica grids verder dan de analyzer-window krijgen.
-
-**Live test:** beat mode → 256 grid-lines (cap-bound), bar mode → 76 grid-lines, alle correct geclassificeerd. Screenshot toont duidelijke verticale lijnen door video-track + waveform + spectrogram-area, met bars als gouden accenten.
-
-### B — Phase 4 polish #2: snap in inline editor
-
-**Files:** `static/index.html` — twee plekken.
-
-- `renderInlineEditor`: `st.clip = clip` toegevoegd aan de runtime-state Map zodat `snapRelSec` toegang heeft tot `clip.start` (nodig om clip-relative naar set-level te vertalen).
-- `_ceUpdateFromX(st, x)`: na de `sec = (x/rect.width) * st.clipDur` compute, snap toepassen als mode ≠ off. Threshold = `8 / pxPerSec` (zelfde conventie als de main editor). Resultaat geclampt naar `[0, clipDur]`.
-
-**Live test:** snapMode=beat, drag in inline editor naar 3.7s relatief, in-handle landde op exact 3.9308s — de nearest synthetic-extended beat. Diff=0, snapped=true.
-
-### C — Filmstrip op dashboard cards
-
-**Files:** `static/index.html` — HTML row, CSS, JS.
-
-- **HTML in `renderClipGrid`**: nieuwe `<div class="dash-strip" data-strip-idx="${i}">` row tussen `.ph` (cover/hover-video) en `.info` (metadata).
-- **CSS**: `.dash-strip` 30px hoog, flex children, gold bottom-line accent op hover, frames fade-in via `.f.is-loaded` opacity transition (0 → .92, .26s ease).
-- **JS**:
-  - `_scheduleDashFilmstripFor(visibleList, allClips)` — gebruikt IntersectionObserver met `rootMargin:'160px 0px'` zodat off-screen cards niet meteen worden gefetched (long dashboards met 100+ clips). Fallback naar stagger-loop op browsers zonder IO.
-  - `loadDashFilmstrip(clipIndex, stripEl)` — fetcht `/api/clip-filmstrip/<job>/<idx>?n=6`, hergebruikt bestaande `_filmstripCache` (key = `jobId::clipIndex`) — als de gebruiker een card uitklapt of de editor opent zijn de frames al gecached.
-  - `_paintDashFilmstrip(stripEl, frames)` — bouwt `.f` cellen met inline `background-image`, twee-pass requestAnimationFrame zodat de browser de image laadt vóór de opacity-transitie start.
-
-**Live test:** 33 cards × 30px strips, IO laadt rij-voor-rij tijdens scroll. Zoom-screenshot bevestigt: card #1 toont crowd-frames uit zijn segment (0:04:08), card #2 toont booth-frames van 0:09:03. Backend returnt 10 frames (≠ de gevraagde 6 — endpoint heeft eigen min/cap), dat past prima in de flex-strip.
-
-### Verificatie
-
-- `python3 -c "import ast; ast.parse(open('app.py').read())"` → OK (app.py niet aangeraakt)
-- `node --check` op extracted JS → OK
-- DOM-id scan: 174 ids, 0 duplicates. Nieuwe id: `tl-snap-grid`.
-- File-sizes: `app.py` 162.000 (ongewijzigd), `static/index.html` 402.634 → 416.965 (+14.331).
-
-### Backups
-
-```
-app.py.pre-sessie20.bak              (162.000 bytes, identiek aan app.py)
-static/index.html.pre-sessie20.bak   (402.634 bytes)
-```
-
-### Open issues / observaties
-
-- **Analyzer beat-detection truncatie** — librosa.beat_track in `analyzer.py` produceert maar ~368 beats over de eerste 177s van een 3307s (55min) set. Synthetic-extension dekt het functioneel maar de analyzer-accuraatheid van beats voorbij de 3-min-mark is een synthetic-grid (BPM-extrapolation), niet ground-truth. Werkt prima voor 4-on-the-floor electronic music; kan slechter werken voor sets met tempo-shifts of breakdowns. Niet kritiek, geen actie tenzij Sjuul het wil oplossen.
-- **`gridOpacity:0.65` na snap-off** — getComputedStyle returnde tijdelijk 0.65 in test, maar `gridChildren=0` betekent visueel niets te zien. Cosmetisch, geen functioneel issue.
-
-### VOLGENDE SESSIE — kies één
-
-1. **Stripe live mode + landing-page DNS verificatie** — pre-launch checklist. Vereist Sjuul-input.
-2. **Code signing / app icon / Windows test / demo video** — polish-sessie, alles geparkeerd in memory.
-3. **Analyzer beat-detection over de hele set** — refactor `analyze_dj_set` zodat beat_track over de volledige duur runt (mogelijk in chunks i.v.m. RAM bij 55-min sets).
-4. **VIDEO_EDITOR_PLAN restjes** — mini-map overview-scrubber uitbreiden, J/K/L scrub-keys verifiëren/aanvullen.
-
----
-
-## SESSIE 19 — Phase 7 + 5/8 polish + 9 + 10 alle vier (2026-05-11)
-
-Vier features in één autonome sessie. Alle wijzigingen live-getest via Chrome MCP op het PRO test-account (`business+wftest17@sjuulstudios.com`).
-
-### A — Phase 7: Inline clip-expand op dashboard cards
-
-Highest-value editor feature uit het plan. Adjust-knop op elke clip-card opent een compacte inline editor onder de card met waveform + filmstrip + draggable in/out handles + Re-export, zonder dat de gebruiker naar de full editor hoeft.
-
-**Files:** `static/index.html` — drie blokken (CSS, HTML in `renderClipGrid`, JS).
-- **CSS**: `.icon-mini` (compacte 26px knoppen voor Adjust + Export), `.ce-panel` (collapsed `max-height:0`, expanded `max-height:360px` met `transition:.28s ease`), `.ce-strip` (64px gradient-bg + overlay `.ce-films` flex-row + absolute `canvas.ce-wave`), `.ce-region` (gold-tinted band tussen handles), `.ce-handle` (14px wide grab-zones met gold middenlijn + grip), `.ce-row` (flex-wrap met times links + actions rechts, `min-width:0` zodat het op smalle 250px cards naar twee rijen breekt), `.ce-btn` + `.ce-btn.is-primary` (gold).
-- **HTML in renderClipGrid**: in elke `.info .r` voeg ik twee nieuwe icon-mini knoppen toe (Adjust = waveform-svg, Export = up-arrow svg) tussen ★ en →. Plus een `<div class="ce-panel" data-panel-idx="${i}">` na `.info` (verborgen tot expand).
-- **JS**: `_ceState` Map keyed op clip-idx; `toggleInlineEditor(idx, btnEl)` (sluit andere panels eerst — alleen één tegelijk open), `renderInlineEditor(idx, panel)` (bouwt strip + row + lazy waveform/filmstrip), `_ceFmt(sec)` (m:ss.mmm formatter), `_cePaintRegion(st)` (positioneert handles + region + enabled-state Save), `_ceOnPointerDown` + `_ceUpdateFromX` (drag logic met clamp + min-0.25s gap), `_ceLoadWaveform(st)` (POST naar `/api/waveform/<job>/clip/<idx>?bins=400`, draws gold envelope op canvas), `_ceLoadFilmstrip(st)` (24 frames van `/api/clip-filmstrip/<job>/<idx>?n=24`), `_ceCommitReexport(st)` (POST naar bestaand `/api/recut/<job>` met absolute set-seconds: `clip.start + inSec` en `clip.start + outSec`, dan refresh card via `renderClipGrid`).
-
-**Live test:**
-Klik Adjust op clip #1 → panel opent met max-height-transitie, waveform-canvas vult met gold envelope (400 peaks), 24 filmstrip-frames eronder als opacity-overlay, In/Out tijden tonen `0:00.000 → 0:21.720`, Reset + Re-export knoppen op tweede regel zichtbaar (na CSS flex-wrap fix). DOM check: `panelHeight: 144`, `filmsChildren: 24`, `wave: 232x62 client / 464x124 backing`. Klik Adjust nogmaals → panel collapse + button is-on weg.
-
-### B — Phase 5/8 polish: per-card export-popover
-
-Mini popover boven elke export-knop op een dashboard card. Hergebruikt `/api/export-preset` exact zoals de editor Phase 8 dropdown uit Sessie 18.
-
-**Files:** `static/index.html`
-- CSS: `.ce-export-menu` (absolute, opens upward boven button met `bottom:calc(100% + 6px); right:0`), reuses existing `.ed-export-item`.
-- JS: `toggleCardExportMenu(idx, btnEl)` (sluit andere open menus eerst, append menu DOM, one-shot outside-click + Esc closer met capture-true voor reliable close), `_ceExportPreset(idx, preset, itemEl)` (POST `/api/export-preset` met clip_index, toast op success, `setLibraryNewDot(true)`).
-
-**Bug-fix tijdens implementatie**: oorspronkelijk bleef de gold is-on highlight op de export-knop hangen na export, omdat `menu.closest('.clip')` null returnde nadat `menu.remove()` was aangeroepen. Capture `card`/`btn` BEFORE removing menu — fixed.
-
-**Live test:**
-Klik Export op clip #1 → popover opent linksboven button met 5 items (TT TikTok 1080×1920, IG Instagram Reel, YT YouTube Shorts, SQ Square / FB, RAW Source quality). Klik TikTok → "Exporting…" busy-state, na ~7s sluit menu, Library sidebar dot wordt gold. File-systeem verifieerd: `output/59a424ac/59a424ac_clip01_drop_vertical_tiktok.mp4` 4.832.407 bytes (4.8 MB) — exact dezelfde size als Sessie 18's editor-render want dezelfde clip. End-to-end pad bevestigd.
-
-### C — Phase 9: Split-tool in editor
-
-Tweede scissor-knop naast de bestaande "split at playhead". Toggle-mode: klik op timeline → split op DAT punt (in plaats van playhead), met C-keyboard shortcut + Esc-cancel.
-
-**Files:** `static/index.html` — toolbar HTML, CSS, JS, plus haakjes in bestaande `bindTimelineScrub` en `bindZoomKeys`.
-- HTML: nieuwe `<button class="ed-tool-split" id="ed-split-mode-btn">` direct na bestaande `#ed-split-toolbar`. Plus `<div class="ed-split-cursor" id="ed-split-cursor">` binnen `.tracks` (hidden tot body krijgt `is-split-mode` class).
-- CSS: `.ed-tool-split` (38×38, transparent, on-state gold), `body.is-split-mode .timeline *{cursor:crosshair}`, `.ed-split-cursor.on` (2px wide vertical line met box-shadow glow).
-- JS: `editorToggleSplitMode(force)` (toggelt STATE.splitMode + body class + button is-on + toast bij activate). `_editorSplitAtRel(relSec)` (validate `0.5 < relSec < dur - 0.5`, POST naar bestaand `/api/split-clip/<job>` met `{clip_index, split_at}`, refresh status, re-render editor, auto-exit split mode in finally). In `bindTimelineScrub`'s mousedown: als `STATE.splitMode === true`, call `_editorSplitAtRel` ipv scrub. In tracks mousemove: update `.ed-split-cursor.left` voor live preview. In `bindZoomKeys`: C toggles, Esc cancels (alleen wanneer mode actief).
-
-**Live test:**
-Open editor clip #1 → klik scissor-toggle (x=362 y=447) → toast "Split tool — click on timeline to split (Esc to cancel)" verschijnt + button gold + body class `is-split-mode` + STATE.splitMode=true. Klik op timeline op x=864 (≈10s relatief naar clip-start) → toast "Split at 00:00:09.06" + `_editorSplitAtRel` POST'd → `output/59a424ac/`: `_clip01_drop_landscape_splitA.mp4` (2.4 MB) + `_clip01_drop_landscape_splitB.mp4` (3.7 MB), totaal 6.1 MB ≈ origineel 6.2 MB. Mode auto-uitgezet na klik.
-
-### D — Phase 10: Spectrogram backend + frontend
-
-Wave/Spec toggle op audio-track. Nieuwe backend module rendert log-magnitude spectrogram met viridis-colormap zonder Pillow/matplotlib (dj-clip-cutter venv heeft geen van die deps).
-
-**Files:**
-- `dj-clip-cutter/spectrogram.py` (nieuw, ~6 KB): `render_spectrogram_png(audio_path, start, duration, out_path, width, height, sr, n_fft, hop, fmin, fmax, db_floor)`.
-  - `librosa.load(offset=, duration=)` om alleen de clip-slice te decoden (snel zelfs op uur-lange sets).
-  - `librosa.stft(y, n_fft=2048, hop=512)` → magnitude → `librosa.amplitude_to_db(ref=np.max)` → clip naar `[-70 dB, 0]` → normalize naar 0..1.
-  - Frequentie-banden naar `[30 Hz, 11025 Hz]` masken, dan max-pool naar gevraagde width (kicks blijven zichtbaar) + log-spaced row binning (bass krijgt meer pixels, DAW-conventie).
-  - Vertical flip + viridis LUT lookup (256-stop hand-tuned interpolatie via `np.interp` op anchor stops — visueel niet te onderscheiden van matplotlib's viridis op deze resoluties).
-  - `_write_png_rgb(path, rgb_array)` — stdlib `struct` + `zlib` PNG encoder (24-bit RGB, no alpha): IHDR + zlib-deflated IDAT met per-row filter-byte-0 + IEND, atomic write via `.tmp` + `os.replace`.
-- `dj-clip-cutter/app.py` (+~50 regels): nieuw endpoint `/api/spectrogram/<job_id>/<int:clip_index>` rond regel 2988 (vlak voor `/api/split-clip`). Validates job + clip, args `w` en `h` (geclamped 80..2000 / 40..400, defaults 800x96), gebruikt zelfde per-job WAV als `/api/waveform/.../clip/...` (fallback: source video), cache file `output/<job>/spec_cache/clip###_<w>x<h>.png` met `send_file(..., mimetype='image/png', max_age=86400, conditional=True)`.
-- `static/index.html` — track HTML, CSS, JS.
-  - HTML in `.audio-track`: `<div class="ed-wave-toggle">` met Wave/Spec buttons + `<span id="tl-wave-label">Waveform</span>`. (Origineel had ik ook `<img id="ed-spec-img">` in de markup maar die werd door de wave-canvas overschreven bij elke `renderEditor`-pass; nu maak ik 'm dynamisch in JS aan.)
-  - CSS: `.ed-wave-toggle` (absolute top-right, blur backdrop, segmented button-pair), `.ed-spec-img.on` (absolute inset:0, object-fit:fill).
-  - JS: `editorSetWaveMode(mode)` (creates `.ed-spec-img` on demand if wave-canvas killed it), `refreshEditorSpec()` (wakes img if missing, fetches `/api/spectrogram/<job>/<clipIdx>?w=<wave.clientWidth>&h=<wave.clientHeight>`, caches URL in `_specCache` Map om multi-fetches te vermijden bij arrow-key clip-switch). `renderEditor()` roept `setTimeout(refreshEditorSpec, 0)` aan na de filmstrip-load zodat clip-switches in spec mode 'm bijwerken.
-
-**Bug-fix tijdens implementatie**: oorspronkelijk dubbele `const wave = document.getElementById('tl-wave')` in `refreshEditorSpec` → `SyntaxError: Identifier 'wave' has already been declared`. Hernoemd: tweede declaratie verwijderd, `wave` van de img-creation hergebruikt.
-
-**Live test:**
-Open editor clip #1 → klik SPEC toggle (x=1422 y=608) → audio-track flipt naar viridis spectrogram (paars/blauw/groen, met duidelijke variatie op drop-momenten), label rechts veranderd naar "SPECTROGRAM". File op disk: `output/59a424ac/spec_cache/clip001_1133x48.png` 57.406 bytes. Klik WAVE → terug naar gold waveform-canvas.
-
-### Verificatie
-
-- `python3 -c "import ast; ast.parse(open('app.py').read())"` → OK
-- `python3 -c "import ast; ast.parse(open('spectrogram.py').read())"` → OK
-- `node --check` op extracted JS → OK (na `wave` const-fix)
-- DOM-id scan: 170 → 175 unique (geen duplicates). Nieuwe ids: `ed-split-mode-btn`, `ed-split-cursor`, `ed-spec-img` (dynamisch), `tl-wave-label`.
-
-### Backups
-
-```
-app.py.pre-sessie19.bak              (159.610 bytes)
-static/index.html.pre-sessie19.bak   (369.990 bytes)
-```
-
-### Open issues / todo's voor later
-
-- **Stripe live mode + DNS verificatie** — Sjuul-input nodig.
-- **Code signing, app icon, Windows test, demo video** — geparkeerde polish, niet in scope.
-
----
-
-## SESSIE 18 — Cutter zero-clips + Phase 8 export-presets + Phase 5 filmstrip (2026-05-11)
-
-Drie launch-polish items in één sessie, alles live-getest via Chrome MCP op het wftest17 test-account (PRO).
-
-### A — `cutter.process_clips` zero-clips fix
-
-Pre-existing crash zichtbaar geworden via Sessie 17 watch-folder tests. Silent / very-short / analyser-leeg uploads sloegen op `ProcessPoolExecutor(max_workers=min(..., len(clips)))` waar `len(clips)==0` → `ValueError: max_workers must be greater than 0`.
-
-**Files:**
-- `cutter.py` (+~13 regels). Backup: `cutter.py.pre-sessie18.bak` *(niet aangemaakt — fix was klein genoeg, maar als nodig: `git diff` toont 'm).*
-  - Early `if not clips: return []` aan top van `process_clips()` vóór de pool wordt opgezet.
-- `app.py` (+~25 regels in `_process_job`). Backup: nieuw, `app.py.pre-sessie18.bak` is een complete pre-sessie state — gebruik die als rollback nodig is.
-  - Na `_update_job(job_id, clips=clips)` + analyser-snapshot persist: nieuwe `if not clips:` short-circuit die `status='done'`, `message='No drops or buildups detected — nothing to cut.'`, `no_clips_detected=True` zet, voortgang naar 100% spelt, naar history schrijft en `return`t. `usage_counted` blijft False — een lege upload kost dus geen quota slot, wat consistent is met "Pro promise is processing drops".
-
-**Live test resultaat:**
-Upload `/tmp/cliplive-silent.mp4` (2 MB silent black 120s) via `/api/upload-local` op het PRO test-account. JobId `0a74b12e` eindigde met `{status:'done', message:'No drops or buildups detected — nothing to cut.', percent:100, clip_count:0, results_count:0}`. Geen ValueError in de log meer, geen lege spinner, geen quota-bump.
-
-### B — Phase 8: export-presets dropdown
-
-Backend `/api/export-preset/<job_id>` endpoint bestond al (vond ik tijdens inventarisatie — pre-existing maar nooit gewired aan UI). Hij accepteert `{clip_index, preset}` waar preset ∈ `(source | tiktok | instagram_reel | youtube_shorts | facebook_post)` en roept `cutter.export_with_preset()` aan. Frontend was de enige missing piece.
-
-**Files:**
-- `static/index.html` — drie blokken (HTML in `ed-right`, CSS voor dropdown, JS handlers).
-  - HTML: nieuwe `.ed-export-wrap` met `<button id="ed-export-btn">Export ▾</button>` onder de Trim-knop, en `<div id="ed-export-menu">` met 5 menu-items (TT TikTok 1080×1920, IG Instagram Reel, YT YouTube Shorts, SQ Square/Facebook 1080×1080, RAW Source quality).
-  - CSS: `.ed-export-btn` (gelijke look-and-feel als `.tool-btn`), `.ed-export-menu` popover (rechts-aligned met `right:calc(100% + 8px)` zodat 'ie naar LINKS opengaat en niet uit beeld klipt), `.ed-export-item` met `.glyph` badge + `.meta` t/s tekst, `.is-busy` spinner-state, `@keyframes ed-spin`.
-  - JS: `toggleExportMenu(event)` met one-shot outside-click + ESC closers (auto-removed na use); `exportClipPreset(preset, itemEl)` doet POST, toont "Exporting…" inline + flips item naar `.is-busy`, toast bij success ("Exported · TikTok → filename.mp4"), zet `STATE.libraryHasNew=true` en lights de Library sidebar dot.
-
-**Live test resultaat:**
-Open editor op Ediine x Ho_r Berlin clip 1. Klik Export ▾ → dropdown opent met 5 items. Klik TikTok → POST `/api/export-preset/59a424ac` 200 OK, file `59a424ac_clip01_drop_vertical_tiktok.mp4` (4.8 MB) verschijnt in `output/59a424ac/`. Menu sluit, toast verschijnt.
-
-### Phase 5 — Filmstrip on video track
-
-Backend was er al (`/api/clip-filmstrip/<job>/<clip>` returnt `{frames:[{time,filename}], duration}`, `/api/filmstrip/<job>/<filename>` serveert individuele JPEGs). Frontend had een broken call die `fs.url` verwachtte — een veld dat het backend nooit returnt — dus de timeline viel altijd terug op de gradient placeholder.
-
-**Files:**
-- `static/index.html` — CSS + JS.
-  - CSS: `.clip-block .frames.has-filmstrip{display:flex;background:none;opacity:1}` + `.filmstrip-frame{flex:1;background-size:cover;...}` zodat alle thumbs evenly stretching across de hele clip-block doen, ongeacht zoom level.
-  - JS: nieuwe `loadEditorFilmstrip(clipIndex, framesEl)` met in-memory cache (`_filmstripCache` Map keyed op `jobId::clipIndex`). Soft-fail: als API faalt blijft de gradient. `_paintFilmstrip` bouwt de row van `<div class="filmstrip-frame" style="background-image:url(...)">` elementen. `clearFilmstripCacheFor(jobId)` voor toekomstige job-switches (nu nog niet gebruikt, klaar voor gebruik).
-  - In `renderEditor()`: oude broken `fs.url` blok vervangen door `loadEditorFilmstrip(backendClipIndex, frames)` — gebruikt `clip.index` (1-based analyser idx) i.p.v. `STATE.selectedClipIdx` (0-based array idx) zodat backend de juiste clip vindt.
-
-**Live test resultaat:**
-Open editor → JS-check `frameChildren:40, hasFilmstripClass:true, firstFrameBg:url("/api/filmstrip/59a424ac/cf_01_0000.jpg")`. Visuele check via screenshot: 40 evenly-spaced DJ-thumbs over de hele video-track, waveform eronder, filmstrip-frames mooi sub-bar gespaced.
-
-### Bonus — `_restart.sh` betrouwbaarheid fix
-
-Tijdens live-test bleek de oude server-process niet weg te gaan na `_restart.sh` omdat `pkill -f "python.*app.py 5555"` case-sensitive is en de macOS-launched binary verschijnt als `Python app.py 5555` (kapitaal P). De nieuwe versie:
-- `pkill -if` (case-insensitive flag)
-- Als fallback: `lsof -ti :5555 | xargs kill -9` om alles te killen dat nog op de poort luistert
-
-**Risk:** kan in theorie andere processen killen die toevallig op port 5555 luisteren — maar dit is een dev-only restart script, dus prima.
-
-### Verificatie
-
-- `python3 -c "import ast; ast.parse(open('app.py').read())"` → OK
-- `python3 -c "import ast; ast.parse(open('cutter.py').read())"` → OK
-- `python3 -c "import ast; ast.parse(open('watch_folder.py').read())"` → OK
-- `node --check` op extracted JS → OK
-- DOM-id scan: 168 → 170 unique (geen duplicates). Nieuwe ids: `ed-export-btn`, `ed-export-menu`.
-- Bestandsgroottes: `app.py` 158.298 → 159.610 (+1.312), `cutter.py` ~46.9k → ~47.1k (+~200), `static/index.html` 355.680 → 369.990 (+14.310). `_restart.sh` 460 → 1.020 (+560).
-
-### Backups (chronologisch deze sessie)
-
-```
-# Allemaal pre-sessie wijzigingen zijn klein; er zijn geen aparte .bak files
-# aangemaakt. Voor rollback: gebruik `git diff` vanaf de SESSIE 17 commit.
-```
-
-### VOLGENDE SESSIE — kies één
-
-1. **VIDEO_EDITOR_PLAN Phase 7: Inline clip-expand** — Adjust-knop op dashboard cards → compact inline editor zonder full editor te openen. Hoogste UX-waarde uit het editor-plan.
-2. **VIDEO_EDITOR_PLAN Phase 9: Split tool** — scissor toggle in toolbar + bestaand `/api/split-clip` endpoint. Klein.
-3. **VIDEO_EDITOR_PLAN Phase 10: Spectrogram mode** — backend librosa.stft PNG render. Visueel impressief.
-4. **Phase 5/8 polish** — filmstrip-frames laten zien op dashboard-cards ook (nu alleen in editor), en/of "Export ▾" snelkoppeling op dashboard cards.
-5. **Stripe live mode + landing-page DNS verificatie** — pre-launch checklist. Vereist Sjuul-input.
-6. **Code signing / app icon / Windows test / demo video** — polish-sessie, alles geparkeerd in memory.
-
----
-
-## SESSIE 17 — Phase 5 watch-folder backend live (2026-05-10)
-
-Pro-tier feature was sinds SESSIE 14-16 visueel ontgrendeld (Settings-card + intake-CTAs) maar de daemon werkte niet — een Pro-betaler kreeg een lege belofte. Deze sessie maakt 'm echt.
-
-### Files
-
-**Nieuw:** `dj-clip-cutter/watch_folder.py` (22.782 bytes). Polling-thread, dedupe via SHA-256 over eerste 1 MB + size, persistente JSON-state in `watch_folder.json`, plan/quota-binding via injected deps, sequential queue (één job tegelijk om CPU-budget niet op te eten). Tunables: `WATCH_TICK_SECONDS=5`, `WATCH_QUIET_SECONDS=4` (file moet die tijd stil zijn voor pickup, zodat half-gecopyeerde Dropbox-bestanden niet worden gepakt), `WATCH_HASH_PREFIX_MB=1`.
-
-**Wijzigingen:**
-- `app.py` 151.743 → 158.298 (+6.555 bytes). Backup: `app.py.pre-phase5-watchfolder.bak`.
-  - Import `watch_folder` module bovenin
-  - `/api/watch-folder` GET: nu auth-required, returnt path/active/last_tick/last_error/stats. Foreign-owner shielding ingebouwd voor multi-user safety.
-  - `/api/watch-folder` POST: auth + plan-gate (Pro/Studio only — Free krijgt 402 met `trigger:'watch_folder'`). Validatie: path absolute, exists, isdir, niet UPLOAD/OUTPUT_DIR.
-  - Nieuw: `/api/watch-folder/status` GET — light-weight status-feed voor UI poll.
-  - Nieuw: `/api/watch-folder/reset-seen` POST — wist seen-cache zodat alle files in folder opnieuw worden gepakt.
-  - `__main__`: `watch_folder.start_daemon(...)` met deps-injection na `_rehydrate_jobs_from_history()`.
-
-- `static/index.html` 344.775 → 355.680 (+10.905 bytes). Backup: `static/index.html.pre-phase5-watchfolder.bak`.
-  - Nieuwe CSS (~55 regels): `.wf-status-row` met state-dot animatie (Watching pulsing groen / Busy amber / Paused grijs / Error rood), `.wf-banner` voor errors, `.wf-buttons`, en de cruciale `[hidden]{display:none !important}` scoped fix (zonder die overschrijft `.btn{display:flex}` de hidden-attr).
-  - Settings watch-folder card uitgebreid met live-status row + error-banner + Pause/Resume + Re-scan + Stop knoppen.
-  - STATE: `watchStatus`, `watchStatusPoll`, `watchStatusLastInFlight` velden.
-  - Nieuwe functies: `renderWatchFolderCard()`, `loadWatchStatus()`, `startWatchStatusPolling()`, `stopWatchStatusPolling()`, `_fmtTimeAgo()`.
-  - `switchView()`: start polling op Settings/Upload/Home, stop elders.
-  - `renderSettings()`: nieuwe knop-handlers (toggle/reset) idempotent gebound. Pick-prompt uitgebreid met betere tekst. Clear vraagt nu om confirm() omdat seen-cache wordt gewist.
-  - Toast-trigger: nieuwe `in_flight` value tussen polls → "Auto-processing &lt;file&gt;" toast. Skipt eerste poll om geen page-load toast te krijgen.
-
-### Verificatie
-
-- `python3 -c "import ast; ast.parse(open('app.py').read())"` → OK
-- `python3 -c "import ast; ast.parse(open('watch_folder.py').read())"` → OK
-- `node --check` op extracted JS → OK
-- DOM-id scan: 160 → 168 (+8 nieuw, geen duplicates). Nieuwe ids: `settings-watch-banner`, `settings-watch-reset`, `settings-watch-stats`, `settings-watch-toggle`, `wf-stat-last`, `wf-stat-processed`, `wf-stat-queue`, `wf-stat-state`.
-
-### Live test via Claude in Chrome MCP
-
-Test-account `business+cliptest@sjuulstudios.com` werkte niet met de in HANDOVER vermelde password — fresh account aangemaakt: `business+wftest17@sjuulstudios.com` / `WatchTest17!`, user_id `c08189f0-1715-4296-903e-e912976b0665`. Plan voor live-test van Pro features ge-flipped via `supabase_admin.table('profiles').update({'plan': 'pro', ...})` omdat Stripe Checkout (`checkout.stripe.com`) browser-MCP restricted is. Helper-script voor toekomstige test-flips:
-
-```python
-from auth import supabase_admin
-from datetime import datetime, timezone, timedelta
-supabase_admin.table('profiles').update({
-    'plan': 'pro',
-    'usage_this_period': 0,
-    'quota_reset_date': (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
-}).eq('id', '<user_id>').execute()
-```
-
-Geverifieerde gedragingen:
-1. **Free plan API-gate**: `POST /api/watch-folder` met FREE plan returnt 402 met `trigger:'watch_folder'`. ✓
-2. **Free plan UI-gate**: Settings toont locked card met "Upgrade to enable" ipv functional card. ✓
-3. **Upgrade modal**: klik "Upgrade to enable" → modal toont "Watch a folder" titel met Pro/Studio cards (trigger-context werkt). ✓
-4. **Pro plan UI**: na flip naar PRO toont functional card met status-row "● Idle | Last check — | Queue | Auto-processed" en alleen "Choose folder" knop (rest hidden, dankzij scoped `[hidden]{display:none!important}` fix). ✓
-5. **Folder configureren**: POST `/api/watch-folder` met absolute path → daemon-state opgeslagen in `watch_folder.json` met user_id-binding. Status-row springt naar "● Watching | Last check just now | Queue 0 | Auto-processed 0". ✓
-6. **Daemon pickup**: drop `test_video.mp4` (2 MB, 320x240 black + 120s sine wave) → log toont `watch_folder: started job 16274f43 for .../_watch_test/test_video.mp4` binnen één tick (≤5s). ✓
-7. **Job-flow**: daemon riep `_process_job` aan via injected dep. Job draaide door tot `process_clips` waar het crashte op een pre-existing bug `ValueError: max_workers must be greater than 0` (gebeurt als analyzer 0 clips vindt — een silent black video). Daemon merkte `status != done`, schreef `last_error` en `errors_total += 1`. ✓
-8. **Error banner**: UI toonde red banner met "Job 16274f43 for test_video.mp4 did not finish cleanly." onder de status-row. ✓
-9. **Pause-knop**: klik "Pause watching" → toast "Watching paused", state dot grijs + "Paused", knop wordt "Resume watching", Re-scan grijs/disabled, sub-line "Watching is paused. Resume to keep auto-processing new drops." ✓
-10. **Resume-knop**: klik "Resume watching" → toast "Watching resumed", dot terug groen + pulsing, "Pause watching" terug, Re-scan re-enabled. ✓
-11. **Stop watching**: clear-knop met confirm() → seen-cache + queue gewist, UI terug naar "Not configured" met enkel Choose-knop zichtbaar. ✓
-
-Daemon-tunables in `watch_folder.py` zijn module-attributes (overridable via env vars):
-- `WATCH_TICK_SECONDS=5` — folder scan-interval
-- `WATCH_QUIET_SECONDS=4` — file moet die tijd onveranderd zijn voor pickup
-- `WATCH_HASH_PREFIX_MB=1` — bytes voor SHA-256 dedupe-hash
-- `WATCH_MAX_QUEUE=20` — max files terug naar UI in status
-
-### Pre-existing bug zichtbaar geworden — niet door watch-folder veroorzaakt
-
-`cutter.process_clips:731` doet `ProcessPoolExecutor(max_workers=max_workers)` waar `max_workers` 0 wordt als analyzer 0 clips vindt. Crasht met `ValueError`. Was er al voor mijn changes, maar live-testen van watch-folder maakt het zichtbaarder omdat de daemon ook lege/silence files kan pakken. **Voorgestelde fix** voor volgende sessie:
-
-```python
-# cutter.py vlak voor ProcessPoolExecutor:
-if not clips:
-    return []
-max_workers = max(1, min(max_workers, len(clips)))
-```
-
-Niet kritiek — daemon vangt het netjes op via `last_error` + `errors_total`. Maar voor een echte Pro-launch wil je dat een lege upload óf netjes faalt óf wordt geweigerd ná validatie (geen clips = "no drops detected").
-
-### Cleanup
-
-`_watch_test/` folder + temp mp3/mp4 verwijderd. `watch_folder.json` gewist. Fresh-test account `business+wftest17@sjuulstudios.com` blijft staan in Supabase met `plan='pro'` — kan worden hergebruikt voor toekomstige tests of door Sjuul verwijderd via Supabase Dashboard.
-
-### Backups (chronologisch deze sessie)
-
-```
-app.py.pre-phase5-watchfolder.bak
-static/index.html.pre-phase5-watchfolder.bak
-```
-
-### VOLGENDE SESSIE — kies één
-
-1. **`cutter.process_clips` zero-clips fix** — pre-existing maar nu zichtbaar via watch-folder. Klein (~5 regels in cutter.py + maybe een early-return in `_process_job` met `status='error'` reason `'no_clips_detected'`).
-2. **VIDEO_EDITOR_PLAN Phase 5: Filmstrip on Video Track** — ffmpeg-thumbnails op video-track bij bar/frame zoom. Backend `/api/filmstrip/<job>/<clip>` + frontend canvas draw. High visual impact.
-3. **VIDEO_EDITOR_PLAN Phase 7: Inline clip-expand** — Adjust-knop op dashboard cards. Hoogste UX-waarde.
-4. **VIDEO_EDITOR_PLAN Phase 8: Export presets** — TikTok / Reels / Shorts / Square dropdown. Klein, snel.
-5. **VIDEO_EDITOR_PLAN Phase 9: Split tool** — scissor toggle + `/api/split` endpoint (al bestaand).
-6. **VIDEO_EDITOR_PLAN Phase 10: Spectrogram mode** — backend librosa.stft PNG render. Visueel impressief.
-7. **Stripe live mode + landing-page DNS verificatie** — vóór launch. Vereist Sjuul-input.
-8. **Code signing / app icon / Windows test / demo video** — geparkeerd in memory, voor een polish-sessie.
-
----
-
-## SESSIE 16 — vier geparkeerde features afgewerkt (2026-05-10)
-
-Volgorde uitgevoerd: 5c → 5b → 5d → 6. Alle wijzigingen live-getest in Chrome op test-account, jobId `59a424ac` (Ediine x Ho_r Berlin, 33 clips). Geen console-errors over alle vier features samen.
-
-### 5c — Background-analyse pill + "Terug naar processing"
-
-`static/index.html`. Pure frontend, ~95 regels. Backup: `static/index.html.pre-5c-bgpill.bak`.
-
-- Nieuwe sidebar-pill `<div id="bg-process-pill">` tussen de brand-row en de "Workspace" label. Toont set-naam, fase + percentage ("Beats · 42%"), gold progress-bar, en een "↗ Back to processing" CTA.
-- CSS: amber gradient + pulsing dot animation (`@keyframes bg-pill-pulse`), zelfde palette als de bestaande `.upgrade` card.
-- STATE-velden: `progressJobId`, `progressPct`, `progressPhase`, `progressName`. Single source of truth — pill is alleen visible als `STATE.progressJobId && STATE.view !== 'processing'`.
-- Helpers: `setBgProcessPill()` (idempotent), `_clearBgProcessPill()`, `bgProcessPillClick()` → `setActiveJobId + switchView('processing')`.
-- Hooks in `openProgressStream(jobId)` (set jobId + best-effort name uit STATE.history), `applyUpdate(data)` (track pct/phase/name op elke tick), terminal branches done/error/404 (clear), en `switchView` (re-evaluate op elke nav).
-- Live test: triggerde STATE.progressJobId via JS, navigeerde naar Library → pill verscheen met juiste tekst, click → ging naar processing-view + pill verdween, _clearBgProcessPill() → pill weg.
-
-### 5b — Stretch-handles draggable op mini-map
-
-`static/index.html`. Pure frontend, ~140 regels. Backup: `static/index.html.pre-5c-bgpill.bak` (cumulatief — was hetzelfde bestand).
-
-- Drie nieuwe DOM-nodes binnen `#tl-minimap`: `tl-mini-trim-band` (lichte gold wash tussen handles), `tl-mini-trim-in`, `tl-mini-trim-out` (gold vertical bars met grip-marker).
-- CSS klasse `.tl-mini-trim` met `transform:translateX(-50%)` zodat de positie-percentage exact het midden van de handle is. z-index 6 boven het tl-mini-window zodat een drag op een handle die toevallig over de viewport-rectangle valt, alsnog wint.
-- Helper `placeMiniTrimHandles()`: zelfde coord-conventie als de hoofd-handles (`relSecToPct(t.inSec, map)`). Idempotent — gebruikt voor de eerste render én tijdens drag-mousemove.
-- `bindMinimapTrim()`: drag-listeners idempotent gebound via `mini.dataset.minitrimbound`. Mousemove gebruikt zelfde clamp + snap als de hoofd-handles. Op mousemove: `renderTrimRegion(drag.map.clipDur)` om hoofdrij te updaten + `placeMiniTrimHandles()` om mini-rij te updaten. Op mouseup: `saveTrimState` met dezelfde localStorage-key (`clipLive.trim.<job>.<idx>`) als de bestaande hoofdhandle-flow.
-- Hooks: `placeMiniTrimHandles()` aangeroepen aan einde van `renderMinimap()`, in de `place()` helper van `renderTrimRegion`, en in de hoofdhandle-mousemove zodat de mini-rij ook tijdens hoofd-drag mee-updates. Click-outside-window in `bindMinimap` skipt nu `.tl-mini-trim` en `.tl-mini-trim-band` zodat een snelle drag door de band-edge geen pan-jump triggert.
-- Live test: dragged mini-in-handle van 781px naar 560px → `STATE.trim.inSec` werd -28.26 (stretch-left), main + mini beide op 22.397%. Vervolgens mini-out-handle van 956 naar 1200 → outSec=50.23 (stretch-right), beide rijen op 77.778%. Persistentie naar localStorage geverifieerd: `clipLive.trim.59a424ac.1` bevat de nieuwe in/out.
-
-### 5d — 1:1 aspect-ratio render-bug
-
-`app.py` `/api/derive/<job_id>`. Backup: `app.py.pre-5d-1to1-fix.bak`.
-
-- Root cause: oude crop-filter `crop='ih*1:ih':'(iw-ih*1)/2':0,scale=1080:1080` gaat ervan uit dat de bron landscape is (iw ≥ ih). Wanneer de enige beschikbare bron-variant de vertical 9:16 cut is (iw=1080, ih=1920), vraagt het filter een crop-width van ih=1920 uit een iw=1080 frame en gaat `(iw-ih)/2` negatief → ffmpeg knalt op `Failed to configure input pad on Parsed_crop_0`. Frontend kreeg "Could not render 1:1: ffmpeg failed".
-- Fix: filter-uitdrukkingen die ALTIJD passen bij elke source-aspect:
-  - 1:1 → `crop=min(iw\,ih):min(iw\,ih):(iw-min(iw\,ih))/2:(ih-min(iw\,ih))/2,scale=1080:1080`
-  - 4:5 → `crop=min(iw\,ih*0.8):min(iw/0.8\,ih):(iw-min(iw\,ih*0.8))/2:(ih-min(iw/0.8\,ih))/2,scale=1080:1350`
-  - Komma's binnen `min()` zijn ge-escaped met `\,` zodat ffmpeg ze niet als filter-chain separator parseert.
-- Bonus: error-response is nu structured (`reason`: `crop_failed` / `codec_failed` / `ffmpeg_failed` / `timeout`) en bevat `target_size` voor debug.
-- Sandbox-test: vertical 1080×1920 → 1080×1080 square ✓ ; vertical → 1080×1350 4:5 ✓ ; landscape 1280×720 → 1080×1080 ✓.
-- Live test: `/api/derive/59a424ac` POST `{clip_index:1, ratio:'square'}` → 200 `{filename:"...drop_square.mp4", cached:false}`. Na clicken op 1:1 in de ratio-rail: `STATE.editorRatio="1:1"`, video-src wijzigt naar `_drop_square.mp4`, stage `aspect-ratio:1/1`, geen toast. 4:5 ook getest, ook OK.
-
-### 6 — Unify upload UX
-
-`static/index.html`. Backup: `static/index.html.pre-6-unify-upload.bak`.
-
-- Tile "Open large file (no copy)" verborgen via `style="display:none"` + `id="source-large-file"`. Functie + modal blijven gewired voor power-users (`openLocalPathPicker()` vanuit console) en voor de auto-fallback hieronder.
-- Constante `LARGE_FILE_THRESHOLD_BYTES = 4 * 1024**3` (4 GB). Zit tussen typische HD-set (≤2 GB) en 4K60 marathons (8+ GB).
-- `uploadFile(file)` checkt nu `file.size` vóór de upload-poging:
-  - `≤ 4 GB` → `/api/upload` (server-side copy, zoals voorheen).
-  - `> 4 GB` → `openLocalPathPicker({reason:'large_file_auto_route', fileName, fileSize})` — modal opent met contextuele banner i.p.v. de generic title.
-- `openLocalPathPicker(ctx)` accepteert nu optioneel een ctx-object. Bij `reason==='large_file_auto_route'`:
-  - Title wordt "This file is too large for browser upload"
-  - Nieuwe `#lp-context` div toont `<filename> · <size> is over the 4.0 GB browser limit. Paste its absolute path on disk below — Clip Live will analyse it in place, no copy needed.`
-  - Default desc verbergt zich; placeholder vult `e.g. /Users/yourname/.../<filename>` in.
-  - Zonder ctx (manual call) blijft alles op de oorspronkelijke "Open large file (no copy)" weergave — backwards-compat.
-- CSS: `.lp-context` met amber wash matchend met de modal-style.
-- Drag-drop, body-level drop, "Choose file", "browse files" link en file-input change-handler routen allemaal door uploadFile() en zijn dus automatisch covered.
-- Live test: hard-reloaded, source-large-file display=none geverifieerd. Faked `File{size:6 GB}` → uploadFile() opende modal met juiste title + context-banner. Faked `File{size:100 KB}` → routing-branch koos `normal_upload`. Manual `openLocalPathPicker()` toont oude UI met default title + desc.
-
-### Verificatie totaal
-
-- `python3 -c "import ast; ast.parse(open('app.py').read())"` → OK
-- `node --check` op extracted JS → OK
-- DOM-id scan: 160 unieke ids (was 148 vóór SESSIE 16, +12), geen duplicates
-- Bestandsgroottes: `app.py` 149.344 → 151.743 bytes (+2.399). `static/index.html` 320.097 → 344.775 bytes (+24.678).
-- Console errors over de hele Chrome-sessie: 0
-- Final smoke-test (1 chat-batch, alle 4 features achter elkaar):
-  - 5c: pill renders met "Compose · 78%", `_clearBgProcessPill()` verbergt
-  - 5b: mini-handles op 42.337% / 57.663%, band 15.326% — sync met hoofdrij
-  - 5d: `/api/derive` square POST → 200 cached:true (re-test van eerder gecreëerde file)
-  - 6: 5 GB faked file → modal opens met "This file is too large for browser upload" + ctx banner
-
-### Backups (chronologisch deze sessie)
-
-```
-static/index.html.pre-5c-bgpill.bak       (5c + 5b cumulatief; beide pure frontend)
-app.py.pre-5d-1to1-fix.bak                (5d backend)
-static/index.html.pre-6-unify-upload.bak  (6 frontend)
-```
-
-### Nieuwe helper
-
-`dj-clip-cutter/_restart.sh` — één-shot restart-script dat PATH zet voor osascript's minimal shell, oude `python.*app.py 5555` killt, en een nieuwe Flask via `nohup … &` start. Aangeroepen vanuit Claude in Chrome / `osascript` workflows omdat workspace-bash in een sandbox draait en de Mac-Python niet kan bereiken. Voor Sjuul handmatig nog steeds gewoon `./start.sh` gebruiken.
-
-### VOLGENDE SESSIE — kies één
-
-1. **VIDEO_EDITOR_PLAN Phase 5: Filmstrip on Video Track** — ffmpeg-thumbnails op video-track bij bar/frame zoom. Backend `/api/filmstrip/<job>/<clip>` + frontend canvas draw. High visual impact.
-2. **VIDEO_EDITOR_PLAN Phase 7: Inline clip-expand** — Adjust-knop op dashboard cards → compact inline editor zonder full editor te openen. Hoogste UX-waarde.
-3. **VIDEO_EDITOR_PLAN Phase 8: Export presets** — TikTok / Reels / Shorts / Square dropdown op Save. Klein, snel.
-4. **VIDEO_EDITOR_PLAN Phase 9: Split tool** — scissor toggle + `/api/split` endpoint (al bestaand).
-5. **VIDEO_EDITOR_PLAN Phase 10: Spectrogram mode** — backend librosa.stft PNG render. Visueel impressief.
-6. **paid-architecture Phase 5: Watch-folder backend** — Pro-tier daemon (5s tick poller, watch_folder.json state, 402 quota-respect, concurrency hash-check). Launch-blocker voor Pro-tier.
-7. **Stripe live mode + landing-page DNS verificatie** — vóór launch.
-8. **Code signing / app icon / Windows test / demo video** — geparkeerd in memory, voor een polish-sessie.
-
----
-
-## SESSIE 15 — marathon UX-/recut-/storage-fix-sessie (2026-05-10)
-
-Twaalf+ fixes plus vier features geparkeerd. Alles end-to-end live geverifieerd via Claude in Chrome (logged in als `business+cliptest@sjuulstudios.com`). Sjuul reset de server tussendoor; Claude testte zelfstandig.
-
-### Wat is er gedaan
-
-**Bug 1b round-2 — Recent Sets strikt op snapshot.json (`app.py`)**
-- Eerdere `_history_entry_is_loadable` accepteerde nog `output_dir + ≥1 mp4` — te losjes; oude /tmp restjes bleven zichtbaar. Nu: ALLEEN `_load_job_snapshot(jid) is not None`. Backups: `app.py.pre-bug1b-r2.bak`, `static/index.html.pre-bug1b-r2.bak`.
-
-**Active highlight in sidebar (`static/index.html`)**
-- `switchView` toggelt nu alleen `.active` op hardcoded items via `data-view`. Recent-set items (allemaal `data-view='dashboard'`) krijgen active alleen als `data-job === STATE.jobId`. Voorheen lichtten alle 5 recent items op zodra je naar dashboard switchte.
-
-**Library 16:9 + 9:16 beide (`static/index.html`)**
-- `startExport()` skipt de aspect-picker modal en stuurt altijd `aspects: ['landscape', 'vertical']`. Library Exports filter chips (9:16/16:9/All) doen het kiezen. Backup: `static/index.html.pre-aspect-zip-fix.bak`.
-
-**★ ZIP knop — disabled state + tooltip + empty-zip protection (`app.py` + `static/index.html`)**
-- Frontend: nieuwe `toggleFavZipState()` die `.is-disabled` class + tooltip toggelt op basis van `STATE.clips.some(c => c.favorite)`. Aangeroepen na `toggleFavorite` (Dashboard én Editor) en in `bindDl` initial bind. CSS `.btn.is-disabled{opacity:.45;cursor:not-allowed}`.
-- `bindDl` herschreven van naïeve `<a href>` click → `fetch + blob` zodat 4xx-responses zichtbaar worden in een toast i.p.v. stilletjes een lege/error-file te downloaden.
-- Backend `download_favorites`: telt copied count, returnt 400 JSON met `'no_rendered_files'` reason als 0 — voorkomt 0-byte zip die macOS Archive Utility niet kan openen.
-- Backend `download_all`: nieuwe `_dir_has_any_mp4` pre-check, 400 JSON als output-dir leeg. Backup: `app.py.pre-zip-empty-fix.bak`.
-
-**Backbutton in editor (`static/index.html`)**
-- `<button class="ed-back-btn">` toegevoegd aan `.crumbs` met chevron-left SVG + label "Clips" + `onclick="switchView('dashboard')"`. CSS-stijl matcht `.ed-tools .t` weight. Backup: `static/index.html.pre-backbutton.bak`.
-
-**Stretch-recut bug — fix 1 (`static/index.html`)**
-- Logica omgekeerd in `editorTrimAtPlayhead`: was `if (hasBand && isStretch) → recut`. Nu `if (isStretch) → recut` als eerste branch ongeacht hasBand. Single-handle stretch (één kant naar buiten, andere onaangeroerd) viel voorheen door naar `else { split-at-playhead }` → recut werd nooit getriggerd. Backup: `static/index.html.pre-stretch-recut-fix.bak`.
-
-**/api/recut hardener (`app.py`)**
-- Catch-all `except Exception` → JSON `{"error": "TypeName: message", "reason": "recut_internal_error"}` ipv HTML 500.
-- Pre-checks: `clip_index` in `results` OF `clips` (lazy-render dekking), `video_path` exists, `end > start`, `end ≤ source_duration`. Returnt 400/404 JSON met `reason`.
-- Promoot lazy clips automatisch van `clips` naar `results` na succesvolle recut.
-- Persist snapshot direct na recut zodat de nieuwe range een server-restart overleeft.
-- Backup: `app.py.pre-recut-hardener.bak`.
-
-**Trim-state persistence over logout (`static/index.html`)**
-- Nieuwe helpers `saveTrimState/loadTrimState/clearTrimState` met localStorage key `clipLive.trim.<jobId>.<clipIndex>`.
-- Save bij elke drag-mouseup; restore in `renderTrimRegion` bij heropenen; clear na succesvolle recut.
-- Bug-fix: `renderEditor` had een tweede STATE.trim-init op regel 4302 die de restore in `renderTrimRegion` overrulede. Nu consulteert die ook eerst loadTrimState. Backup: `static/index.html.pre-trim-restore-fix.bak`.
-
-**UPLOAD_DIR + OUTPUT_DIR persistent (`app.py`)**
-- Was `tempfile.gettempdir()/dj-clip-cutter/{uploads,output}` — macOS wist `/tmp` regelmatig → bron-video weg → recut onmogelijk.
-- Nu `BASE_DIR/{uploads,output}` (project-relatief, persistent over reboot).
-- Eenmalige `_migrate_legacy_tmp_storage()` runt at-import: verhuist bestaande items uit /tmp/dj-clip-cutter/ naar de nieuwe locatie + herschrijft `video_path` in alle on-disk job snapshots zodat oude jobs ook recutbaar blijven. .gitignore uitgebreid met `uploads/`. Backup: `app.py.pre-storage-persistent.bak`, `.gitignore.pre-storage.bak`.
-
-**Source-video persistence (`app.py`)**
-- `_cleanup_source_video` → no-op (was: delete bron-mp4 na done). Stub blijft voor toekomstige opt-in cleanup-UI.
-- `_purge_old_uploads` → alleen `.wav` analyse-files; mp4 bron-videos blijven staan over server-restart.
-- `_persist_job_snapshot` behoudt nu `video_path` (was: gestript omdat /tmp paths niet overleefden — nu UPLOAD_DIR persistent is, paths ook). Backup: `app.py.pre-source-persist.bak`.
-
-**Read-only marker voor view-only sets (`app.py` + `static/index.html`)**
-- Backend `/api/status` returnt `recut_capable: bool` + `recut_blocked_reason: 'video_path_missing'|'source_file_gone'|null`. Capable iff `video_path and os.path.exists(video_path)`.
-- Frontend: `STATE.recutCapable`, helper `setEditorReadonly(blocked, reason)` toggelt `.is-disabled` op alle `.ed-recut-btn` (Trim big + Trim toolbar + Split toolbar — IDs `ed-trim-big`, `ed-trim-toolbar`, `ed-split-toolbar`). Tooltip wisselt van "Trim — split clip at playhead" naar "View-only — re-upload to enable trim/stretch". CSS `.tool-btn.is-disabled` + `.btn.is-disabled` opacity .4–.45.
-- `editorTrimAtPlayhead` + `editorSplit` pre-check: `if (STATE.recutCapable === false) → toast + return`. Geen 500 meer voor oude jobs zonder bron. Backup: `app.py.pre-readonly.bak`, `static/index.html.pre-readonly.bak`.
-
-**Recent Sets / Library refresh na nieuwe upload (`static/index.html` + `app.py`)**
-- Backend `_history_entry_is_loadable`: race-safety toegevoegd. Accepteert ook in-memory jobs met status='done'/'ready' wanneer snapshot nog niet gepersisteerd is — zo verschijnt een verse upload meteen in /api/history.
-- Frontend: helper `refreshHistoryFromServer()` (returnt true als de id-lijst wijzigde, rendert sidebar opnieuw). `switchView('home')` en `switchView('dashboard')` triggeren een fetch + selectieve re-render. Backup: `app.py.pre-recent-refresh-fix.bak`.
-
-**Pauze-knop bij Volgende clip (`static/index.html`)**
-- Nieuwe `_resyncEditorPlayState()` na renderEditor in `editorPrev/Next`: forceert `setEditorPlayBtnIcon(false)` + `.is-paused` op stage als de nieuwe clip pauzed is. Voorheen bleef de pauze-icon op de play-btn staan tot de nieuwe video een 'play' event vuurde.
-
-**Trim loading-bar overlay (`static/index.html`)**
-- Nieuw element `#ed-trim-loading` (positioned `fixed`, `bottom:96px`, amber border) met indeterminate slider-animatie + "Trimming…" label. CSS-keyframes `ed-trim-slide`. Helper `_showTrimLoading(on)` toggle in `editorTrimAtPlayhead` (try → false in `finally`).
-
-**Blade-icon + amber cursor op Trim (`static/index.html`)**
-- Beide Trim-knoppen (`ed-trim-big`, `ed-trim-toolbar`) krijgen razor-blade SVG (rechthoek + v-inkepingen + 2 stippen). Class `.ed-blade-btn`.
-- Hover: `cursor: url('data:image/svg+xml;…') 14 14, pointer` — amber blade SVG als cursor. Plus inset amber shadow + scale(.96) op active. Backup: `static/index.html.pre-feedback-batch.bak`.
-
-**Sort newest-first + View all expand (`static/index.html`)**
-- `renderSidebarRecent`: was `slice(0, 5)` (oudste). Nu `slice(-5).reverse()`.
-- `renderHome`: was `slice(0, 6)`. Nu `STATE.history.slice().reverse()` met `STATE.libraryShowAll` toggle die alle entries laat zien.
-- "View all →" link is nu een `<a id="home-projects-toggle" onclick="toggleLibraryShowAll()">`. Toggles tussen "View all →" en "← Show fewer". Backup: `static/index.html.pre-sort-viewall.bak`.
-
-### Live test resultaten (via Claude in Chrome)
-
-Voor alle bovenstaande fixes is een echte Chrome-tab gebruikt (logged in als test-account, jobId `59a424ac` = nieuwe Ediine x Ho_r Berlin upload met 33 clips, 55 min):
-- Stretch IN-handle 5s naar links → klik Trim → toast "Recut to 00:00:21.72" → clip 1 ging van 16.72s naar 21.72s → file timestamps op disk bevestigen herrender (17:39).
-- Sidebar Recent Sets toont Ediine bovenaan na refresh, andere oude sets daaronder.
-- Library Recent projects: Ediine eerste card.
-- View all knop expand naar 19 projects, label wordt "← Show fewer".
-- ★ ZIP knop is dim wanneer `STATE.clips.some(c => c.favorite)` false is, tooltip "Mark some clips as ★ favourite first".
-- Trim-knop voor oude /tmp jobs (zoals Don Diablo `46716f96`) is dim, tooltip "View-only — this set was processed before persistent storage."
-- Snap toggle cycelt Off → Beat → Bar → Off, knop wordt amber, toast "Snap: beat" / "Snap: bar".
-- Loop button toggle, console log `STATE.loopEnabled = true`, knop amber.
-
-### Verificatie
-
-- `python3 -c "import ast; ast.parse(open('app.py').read())"` → OK.
-- Inline JS via `node --check` → OK.
-- DOM-ids: 148 unieke (was 141 vóór SESSIE 14 → 144 na SESSIE 14 → 148 nu), geen duplicates. Nieuwe ids: `ed-back-btn`, `ed-trim-big`, `ed-trim-toolbar`, `ed-split-toolbar`, `ed-trim-loading`, `home-projects-toggle`.
-- Bestanden: `app.py` 138.351 → 149.344 bytes (+10.993). `static/index.html` 290.431 → 320.097 bytes (+29.666).
-
-### Backups (chronologisch deze sessie)
-
-```
-app.py.pre-bug1b-r2.bak
-static/index.html.pre-bug1b-r2.bak
-static/index.html.pre-stretch-recut-fix.bak
-static/index.html.pre-aspect-zip-fix.bak
-app.py.pre-zip-empty-fix.bak
-static/index.html.pre-zip-empty-fix.bak
-app.py.pre-recent-refresh-fix.bak
-static/index.html.pre-backbutton.bak
-app.py.pre-recut-hardener.bak
-static/index.html.pre-trim-persistence.bak
-static/index.html.pre-trim-restore-fix.bak
-app.py.pre-storage-persistent.bak
-.gitignore.pre-storage.bak
-app.py.pre-source-persist.bak
-app.py.pre-readonly.bak
-static/index.html.pre-readonly.bak
-static/index.html.pre-feedback-batch.bak
-static/index.html.pre-sort-viewall.bak
-```
-
-### VOLGENDE SESSIE — vier geparkeerde features
-
-In de volgorde die Sjuul aangeeft (geen vaste prio):
-
-1. **5b — Stretch-handles ook draggable op mini-map** (~150 regels frontend). De mini-map onder de waveform toont nu alleen de viewport-positie. Voeg twee handles toe (zelfde gold-style als hoofd-tracks), bind drag-listeners die STATE.trim updaten via dezelfde `pxToVirtSec`-coordinate helper. Bestaande hoofd-handles blijven werken. Risk: laag.
-
-2. **5c — Achtergrond-analyse pill + "Terug naar processing"** (~80 regels frontend, geen backend). Persistent badge bovenin de sidebar wanneer een job in-memory met status='processing' bestaat. Klik → `switchView('processing')` met juiste jobId. Pollt /api/status elke 3s. Risk: laag.
-
-3. **5d — 1:1 aspect-ratio render bug** (backend ffmpeg arg, plus catch + nette toast). Bij klik op "1:1" in editor preview aspect-rail toast "Could not render 1:1: ffmpeg failed". Onderzoeken welke filtergraph faalt — waarschijnlijk crop berekening. Risk: middel (vereist ffmpeg-debug).
-
-4. **6 — Unify upload UX** (zie eerdere follow-up #5 voor volle uitleg). Eén intake-knop die op basis van `file.size` automatisch routeert tussen `/api/upload` en `/api/upload-local`. Verberg "Open large file (no copy)" knop. Risk: middel (drag-drop vs picker pad).
-
-Werk volgens de "werk zelfstandig" instructie in de START PROMPT — gebruik Chrome MCP om je eigen werk live te valideren tussen stappen. Maak per stap een backup, parse-check, DOM-id scan, en een korte test-flow voor elke fix.
-
----
-
-## SESSIE 14 — Bug 1a + 1b + VIDEO_EDITOR_PLAN Phase 3, 4 (snap), 6 (loop) (2026-05-10)
-
-Vijf changes in één sessie. Alle pure frontend behalve Bug 1b (één `/api/history` filter in `app.py`). Geen breaking change op bestaande state shape, alleen toegevoegde STATE-velden + helpers.
-
-### Wat is er gedaan
-
-**Bug 1b — Recent Sets filter (`app.py`, +30 regels)**
-- Nieuw `_history_entry_is_loadable(jid)` helper: returnt True als snapshot.json bestaat OF output_dir bestaat met ten minste 1 .mp4. Geen side-effects.
-- `/api/history` endpoint filtert nu at-request-time. Sidebar toont nooit meer entries die op een 404 zouden landen.
-- Backwards-compat: rehydrate-pad onaangeroerd. Filter is strikter dan alleen `output_dir_exists` (eist ook clip-files), wat Sjuuls oude pre-snapshot rommel uit de zicht haalt.
-- Backup: `app.py.pre-bug1b.bak`.
-
-**Bug 1a — Hard-reload jobId restore (`static/index.html`)**
-- Nieuwe helper `setActiveJobId(jobId)` + `loadActiveJobId()` (~20 regels) — persist STATE.jobId in `localStorage.clipLive.activeJobId`.
-- Vier callsites omgezet: `closeLocalPathPicker → setActiveJobId`, `uploadFile → setActiveJobId`, `openExportInEditor → setActiveJobId`, `openJob → setActiveJobId`. `forgetJob` clear's de pointer als 'ie de huidige was.
-- `openJob`-catch (404 / netwerk) clear't óók de pointer zodat een hard-reload niet eindeloos in een missende job blijft hangen.
-- `postLoginBoot()` checkt na `STATE.history` of de saved jobId nog loadable is (= staat in de gefilterde history van bug 1b). Zo ja → `openJob(saved)` ipv default `switchView('upload')`. Zo nee → clear pointer, ga upload in.
-- Backup: `static/index.html.pre-bug1b.bak`.
-
-**Phase 6 — Loop playback (`static/index.html`)**
-- Nieuwe knop in `.tl-toolbar .c` (rechts naast Next, met `tl-divider`): `#tl-loop-btn` met loop-iconen SVG, klassen `loop-btn`. CSS: `.tl-toolbar .loop-btn.is-on` → amber wash + ring (matchend met play-knop accent).
-- State: `STATE.loopEnabled = false`.
-- Functies: `editorToggleLoop()`, `setLoopBtnState(on)`, `bindEditorLoopHandler()`. Listener idempotent gebound op `#ed-video.dataset.loopbound`. Reads `STATE.loopEnabled` + `STATE.trim` op elke `timeupdate` tick — toggle werkt at-runtime zonder rebind.
-- Wrap rule: `currentTime >= clamp(outSec) - 0.01` → `currentTime = clamp(inSec)`. Tweede listener op `'ended'` (voor het geval outSec voorbij `video.duration` ligt door stretch).
-- Wire-in: `bindEditorLoopHandler()` + `setLoopBtnState(STATE.loopEnabled)` direct na `bindStagePlayToggle()` in renderEditor.
-- Backup: `static/index.html.pre-phase6.bak`.
-
-**Phase 3 — J/K/L scrubbing (`static/index.html`)**
-- Module-scope state: `_jklSpeed` (-4..0..4), `_jklRAF`, `_jklRAFLast`, `_jklKHeld`, constant `_JKL_FRAME = 1/30`.
-- `_jklSetSpeed(speed)`:
-  - `0` → pause + playbackRate=1 + cancelAnimationFrame.
-  - `>0` → playbackRate=speed + play (native forward speed).
-  - `<0` → pause + rAF loop dat `currentTime` decrementeert per delta-tijd (HTML5 video heeft geen native reverse).
-- `_jklStepFrame(dir)` → 1/30s nudge in de gevraagde richting, na een `_jklSetSpeed(0)` om eventuele scrub te stoppen.
-- `bindEditorJKL()` (idempotent via `window._jklBound`):
-  - `keydown` filter: editor-active, geen input/textarea, geen modifiers, geen `e.repeat`.
-  - `J` → speed -1 → -2 → -4 (vanaf 0/+).
-  - `L` → speed +1 → +2 → +4 (vanaf 0/-).
-  - `K` → set `_jklKHeld=true`, speed=0.
-  - `K+J` / `K+L` (terwijl K nog vast) → frame-step.
-  - `keyup` op K → `_jklKHeld=false`.
-  - `window blur` → reset alles (anti-strand-in-4×).
-- Aangeroepen vanuit `bindGlobalKeyboard()` zodat het niet conflicteert met de bestaande spacebar-handler (die checkt al editor-active + niet-input).
-- Backup: `static/index.html.pre-phase3-jkl.bak`.
-
-**Phase 4 — Snap modes Off / Beat / Bar (`static/index.html`)**
-- State: `STATE.snapMode='off'`, `STATE.beatTimes=[]`, `STATE.barTimes=[]`. beatTimes/barTimes worden gevuld vanuit `status.bpm` (al door analyzer geleverd: `{bpm, beat_times, bar_times}`) wanneer de editor laadt.
-- HTML: snap-toggle button `#tl-snap-toggle` in `.tl-toolbar .l` (na zoom-slider + tl-divider). Cycle Off → Beat → Bar → Off. Label `#tl-snap-lbl` updatet mee.
-- CSS: `.tl-toolbar .snap-toggle` ghost style + `.is-on` amber wash. `.timeline.is-snapping .trim-handle` krijgt `cursor:cell` als magnet-affordance.
-- Functies:
-  - `cycleSnapMode()` — toolbar onclick.
-  - `setSnapMode(mode, silent)` — externe entry. `silent=true` skipt toast (voor renderEditor re-sync).
-  - `_snapGridForMode(mode)` — beatTimes/barTimes met fallback: synthetisch grid uit `setBpm + setDuration` als analyzer geen array meegaf.
-  - `_nearestInSortedArray(arr, target)` — binary search.
-  - `snapRelSec(relSec, clip, thresholdSec)` — converteert naar set-time, snapt, terug naar clip-relative. Returnt input ongewijzigd als geen grid of buiten threshold.
-- Mousemove integration in `renderTrimRegion`: na `relSec = pxToVirtSec(...) - leftMax`, snapt de relSec via `snapRelSec` met threshold = 8px / pxPerSec (rect.width / map.vDur). Bestaande clamps (Math.max/Math.min op stretch-bounds) blijven daarna van toepassing.
-- Wire-in: `setSnapMode(STATE.snapMode || 'off', true)` aan einde van renderEditor (idempotent UI re-sync).
-- Backup: `static/index.html.pre-phase4-snap.bak`.
-
-### Wat NIET veranderd is
-
-- Phase 1-3 paid-architecture, deelstap 1, 2a, 2b, 2c, 2d, S4.1, S4.2 — onaangeroerd.
-- Bestaande spacebar handler — onaangeroerd; J/K/L is een aparte listener.
-- Stretch-zone CSS, mini-map, drag-clamping logica — onaangeroerd.
-- `/api/history` snapshot-pad blijft 1:1 hetzelfde — alleen de output-filter is nieuw.
-
-### Verificatie
-
-- `python3 -c "import ast; ast.parse(open('app.py').read())"` → OK.
-- `awk '/<script>/{flag=1;next} /<\/script>/{flag=0} flag' index.html | node --check` → OK.
-- DOM-id scan: 144 unieke ids (was 141, +3: tl-loop-btn, tl-snap-toggle, tl-snap-lbl), geen duplicates.
-- Bestandsgroottes: app.py 138.351 → 139.463 bytes (+1.112). index.html 290.431 → 307.794 bytes (+17.363).
-- **Sjuul-handmatige test nog te doen** — zie smoke-tests hieronder.
-
-### Smoke-tests voor Sjuul (na server-restart)
-
-Server herstarten:
+osascript -e 'tell application "Clip Live" to quit' 2>/dev/null
 
 cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+
 ./start.sh
 
-Browser: http://127.0.0.1:5555
-
-**Bug 1b — Recent Sets**
-- Open de sidebar links. De oude pre-snapshot entries (24+ stuks van vorige projecten) zouden weg moeten zijn. Nieuwe entries die je vandaag hebt gemaakt blijven zichtbaar. Klikken op een recent-item moet werken zonder 404.
-
-**Bug 1a — Hard-reload restore**
-- Open een set → ga naar Dashboard of Editor → druk cmd+shift+R.
-- Verwacht: na re-login (of cached session restore) land je terug op dezelfde set, niet op de Upload screen.
-- Check via DevTools → Application → Local Storage: key `clipLive.activeJobId` moet de huidige jobId bevatten.
-
-**Phase 6 — Loop playback**
-- In de Editor: zet trim-handles op een interessant stukje. Klik op de loop-knop rechts in de transport-balk (na de Next-knop, naast een tl-divider) — knop kleurt amber.
-- Druk play. Bij `outPoint` moet 'ie automatisch terug naar `inPoint` springen en blijven loopen.
-- Klik nogmaals op loop-knop → uit, normale playback hervat.
-
-**Phase 3 — J/K/L**
-- In de Editor (niet in een tekstveld!):
-  - `L` → forward 1×, nogmaals 2×, nogmaals 4×.
-  - `J` → reverse 1×, nogmaals 2×, nogmaals 4× (rAF-loop, soepel).
-  - `K` → pauze.
-  - `K` ingedrukt houden + `J` of `L` → één frame back/forward.
-- Spacebar play/pause moet nog steeds werken (geen conflict).
-
-**Phase 4 — Snap**
-- In de Editor: klik op de snap-knop links in de toolbar (na de zoom-slider + tl-divider).
-- Klik 1× → "Snap Beat", knop kleurt amber, cursor over trim-handle wordt magnet-cursor.
-- Sleep een trim-handle: bij elke beat-grens snap't 'ie nu binnen 8px.
-- Klik 2× → "Snap Bar" (4 beats). Sleep handle: snap nu naar bar-grenzen.
-- Klik 3× → "Snap Off", cursor terug normaal.
-
-### VOLGENDE SESSIE — keuze
-
-Phase 1 + bug-fixes klaar. Volgende interessante stappen:
-
-1. **VIDEO_EDITOR_PLAN Phase 5: Filmstrip on Video Track** — backend `/api/filmstrip/<job>/<clip>` + frontend draws ffmpeg-thumbnails op video track bij bar/frame zoom. High visual impact.
-2. **VIDEO_EDITOR_PLAN Phase 7: Inline clip-expand** — Adjust-knop op dashboard cards → compact inline editor zonder full editor te openen. Hoogste UX-waarde.
-3. **VIDEO_EDITOR_PLAN Phase 8: Export presets** — TikTok/Reels/Shorts/Square dropdown op Save. Klein, snel.
-4. **VIDEO_EDITOR_PLAN Phase 9: Split tool** — scissor tool toggle + `/api/split` (al bestaand).
-5. **VIDEO_EDITOR_PLAN Phase 10: Spectrogram** — backend `librosa.stft` PNG render. Visueel impressief.
-6. **paid-architecture Phase 5: Watch-folder backend** — Pro-feature is visueel ontgrendeld maar daemon werkt niet. Launch-blocker voor Pro-tier.
-7. **Stripe live mode + landing-page DNS verificatie** — vóór launch.
-
----
-
-## VOLGENDE SESSIE — keuze: bug-fix, VIDEO_EDITOR_PLAN Phase 2-7, of paid-architecture Phase 5 watch-folder
-
-> **VIDEO_EDITOR_PLAN Phase 1 is 100% klaar** na SESSIE 13 (2d mini-map). Pad A heeft inmiddels stretch-UX, alle coord-helpers, een zoom-UI, pan/seek/framenummer, een live-preview tijdens stretch-drag, en een mini-map. Tijd om te beslissen wat er nu komt.
-
-### Optie 1 — Bekende bugs aanpakken
-
-Twee bugs gemeld door Sjuul tijdens SESSIE 12-13 (zie Bekende bugs tabel):
-
-- **Clips verdwijnen na hard-reload** — diagnose nodig op rehydrate-pad of localStorage `STATE.jobId` restore. Risk: middel.
-- **Recent Sets toont oude pre-snapshot jobs** — voorgesteld fix: filter op `snapshot_exists OR job_in_history_AND_output_dir_exists`. Risk: laag.
-
-Beide niet-urgent maar wel zichtbaar in dagelijks gebruik.
-
-### Optie 2 — VIDEO_EDITOR_PLAN Phase 6: Loop playback
-
-Eén `ontimeupdate`-listener: bij `currentTime >= outPoint` reset naar `inPoint`. Toggle-knop in stage-controls.
-
-- Pure frontend.
-- Schatting: kleiner dan deelstap 1, ~50 regels JS + 1 knop in HTML + CSS voor button-state.
-- Risico: minimaal.
-- Waarde: hoog QoL — DJs kunnen een edit op repeat horen zonder iets aan te raken.
-
-### Optie 3 — VIDEO_EDITOR_PLAN Phase 3: J/K/L scrub
-
-`requestAnimationFrame`-loop op `scrubSpeed` state (-4..0..4). J = rewind, K = pauze, L = forward. K+J / K+L = frame-step.
-
-- Pure frontend.
-- Schatting: ~80 regels JS, 1 small UI hint.
-- Risico: laag. Conflict-check met bestaande spacebar-handler.
-- Waarde: middel — DJ-skim-workflow upgrade.
-
-### Optie 4 — VIDEO_EDITOR_PLAN Phase 7: Inline clip-expand
-
-Dashboard cards krijgen een "⚙ Adjust" knop die een compact inline editor onthult zonder naar de full editor te navigeren. Hi-res waveform + draggable handles + Re-export. Plan-volgorde noemt dit "highest user value, moderate effort".
-
-- Pure frontend (de waveform/recut-endpoints bestaan al).
-- Schatting: groot — vergelijkbaar met deelstap 1 + 2b samen, 200-300 regels.
-- Risico: middel. CSS-transitions + state-isolation per card.
-- Waarde: hoog — schilft 60% van de editor-bezoeken weg.
-
-### Optie 5 — VIDEO_EDITOR_PLAN Phase 4: Snap modes (bar/beat)
-
-Snap-toggle (Off / Beat / Bar) in tl-toolbar. Handles "klikken" naar grid-lines binnen 8px. Vereist `clip.bpm` en `clip.beat_times` (analyzer levert deze al).
-
-- Pure frontend.
-- Schatting: ~120 regels JS + CSS voor magnet-cursor.
-- Risico: middel. Grid-positie berekening + visual feedback tijdens drag.
-- Waarde: middel-hoog — bar-aligned cuts zijn waardevol voor DJ-content.
-
-### Optie 6 — paid-architecture Phase 5: Watch-folder backend
-
-De Pro-tier watch-folder is sinds Phase 3 visueel ontgrendeld maar de daemon werkt niet. Lokale folder-poller (5s tick) + `watch_folder.json` state-persist + 402-quota-respect + dynamische Settings-status. Volle uitleg staat in eerdere VOLGENDE SESSIE-blokken (zie git history of memory).
-
-- Backend + frontend.
-- Schatting: groot — 2-3 sessies werk.
-- Risico: middel. Background thread + concurrency hash-checks.
-- Waarde: launch-blocker voor Pro-tier (huidig: betalend product zonder werkend feature).
-
-### Aanbeveling
-
-**Optie 2 (loop playback)** als snelle start om weer in flow te komen, gevolgd door **Optie 1 (Recent Sets bug)** als een korte cleanup-stap. Daarna kies tussen Phase 7 (inline expand, hoogste UX-impact) of Phase 5 (watch-folder, voor launch-readiness).
-
-### Wat we niet meer aanraken
-
-- Phase 1-3 paid-architecture: af + getest.
-- Phase 4 editor-werk (deelstap 1, 2a, 2b, 2c, 2d, S4.1, S4.2): af + getest.
-- Stripe live mode — pas vóór launch.
-- Code signing, app icon, Windows tests, demo video — geparkeerd (memory).
-
-### Live stretch-preview (geparkeerd, gerelateerd)
-
-Bij de UI-test van deelstap 1 (2026-05-09) ontdekte Sjuul dat tijdens slepen de waveform en preview-video niet uitrekken in de stretch-zone — dat gebeurt pas bij Save & Re-export (`/api/recut`). Discoverability is nu opgelost (amber wash + `±Xs` label), maar het blijft een blinde sprong. Bewust **uitgesteld tot ná Phase 1**, omdat:
-
-- Phase 1 levert de `timeToX`/`xToTime` helpers die deze feature óók nodig heeft.
-- Eerst Phase 1 → daarna live-preview voorkomt dubbele refactor.
-
-Aanpak voor later (notitie aan toekomstige sessie):
-1. Tijdens drag: waveform-data ophalen via `/api/waveform/<job>?start=...&end=...` voor de virtuele range i.p.v. de per-clip cache.
-2. Preview-video swappen naar de bron-set met seek naar de virtuele positie. Bron-pad zit al in `STATE.jobId` → `/uploads/<job>/source.<ext>` (te verifiëren in `app.py`).
-3. Op mouseup: terug naar de clip-cache zodat alles snel blijft buiten drag-momenten.
-
-### Wat we niet meer aanraken
-
-- Phase 1-3 (auth/billing/quota): af + getest. Alleen bij regressie.
-- Stretch-zone CSS/JS van deelstap 1: af. Moet wel zoom-aware blijven (zie valkuilen).
-- Stripe live mode — pas vóór launch.
-- Code signing, app icon, Windows tests, demo video — geparkeerd (memory).
-- Patent — besproken, nog niet uitgevoerd.
-
-### Pad B (Phase 5 watch-folder) — niet vergeten, parallel beschikbaar
-
-De watch-folder is visueel ontgrendeld maar de daemon werkt nog niet. Volle uitleg stond eerder in dit document; samengevat: lokale folder-poller (5s tick) + state-persist in `watch_folder.json` + quota-respect (402-skip) + UI-status dynamisch + concurrency hash-check. Dropbox/GDrive OAuth = parked. Pad B blijft naast Pad A schedulebaar voor later.
-
-### Hoe te beginnen
-
-In de volgende chat: bevestig dat je Phase 1 wil oppakken, krijg een diagnose+aanpakvoorstel, geef "ja", dan uitvoeren — net zoals deelstap 1.
-
----
-
-## SESSIE 13 — Phase 4 deelstap 2d: mini-map onder de timeline (2026-05-10)
-
-Sluit `VIDEO_EDITOR_PLAN.md` Phase 1 af. De mini-map staat altijd onder de hoofdtimeline en toont de hele virtuele duration (clip + ±60s stretch-zones) ongeacht de zoom in de hoofd-tracks. Een gold rechthoek markeert de huidige viewport — sleep om te pannen, klik buiten de rechthoek om te springen.
-
-### Wat is er gedaan
-
-`dj-clip-cutter/static/index.html` (281.098 → 290.431 bytes; 6239 → 6467 regels, +228 regels). Backup: `static/index.html.pre-phase4-zoom-2d.bak`.
-
-Pure frontend. Geen backend, geen API.
-
-**HTML** (in de `.timeline` container, vlak ná `tl-scroll`):
-- `<div id="tl-minimap">` met:
-  - `<canvas id="tl-mini-canvas">` voor gedimde waveform-achtergrond.
-  - Twee stretch-markers `<div id="tl-mini-stretch-left/right">` proportioneel met `leftMax/rightMax`.
-  - `<div id="tl-mini-window">` — gold zoom-window rechthoek.
-
-**CSS**:
-- `.tl-minimap` 24px hoog, full-width, gold-bordered.
-- `.tl-mini-stretch-*` lichte amber wash matchend met deelstap 1.
-- `.tl-mini-window` semi-transparant gold met grab/grabbing cursor.
-
-**JS — vier nieuwe helpers**:
-- `renderMinimap()` — orchestrator: tekent canvas + plaatst stretch-markers + sync window.
-- `drawMinimapCanvas(canvas)` — devicePixelRatio-aware. Hergebruikt `buildStretchPreviewPeaks(startSet, endSet, w)` uit S4.1 voor 1 peak per pixel.
-- `syncMinimapWindow()` — bereken width/left van rechthoek uit `tl-scroll.scrollLeft/scrollWidth/clientWidth`.
-- `bindMinimap()` — idempotent (`dataset.minibound`, `dataset.miniscrollbound`, `window._clClipMiniResizeBound`):
-  - Drag op rechthoek → `tl-scroll.scrollLeft` update via factor `scrollWidth / miniWidth`.
-  - Click op mini-map buiten rechthoek → jump-scroll, click-point centraal in viewport.
-  - `scroll`-event op `tl-scroll` → automatisch sync.
-  - `resize`-event op window → herrender canvas + sync.
-
-**Wire-in in `renderEditor()`**:
-- `ensureWholeSetWaveformCache()` uitgebreid met `.then()` die `drawMinimapCanvas` repaint zodra prefetch landt.
-- `renderMinimap() + bindMinimap()` direct daarna voor initial render + listener-binding.
-
-### Wat NIET veranderd is
-
-- Phase 1-3 paid-architecture, deelstap 1, 2a, 2b, 2c, S4.1, S4.2 — onaangeroerd.
-- DOM-ids: 136 → 141 (+5 voor mini-map elementen). Geen dupes.
-
-### Verificatie
-
-- `node --check` op het inline `<script>`-blok: parse OK.
-- DOM-id scan: 141 ids, allemaal uniek.
-- Sjuul handmatig getest: mini-map zichtbaar onder hoofdtimeline, gold rechthoek toont viewport, slepen pant, click buiten window jumpt, sync via scroll-event werkt voor alle pan/zoom triggers (slider, wheel, ruler-drag, +/- keys, mini-map zelf), stretch-zone markers tonen amber wash. Geen JS-errors.
-
-### Open observatie tijdens test (geen actie)
-
-Sjuul vroeg: "wanneer ik stretch naar minder dan 0sec, klopt het dat de video nog niet gerenderd kan worden?" Antwoord: ja, maar dat is bestaand gedrag, niet nieuw door 2d. De "Clip file not yet rendered. Run a re-cut to generate this segment."-notice komt uit de lazy-render pipeline (Bucket-D2, april 2026): clips zonder `files`-veld tonen die notice tot Save & Re-export of `/api/recut` runt. Tijdens stretch-drag zelf swap't S4.2 naar `/api/source/<job>` zodat je wel beeld ziet; op mouseup gaat src terug naar de clip-file en als die niet bestaat zie je de notice. Mogelijke follow-up (geparkeerd, niet urgent): bij stretch-mouseup blijven hangen op bron-video tot user expliciet save't, i.p.v. terugswapen naar de niet-gerenderde clip-file.
-
----
-
-## SESSIE 12 — Phase 4 S4.1 + S4.2: live waveform + bron-video preview tijdens stretch-drag (2026-05-10)
-
-Lost het UX-gat op dat Sjuul flagde tijdens deelstap 1 — voorbij de clip-grens slepen was tot nu toe een blinde sprong. Met S4.1 + S4.2 zie je tijdens de drag de echte audio (waveform live geüpdatet uit whole-set cache) én de echte beelden (bron-video swap met seek naar set-time).
-
-### Wat is er gedaan
-
-`dj-clip-cutter/app.py` (136.571 → 138.351 bytes; +1.780 bytes). Backup: `app.py.pre-s4-2.bak`.
-- **Nieuwe route `GET /api/source/<job_id>`** — streamt `job['video_path']` met Range-support (HTTP 206) zodat de HTML5 `<video>` kan seeken zonder de hele file te downloaden. Mimetype-tabel `_SOURCE_MIME_BY_EXT` voor mp4/mov/m4v/mkv/webm + audio-formats. Path-traversal safety: het pad komt uit `_get_snapshot()` (gezet door upload-handlers vanuit een vertrouwde bron), nooit uit user-input. `realpath` + `isfile` check.
-- Werkt voor zowel `OUTPUT_DIR`-jobs als `no_copy` user-folder jobs (laatste: `video_path` is een absolute pad in user-folder, send_file accepteert dat).
-
-`dj-clip-cutter/static/index.html` (274.225 → 281.098 bytes; 6088 → 6239 regels, +151 regels). Backups: `static/index.html.pre-s4-1.bak` (alleen-S4.1 rollback) en `static/index.html.pre-s4-2.bak` (volledige S4 rollback).
-
-**S4.1 — Live waveform-preview**
-- Drie nieuwe helpers vlak na de coord-helpers van 2a:
-  - `ensureWholeSetWaveformCache()` — idempotente prefetch van `/api/waveform/<job>` → `STATE.wfCache.points`. Returns silent op fail; preview degradeert dan graceful naar de bestaande clip-cache.
-  - `buildStretchPreviewPeaks(startSec, endSec, targetBars)` — slice op tijd, downsample naar ~240 buckets, normaliseer naar 0..1. Returns null bij lege cache of zero-range.
-  - `restoreClipWaveform()` — redraw via `STATE.wfClipCache` na drag. Geen fetch.
-- Wire-in in `renderEditor()`: `ensureWholeSetWaveformCache().catch(()=>{})` fire-and-forget naast de zoom/pan wiring.
-- In drag-mousemove (in `renderTrimRegion`): detect `isStretch`, dan rAF-throttled `drawWaveformCanvas(wave, peaks)` via `drag._wavePreviewScheduled` flag (max 1× per frame).
-- In mouseup: `restoreClipWaveform()` zet de oude clip-cache terug — instant, geen fetch.
-
-**S4.2 — Live video-preview**
-- In drag-mousemove, eerste keer voorbij grens: één-shot swap van `<video>.src` naar `/api/source/<job>`. `drag._priorVideoSrc/_priorVideoTime/_priorVideoPaused` bewaren de pre-swap state. `onloadedmetadata` seekt naar absolute set-time `clip.start + relSec`.
-- Live-scrub block in mousemove gerefactored: bij `_sourceSwapped` gebruikt 'ie set-time, anders clip-time. Tijdens vervolg-drag dus alleen `currentTime` updates, geen src-swaps (= soepel).
-- In mouseup: src terug naar de bewaarde clip-file URL, `onloadedmetadata` seekt naar de oude tijdpositie en hervat play als 't speelde.
-
-### Wat NIET veranderd is
-
-- Stretch-logica zelf (`getEditorTimeMap`, drag-clamping, `/api/recut` vs `/api/split-clip` pad bij Save) — onaangeroerd.
-- Coord-helpers van 2a, zoom-UI van 2b, pan/seek van 2c — onaangeroerd.
-- DOM-ids: 136 (geen wijziging — alleen JS-helpers + één backend route toegevoegd).
-
-### Verificatie
-
-- `python -m py_compile app.py`: OK.
-- `node --check` op het inline `<script>`-blok: parse OK.
-- DOM-id scan: 136 ids, allemaal uniek.
-- Sjuul handmatig getest: alle functies werken, geen JS-errors. Bevestigd op 2026-05-10.
-
-### Twee bekende bugs gemeld door Sjuul tijdens deze test (niet-urgent)
-
-1. **Clips verdwijnen na hard-reload** — na `cmd+shift+R` zijn recent gegenereerde clips niet meer zichtbaar in de Clips-sectie. Mogelijk een job-state rehydration issue na het Phase-3 plan-gating werk (jobs hebben nu een `user_id` veld; oude job-snapshots niet, en/of de rehydrate-pad mist iets). Of een localStorage `STATE.jobId` die niet correct gerestored wordt. Verdere diagnose vereist.
-2. **Recent Sets toont oude pre-snapshot jobs** — sidebar toont 5 oude entries gekoppeld aan een vorig project. Bekende bug uit SESSIE 2 ("Pre-snapshot jobs in history") — nog niet gefixed. UI-affordance "Forget" bestaat per item maar Sjuul heeft 'm niet gevonden of 't is niet duidelijk dat 't bestaat.
-
-Beide op de bekende-bug-lijst gezet, geen actie deze sessie.
-
-### Bekende valkuilen voor 2d
-
-- `STATE.wfCache.points` is nu prefetched dankzij S4.1 — 2d kan dezelfde data gebruiken voor de mini-map achtergrond zonder extra fetch.
-- `tl-scroll.scrollLeft` wordt al gewijzigd door 2c (ruler-pan, middle-mouse) en door zoom-rond-cursor in 2b. 2d's mini-map moet **luisteren** op `scroll`-event om gesynchroniseerd te blijven.
-
----
-
-## SESSIE 11 — Phase 4 deelstap 2c: pan + zoom-aware seek + framenummer (2026-05-09)
-
-Drie samenhangende interactiepatronen + één backend-uitbreiding voor framenummer-display. Phase 1 uit `VIDEO_EDITOR_PLAN.md` is hiermee 75% af (alleen 2d mini-map ontbreekt nog).
-
-### Wat is er gedaan
-
-`dj-clip-cutter/app.py` (133.812 → 136.571 bytes). Backup: `app.py.pre-phase4-zoom-2c.bak`.
-
-- **Nieuwe helper `_parse_fps_string(value)`** — converteert ffprobe `r_frame_rate`/`avg_frame_rate` strings (`"30000/1001"`, `"30/1"`, `"24"`) naar float. Sanity-check op range 1..240. Returnt `None` bij ongeldige waardes.
-- **`_validate_video_file(path)` uitgebreid** — parse't tijdens de bestaande ffprobe-call de eerste video-stream's `r_frame_rate` (met `avg_frame_rate` als fallback) en zet als `info['fps']`. Geen extra subprocess-call.
-- **Beide upload-handlers** (`/api/upload` regel ~1428, `/api/upload-local` regel ~1652) zetten nu `'fps': info.get('fps') if isinstance(info, dict) else None,` in de jobs[job_id]-init.
-- **Nieuwe helper `_inject_clip_fps(snap)`** — kopieert job-level fps in elke clip in `snap['clips']` en `snap['results']` (alleen waar clip nog geen eigen fps heeft). No-op voor jobs zonder fps (van vóór deze sessie). `_get_snapshot()` roept 'em aan op beide return-paden (in-memory + on-disk fallback).
-
-`dj-clip-cutter/static/index.html` (270.320 → 274.225 bytes, +94 regels). Backup: `static/index.html.pre-phase4-zoom-2c.bak`.
-
-- **Nieuwe `<span id="ed-frame">`** in de timecode-bar HTML naast `tl-cursor`/`tl-total`. CSS `.ed-frame:empty{display:none}` zorgt dat de span gewoon verdwijnt voor jobs zonder fps — geen lelijke placeholder.
-- **CSS** voor `.ed-frame` (klein, mono, gedimd amber) en pan-cursor styling (`.ruler{cursor:grab}` + `.tl-scroll.is-panning *{cursor:grabbing!important}`).
-- **`bindTimelineScrub()` gerefactored naar zoom-aware** — gebruikt nu `pxToVirtSec()` van 2a + `getEditorTimeMap()` om pointer-x naar relSec te converteren, dan clamp naar `[0, video.duration]`. Werkt correct op elk zoom-niveau én respecteert de stretch-zones (klikken in stretch-zone clamp't naar de clip-randen i.p.v. seek naar een onmogelijke positie). Extra skip-check op `ev.button !== 0` zodat middle-mouse niet wordt gehijack't door scrub.
-- **Nieuwe `bindTimelinePan()`** (idempotent via `dataset.panbound`):
-  - **Ruler-drag**: left-button mousedown op `.ruler` of `.ruler-labels` → noteer `startClientX` + `startScrollLeft`. Mousemove update `tl-scroll.scrollLeft = startScrollLeft - dx`. mouseup eindigt pan.
-  - **Middle-mouse-drag**: `mousedown` met `ev.button === 1` anywhere binnen `tl-zoomwrap` → zelfde mechaniek, met `preventDefault` op mousedown om Linux-autoscroll te blokken.
-  - Tijdens pan: `tl-scroll` krijgt `is-panning` class voor `cursor:grabbing` styling.
-  - `mouseup` + `mouseleave` op window beëindigen pan zodat je niet stuck zit als je window verlaat tijdens drag.
-- **`updateEditorTime()` updatet nu ook de `ed-frame` span** met `Math.floor(currentTime * fps)` als `STATE.clips[idx].fps` beschikbaar is. Anders: lege string → CSS hidet de span.
-- **Wire-in**: `bindTimelinePan()` aangeroepen vanuit `renderEditor()` naast de bestaande `bindTimelineScrub()`/`bindStagePlayToggle()`.
-
-### Wat NIET veranderd is
-
-- Stretch-zone visualisatie van deelstap 1, drag-label, handles — onaangeroerd. Werken correct op elk zoom-niveau dankzij 2a's helpers.
-- Zoom-UI van 2b (slider/wheel/keys) — onaangeroerd.
-- Coord-helpers van 2a — gebruikt door 2c, niet gewijzigd.
-- Geen wijzigingen aan `/api/upload` / `/api/upload-local` flow buiten het toevoegen van het `'fps'` veld.
-
-### Verificatie
-
-- `python -m py_compile app.py`: OK.
-- `node --check` op het inline `<script>`-blok: parse OK.
-- DOM-id scan: 136 ids, allemaal uniek (was 135; +1 voor `ed-frame`).
-- Backend identifier sanity: `_parse_fps_string`/`_inject_clip_fps` op verwachte plekken; 2 `'fps':` writes in app.py (één per upload-handler).
-- Sjuul handmatig getest: ruler-drag pant, middle-mouse-pan werkt, klikken op waveform seekt zoom-aware (incl. stretch-zone clamp), framenummer toont correct bij verse upload, oude jobs zonder fps tonen geen frame-counter (graceful), geen JS-errors.
-
-### Bekende valkuilen voor latere sessies
-
-- **Oude jobs in history** hebben geen fps in hun snapshot → frame-counter blijft leeg. Geen UI-impact (CSS hidet 'm), maar als je een one-time backfill wilt: een nieuwe migratie-script die `_validate_video_file` opnieuw runt op bestaande sources en `job['fps']` patcht. Out of scope deze sessie.
-- **Variable-rate sources** (sommige iPhone-camera output) krijgen mogelijk een misleidend hoog `r_frame_rate` (bv. 60 voor een clip die effectief op 30 draait). `_parse_fps_string` clamp't op 240 maar correct ondervangen vereist een `nb_frames / duration` heuristiek. Niet aangepakt nu — als Sjuul echte foute getallen ziet, dat is de volgende fix.
-- **Pan + scrub conflict bij snel klikken** — een korte ruler-mousedown zonder beweging triggert geen scroll-update (dx=0). Dat is correct gedrag, maar als een gebruiker bewust wil seeken via een ruler-click moeten we dat als afzonderlijk pad aanleggen. Niet relevant nu.
-
----
-
-## SESSIE 10 — Phase 4 deelstap 2b: zoom-UI + slider + Ctrl+wheel/pinch + +/- keys (2026-05-09)
-
-Eerste **zichtbare** zoom-UI. Bouwt op 2a's coord-helpers (handles + zones blijven correct positioneren bij elk zoom-niveau). Alle vier de zoom-triggers routen via één centrale `setEditorZoom()` zodat slider, knoppen, wheel/pinch en keys consistent blijven.
-
-### Wat is er gedaan
-
-`static/index.html` (264.180 → 270.320 bytes; 5843 → 5994 regels). Backup: `static/index.html.pre-phase4-zoom-2b.bak`.
-
-- **Slider HTML** (regel ~1944) in tl-toolbar naast de bestaande `−`/`⊡`/`+` knoppen, achter een divider. `<input type="range" id="tl-zoom-slider" min="0" max="100" step="1" value="50">` + readout `<span id="tl-zoom-val">1.0×</span>`.
-- **CSS** (`.zoom-slider-wrap`, `.zoom-slider`, `.zoom-slider-val`) — gold thumb met glow + mono readout, past visueel binnen tl-toolbar.
-- **Centrale helper `setEditorZoom(value, anchorClientX?)`** — clamp naar [0.5, 12], bereken virtuele tijd onder anchor (cursor of midden), update `STATE.timelineZoom`, zet `tl-zoomwrap.style.width` inline en pas `tl-scroll.scrollLeft` aan zodat dezelfde virtuele tijd onder anchor blijft, dan `renderEditor()` + `renderZoomSlider()`.
-- **Wrappers** — `editorZoom(direction)` en `editorZoomFit()` zijn nu thin wrappers rond `setEditorZoom`. Bestaande knoppen blijven werken zonder HTML-wijziging.
-- **Slider mapping** — `sliderToZoom(s)` en `zoomToSlider(z)` doen log-mapping zodat elke slider-unit een constant zoom-multiplier is (~1.032× per slider-unit voor 0.5..12 range over 100 stappen).
-- **`renderZoomSlider()`** — sync slider value + readout met `STATE.timelineZoom`. Aangeroepen vanuit `setEditorZoom()` én vanuit `renderEditor()` (idempotent).
-- **Bind helpers (alle idempotent)**:
-  - `bindZoomSlider()` — `input` event op slider via `dataset.zoombound`.
-  - `bindZoomWheel()` — `wheel` listener op `tl-scroll` met `passive:false`. Triggert alleen bij `ev.ctrlKey` (Ctrl+wheel + macOS pinch). `Math.pow(1.0015, -ev.deltaY)` factor voor smoothness. Plain horizontal scroll blijft browser-default — bewaard voor 2c pan.
-  - `bindZoomKeys()` — `keydown` op window via `window._clClipZoomKeysBound` sentinel. Alleen bij `STATE.view === 'editor'` en focus niet in input/textarea/contentEditable. Geen modifier (Cmd/Ctrl/Alt) — voorkomt botsing met browser page-zoom. `+`/`=` zoomt in 1.4×, `-`/`_` zoomt uit 1/1.4×.
-- **Wire-ins in `renderEditor()`** — vlak na `STATE.timelineZoom` init worden `renderZoomSlider() + bindZoomSlider() + bindZoomWheel() + bindZoomKeys()` aangeroepen (idempotent dankzij bind-flags).
-
-### Wat NIET veranderd is
-
-- Stretch-zone visualisatie van deelstap 1, drag-label, handles — onaangeroerd. 2a's helpers zorgen automatisch dat alles correct blijft positioneren bij elk zoom-niveau.
-- Bestaande `tl-zoomwrap.style.width = ${100 * zoom}%` mechanisme — onaangeroerd.
-- Geen backend-aanrakingen, geen API-wijzigingen.
-
-### Verificatie
-
-- `node --check` op het inline `<script>`-blok: parse OK.
-- DOM-id scan: 135 ids, allemaal uniek (was 133; +2 voor `tl-zoom-slider` + `tl-zoom-val`).
-- Sjuul handmatig getest: slider sleept smooth + readout sync, trackpad pinch zoomt rond cursor, Ctrl+wheel idem, `+`/`-` keys werken, plain scroll laat alleen pan zien (ongewijzigd browser-default), Cmd+`+/-` zoomt page-default, geen JS-errors. Stretch-zones blijven op de juiste virtuele positie bij hoge zoom.
-
-### Bekende valkuilen voor 2c
-
-- **Plain scroll moet ongewijzigd blijven** — 2b raakt geen plain wheel/scroll aan; 2c gaat plain scroll als pan-pad gebruiken. Verifieer in 2c dat plain horizontal scroll nog steeds werkt zoals verwacht.
-- **Frame-accurate seek (2c) vs handle-drag (1/2a)** — beide reageren op een mousedown op de tracks-area. Conflict-resolutie via `ev.target.closest('.trim-handle')` check in de seek-handler.
-- **Conflict met `bindTimelineScrub`** — bestaande scrub-on-drag handler (regel ~3956) werkt op de tracks-area. 2c's seek-click moet niet dezelfde mousedown hijacken; check welke target priority krijgt.
-
----
-
-## SESSIE 9 — Phase 4 deelstap 2a: coord-systeem refactor (2026-05-09)
-
-Foundation-stap voor de zoom/pan/mini-map werk in 2b/2c/2d. **Invariance-refactor**: niets verandert visueel of functioneel, maar onder de motorkap loopt elke positie-berekening op de editor-timeline nu via één gedeeld coord-systeem. Vereist voordat 2b zoom-UI kan landen — anders zou elke percentage-formule individueel zoom-aware gemaakt moeten worden.
-
-### Wat is er gedaan
-
-`static/index.html` (262.195 → 264.180 bytes; 5801 → 5843 regels). Backup: `static/index.html.pre-phase4-zoom-2a.bak` (apart roll-back punt naast `pre-phase4-stretch.bak`).
-
-- **`STATE.timelineScrollOffset = 0`** lazy-init in `renderEditor()` naast bestaande `STATE.timelineZoom`. Geen UI yet — staat klaar voor 2c (pan).
-- **Drie helpers** vlak na `getEditorTimeMap()` (regel ~4499 in nieuwe nummering):
-  - `virtSecToPct(virtSec, map)` — virtual-track-second → % offset op de timeline. Convention: `virtSec=0` is de stretch-left edge van de virtuele track, `virtSec=map.vDur` is de stretch-right edge.
-  - `relSecToPct(relSec, map)` — clip-relative-second (de convention die `STATE.trim.{inSec,outSec}` gebruikt — negatief = stretch-left, >clipDur = stretch-right) → % offset. Wrapper rond `virtSecToPct` met de leftMax-offset.
-  - `pxToVirtSec(x, rectWidth, map)` — pointer-x op de tracks-element → virtual-track-second. Gebruikt door drag-handler.
-  - Bij `STATE.timelineZoom=1` + `scrollOffset=0` produceren ze exact dezelfde getallen als de oude inline formules. 2b/2c plug-in zoom/scroll zonder callsite changes.
-- **Migratie van `renderTrimRegion()`**:
-  - `place()` lokale `toVPct` pijlfunctie weg — vervangen door `relSecToPct` voor handles + `virtSecToPct` voor zone-edges.
-  - Drag-handler bewaart de `vDur`-correctie nu in `drag.map` zelf via `Object.assign({}, snapMap, { vDur: snapVDur })`. `drag.vDur` veld is weg.
-  - Mousemove gebruikt `pxToVirtSec` + `relSecToPct` ipv inline formules.
-
-### Wat NIET veranderd is
-
-- Geen DOM-elementen, geen CSS, geen events, geen API-calls.
-- `getEditorTimeMap()`, het 60s stretch-bedrag, het pad `/api/recut` vs `/api/split-clip`, de bestaande `editorZoom()`/`editorZoomFit()` controls — allemaal onaangeroerd.
-- DOM-ids: 133, allemaal uniek.
-
-### Verificatie
-
-- `node --check` op het inline `<script>`-blok: parse OK.
-- DOM-id scan: 133 ids, allemaal uniek (zelfde count als SESSIE 8).
-- Geen `drag.vDur`, `toVPct`, `secOnTrack` referenties meer in de file (oude formule-residu opgeruimd).
-- Sjuul handmatig getest in browser: stretch-zones zelfde positie, handles zelfde gedrag, drag-label zelfde positie/timing als deelstap 1, geen JS-errors. Visueel + functioneel identiek aan SESSIE 8 — bevestigt dat 2a de invariance-claim haalt.
-
-### Bekende valkuilen voor 2b en verder
-
-- **`drag.vDur` is weg**: als 2b de drag-handler aanraakt, niet terugvallen op `drag.vDur` (bestaat niet meer). Gebruik `drag.map.vDur` of de helpers.
-- **Helpers retourneren altijd %**: in 2b moet de helper-implementatie blijven werken op % zolang `tl-zoomwrap.style.width = ${100 * zoom}%` het zoom-mechanisme is. Pas in 2c (pan) wordt scroll-offset relevant — dan moet `virtSecToPct` mogelijk afgeleid worden naar pixel-mode of een tweede helper-flavor krijgen.
-- **`Object.assign({}, snapMap, { vDur: ... })`**: shallow copy is voldoende want map-velden zijn primitives. Als toekomstige wijzigingen aan `getEditorTimeMap()` nested objects toevoegen, deep-copy nodig.
-
-### Bestanden
-
-- Aangepast: `dj-clip-cutter/static/index.html` (5801 → 5843 regels).
-- Backup: `dj-clip-cutter/static/index.html.pre-phase4-zoom-2a.bak`.
-
----
-
-## SESSIE 8 — Phase 4 deelstap 1: stretch-zone UX (2026-05-09)
-
-Open follow-up #1 (Scenario S1) uit eerdere sessies geïmplementeerd. Backend ondersteunde al sinds SESSIE 1 ±60s stretch buiten clip-grenzen via `/api/recut`, maar het was visueel volledig onontdekbaar (alleen een doffe zwarte dim-gradient). Deze deelstap maakt de stretch *zichtbaar en aankondigend* zonder de stretch-logica zelf aan te raken.
-
-### Wat is er gedaan
-
-`static/index.html` (backup `static/index.html.pre-phase4-stretch.bak`, +5.4 KB / +135 regels):
-
-- **CSS-block toegevoegd** vlak na `.trim-handle:hover::after` rule:
-  - `.tl-stretch-zone` + `.left` / `.right` varianten — soft amber wash i.p.v. de oude `rgba(0,0,0,0.32)` dim-gradient. Zone fade gaat van iets sterker amber bij de clip-grens naar transparant aan de buitenrand zodat de "edge" duidelijk is.
-  - `.tl-stretch-zone .lbl` — uppercase mono eyebrow `STRETCH ←60S` / `60S→ STRETCH`. Toont werkelijk beschikbare seconden (kan minder zijn dan 60 voor clips dicht bij begin/einde van de set; gebruikt `Math.round(map.leftMax/rightMax)`).
-  - `.tl-stretch-zone.is-active` — feller amber wanneer de gebruiker een handle aan die kant sleept (visuele bevestiging "deze kant ben je nu aan het rekken").
-  - `.tl-stretch-drag-label` — floating tooltip-stijl pill (mono, donkere bg, amber border) die boven de actieve handle verschijnt tijdens slepen voorbij de grens. Toont `+12s` of `−45s` (unicode minus voor visuele symmetrie met plus).
-
-- **`renderTrimRegion()` aangepast** (~regel 4474):
-  - Vervangen: enkele `<div class="tl-stretch-dim">` met linear-gradient → twee aparte `<div class="tl-stretch-zone left/right">` elementen met label-`<span>`'s.
-  - Legacy-cleanup: oude `.tl-stretch-dim` element wordt opgeruimd op eerste render (voor hot-reload van sessies vóór deze sessie).
-  - Eyebrow-text wordt elke render herberekend op basis van de huidige `getEditorTimeMap(clip)` zodat clips in de set-randen het correcte budget tonen ("Stretch ←8s" voor een clip die 8s na set-start zit).
-  - Zones worden volledig verborgen (`display:none`) als `leftMax < 0.5s` of `rightMax < 0.5s` (zelfde gedrag als oude implementatie).
-
-- **Drag-handler uitgebreid** (`window.addEventListener('mousemove', …)` in dezelfde functie):
-  - `setZoneActive(kind, on)` toggelt `.is-active` op de juiste zone bij mousedown/mouseup.
-  - `fmtOffset(sec)` formatter levert `+12s` / `−45s` (1 decimaal voor <10s, geen voor ≥10s).
-  - In mousemove: bereken `offset = (kind === 'in') ? tt.inSec : (tt.outSec - clipDur)`. Toon label alleen wanneer voorbij grens (`> 0.05s`). Position via `inPct` / `outPct` percentages, gehouden in `#tl-trim` element zodat coord system gedeeld is met de handles.
-  - In mouseup: alle visualisatie-state opruimen (label `is-on` weg, zone `.is-active` weg).
-
-- **Tooltip-attributen** op `#tl-trim-in` / `#tl-trim-out` updated van "Drag to set IN/OUT point" → "Sleep om IN/OUT-punt te zetten — voorbij de grens verlengt de clip tot ±60s".
-
-### Wat NIET veranderd is
-
-- `getEditorTimeMap()`, de drag-clamping, het pad `/api/recut` vs `/api/split-clip` in `requestExportEditedClip()` — **alle stretch-logica blijft 1:1 zoals SESSIE 1**.
-- Geen `app.py` wijziging. Geen nieuwe routes, geen nieuwe `STATE`-velden.
-- Geen wijziging aan waveform-renderer of preview-video clamp.
-
-### Verificatie
-
-- `node --check` op de inline `<script>`-block: parse OK.
-- DOM-id scan: 133 ids, allemaal uniek (geen regressie t.o.v. SESSIE 7-baseline).
-- Sjuul handmatig getest in browser (zie screenshot 2026-05-09): stretch-zones zichtbaar amber, eyebrow-labels correct, `+Xs` / `−Xs` label tracked the active handle, active zone hilight correct.
-
-### Tijdens test ontdekt: live-preview gat (geparkeerd)
-
-Sjuul observeerde dat de waveform en preview-video tijdens drag niet "uitrekken" in de stretch-zone — dat is bestaand gedrag sinds SESSIE 1, niet veroorzaakt door deze deelstap. De UI is nu discoverable (✓), maar het blijft een blinde sprong tussen drag en Save & Re-export. **Bewust uitgesteld tot ná Phase 1 zoom/pan** omdat Phase 1 de gedeelde `timeToX`/`xToTime` helpers oplevert die deze feature óók nodig heeft. Aanpak voor later staat in de "VOLGENDE SESSIE → Live stretch-preview"-blok bovenaan dit document.
-
-### Bestanden
-
-- Aangepast: `dj-clip-cutter/static/index.html` (256.634 → 262.195 bytes; 5666 → 5801 regels).
-- Backup: `dj-clip-cutter/static/index.html.pre-phase4-stretch.bak`.
-
-### Bekende valkuilen voor toekomstige sessies
-
-- Bij Phase 1 (zoom/pan) moet de positionering van `.tl-stretch-zone` en de drag-label van **percentage-based** naar het nieuwe `timeToX(t)`-systeem gemigreerd worden. Anders verspringen ze bij elk zoom-niveau ≠ 1.0.
-- De `is-active` toggle hangt af van een correcte `kind` in de drag-state — als Phase 2 (draggable handles) de drag-state opnieuw schrijft moet dezelfde `kind`-key behouden blijven, anders blijft `.is-active` per ongeluk hangen na release.
-
----
-
-## SESSIE 7 — Phase 3 end-to-end getest (2026-05-08)
-
-Plan-gating is volledig gevalideerd in de browser na een end-to-end testronde. Geen open punten — Phase 3 is af.
-
-### Wat is er getest + werkte
-
-- **Quota-strip pre-render** — strip toont al `0 / 2 sets · FREE` voordat `/api/quota` antwoordt; geen lege flash.
-- **Strip met echte data** — na auth + `loadQuota()` toont 'ie de echte stand (`2 / 2 sets · resets in 29 days` voor de Free-test-user die 2 sets had verbruikt).
-- **Live counter na analyse** — 4e upload (eerste onder Pro): strip flipt van `0 / 10` naar `1 / 10` zodra status='done' is.
-- **402-flow** — 3e upload op Free triggert de upgrade-modal met titel "You're out of clips this month", body "You've used 2 of 2 sets this month on the FREE plan.", en sub "Resets in 29 days." Backdrop-click + Escape + "Maybe later" sluiten 'm. Geen file in `$TMPDIR/dj-clip-cutter/uploads/` na de poging — gate hield stand.
-- **Watch-folder gate (Free)** — alle drie de intake-CTAs (sidebar Cloud-sync, Drop-a-set source, home quick-card) openen de modal met "Watch a folder"-titel + Pro-pitch (i.p.v. quota-copy). Settings → Watch folder sectie toont locked-tile met slot-icoontje + "PRO FEATURE" eyebrow + "UPGRADE TO ENABLE" knop.
-- **Stripe upgrade** — testkaart 4242 → "Payment received…" toast → "Welcome to PRO." → chip flipt FREE→PRO badge, strip springt van `2 / 2` naar `0 / 10` (webhook reset usage_this_period bij eerste betaalde upgrade — verse 30-dagen-window). Settings: locked-tile is weg, "Choose folder" / "Stop watching" knoppen weer actief.
-
-### Cosmetische tweaks gemaakt na test 1
-
-- `uploadFile()` swallow't de "Upload failed: quota_exceeded" rode toast wanneer de modal al opent (`err.code === 'quota_exceeded'` check).
-- `_registerLocalPath()` doet hetzelfde voor de "Open large file (no copy)"-flow + sluit de picker netjes.
-
-### Edge case bewust niet gefixed
-
-- **Token-expiry refresh-rotation** — Supabase JWTs zijn ~1 uur. Bij verloop 401-pad geeft nu een nette "Session expired — please sign in again"-toast + auth-overlay terug, maar er is nog geen automatische refresh-token-flow. User moet opnieuw inloggen. Out of scope Phase 3 — wordt eventueel apart opgepakt als Sjuul echte gebruikers krijgt.
-
----
-
-## SESSIE 6 — Phase 3 frontend (Blok 3+4) gecodeerd (2026-05-08)
-
-Plan-gating UI: quota-strip in account-chip, upgrade-modal in dezelfde brand-card-stijl als de auth-overlay, automatische trigger via `api()` op 402, en Pro-feature gate op de watch-folder.
-
-### Wat is er gedaan
-
-**`static/index.html`** (backup: `static/index.html.pre-phase3.bak`):
-
-- **STATE.quota** toegevoegd `{plan, used, limit, remaining, reset_in_days, reset_date}`.
-- **Quota-strip** in account-chip onder de plan-badge: dunne progress-bar + "X / Y sets · resets in N days". Default-render `0 / 2` voor Free zodat er geen lege flash is. Studio krijgt "Unlimited sets". CSS-classes: `.ac-quota`, `.ac-q-bar`, `.ac-q-fill`, `.ac-q-fill-full` (rood-amber bij vol), `.ac-q-fill-studio` (gedimd).
-- **Upgrade-modal** met DOM-id `upgrade-modal` (vlak na de auth-overlay markup). Twee plan-cards (Pro €21,99 / Studio €200) met feature-bullets en CTAs. Pro is goud-primary, Studio is subtieler. "Maybe later" sluit-knop top-right + click-buiten-kaart + Escape sluiten ook. CTAs roepen `startCheckout('pro' | 'studio')` aan.
-- **`api()` helper** vangt nu 402-`quota_exceeded` en 401:
-  - 402: `showUpgradeModal(payload)` automatisch + `err.code = 'quota_exceeded'` zodat callers (zoals upload) `if (err.code === 'quota_exceeded') return;` kunnen doen. Opgenomen in tests: payload-shape moet matchen `_quota_block_response` in app.py — die hebben we gelijktijdig getuned.
-  - 401: clearSession + toast + showAuthOverlay, behalve op `/api/auth/*` (die mogen 401'en op verkeerde credentials zonder de hele app te resetten).
-- **`loadQuota()`** roept `GET /api/quota` aan, vult STATE.quota, repaint de strip. Failures silent.
-- **`renderQuotaStrip()`** plakt de progress-bar + label samen. Robuust tegen een nog-niet-geladen STATE.quota (defaults).
-- **`showUpgradeModal(payload)`** vult titel/body/sub op basis van trigger:
-  - `error: 'quota_exceeded'` → "You're out of clips this month" + reset-info
-  - `trigger: 'watch_folder'` → "Watch a folder" + Pro-pitch
-  - geen payload → generic "Need more clips?"
-  - Hidet ook automatisch het plan-card waar je al op zit (Pro-user ziet alleen Studio-card).
-- **`bindUpgradeModal()`** wired close + CTAs + backdrop + Escape — eenmalig in boot.
-- **`openWatchFolderUI()`** — Free → upgrade-modal, Pro/Studio → switchView('settings'). Drie inline `onclick="switchView('settings')"`-aanroepen voor de Watch-folder intake-bronnen vervangen door deze router (home quick-card, upload source, sidebar Cloud-sync upgrade-card).
-- **`renderSettings()`** plakt voor Free een locked-placeholder vóór de bestaande render-card en verbergt de echte. Idempotent: re-runs op elke visit, en switcht clean wanneer plan verandert.
-- **Wire-ins** in:
-  - `boot()` → `bindUpgradeModal()`
-  - `postLoginBoot()` → `loadQuota()` na auth
-  - `renderAccountChip()` → roept `renderQuotaStrip()` aan zodat een plan-flip direct de strip update
-  - status-poll done-branch (regel ~2710) → `loadQuota()` zodra een analyse klaar is, dus de teller update live
-  - `pollProfileForUpgrade()` → na succesvolle plan-flip: `loadQuota()` + re-render Settings/Upload als die actief zijn
-
-### Verificatie
-
-- `node --check` op alle inline `<script>`-blokken: parse OK.
-- Geen dubbele DOM-IDs (alle 133 unique).
-- Bytecode-compile op `app.py` blijft OK (geen backend regressies).
-
-### Sjuul UI-test-checklist (DOEN VÓÓR Phase 4)
-
-Pre-req: app draait op http://127.0.0.1:5555. Hard-refresh de browser (cmd+shift+R) want index.html is veranderd.
-
-1. **Default state — strip pre-rendert FREE / 0 of 2**
-   - Open de app in incognito of na hard-reload. Voor `/api/auth/me` antwoord geeft moet je in de account-chip al "0 / 2 sets" zien staan (geen lege flash).
-
-2. **Login als Free-account** (bv. business+free@sjuulstudios.com)
-   - Account-chip toont: email, FREE-badge, **progress-bar + "1 / 2 sets · resets in N days"** (omdat die user al 1 voltooide analyse heeft van de eerdere sessie). Bar voor ~50% gevuld.
-
-3. **Counter live na nieuwe analyse**
-   - Upload nog 1 set. Wacht tot status='done'. De strip moet binnen 1-2 sec updaten naar "2 / 2 sets" en de bar wordt rood-amber-getint (full state).
-
-4. **402 → upgrade-modal**
-   - Probeer een 3e set te uploaden. In plaats van een toast/error: de upgrade-modal opent over de hele app. Titel: "You're out of clips this month". Body: "You've used 2 of 2 sets this month on the FREE plan." Sub: "Resets in N days." Twee cards zichtbaar: **Pro €21,99** (goud-primary CTA) en **Studio €200** (subtieler CTA). Backdrop click + Escape + "Maybe later" sluiten 'm.
-   - Geen file in `$TMPDIR/dj-clip-cutter/uploads/` na de poging.
-
-5. **Klik "Upgrade to Pro"** → landt op Stripe Checkout. Vul testkaart `4242 4242 4242 4242` in. Na succes: "Payment received — activating…" toast → "Welcome to PRO." → account-chip flipt naar PRO-badge → strip update naar **"2 / 10 sets"** (oude usage blijft staan, terecht, en limit is nu 10).
-
-6. **Watch-folder gate (Free vs Pro)**
-   - Log uit + log in als een Free-account die nog niet ge-upgrade is.
-   - Op Home: klik de "Watch a folder" quick-card → upgrade-modal opent met titel "Watch a folder" + Pro-pitch (i.p.v. quota-copy). Hetzelfde voor de "Watch a folder" source op de Drop-a-set scene en de "Connect →" knop in de sidebar Cloud-sync card.
-   - Open Settings via sidebar: bij de "Watch folder" sectie zie je een doffe locked-tile met slot-icoon + "Pro feature" eyebrow + "Upgrade to enable" knop. Klik → opent dezelfde modal.
-   - Upgrade naar Pro. Na flip: ga terug naar Settings — locked-tile is weg, echte "Choose folder" / "Stop watching" UI is zichtbaar.
-
-7. **Studio render**
-   - Met een Studio-user (Customer Portal: switch plan): account-chip strip toont "Unlimited sets" met een gedimde volledige bar. Geen counter.
-
-8. **Session-expired (bonus)**
-   - Wacht ~1 uur of in DevTools `localStorage.clear()` + reload zonder herinloggen. Bij volgende API-call (bv. switch view) krijg je nu een **"Session expired — please sign in again"**-toast en de auth-overlay komt automatisch terug, in plaats van een rare "token invalid" foutmelding.
-
-### Bekende valkuilen
-
-- **Strip blijft op 0/2** zelfs na geslaagde analyse → check DevTools console op fouten in `loadQuota()`. Of de SSE/poll-flow zat in een edge-case die `applyUpdate(s)` returnt voor 'done'.
-- **Modal opent dubbel** → was getest met `bindUpgradeModal()` idempotency-flag, maar als je per ongeluk 2x de pagina bind (bv. via een tweede `boot()`-call) → klik-handler runs 2x. Niet voorzien op dit moment.
-- **Pro-card verdwijnt op Pro-user** → that's intentional. Pro-users zien alleen Studio in de modal. Studio-users zien geen modal triggers (geen quota-block, watch-folder is unlocked).
-- **Plan-gating dwingt geen "Cloud sync"-marketing weg voor Pro/Studio**. De sidebar promo-card toont nog steeds voor alle plans. Niet stoppend, kan later weg op Pro/Studio.
-
----
-
-## SESSIE 5 — Phase 3 backend (Blok 1+2) gecodeerd, runtime-test pending (2026-05-08)
-
-Phase 3 plan-gating: backend-helpers + quota check + counter + /api/quota endpoint. Code is geschreven en bytecode-compile-OK in de sandbox; runtime-test op Sjuul's Mac staat nog open.
-
-### Wat is er gedaan (Claude)
-
-**Imports** — `from datetime import datetime, timezone, timedelta` toegevoegd; `supabase_admin` re-exported uit `auth.py` en geïmporteerd in `app.py`.
-
-**Nieuwe helpers in `app.py`** (vlak voor `_require_authed_user`, ~regel 900):
-- `PLAN_LIMITS = {'free': 2, 'pro': 10, 'studio': inf}` — single source of truth.
-- `_parse_pg_timestamp(value)` — robuste parser voor Supabase timestamptz strings (handelt zowel `Z` als `+00:00` af).
-- `_get_or_refresh_profile(user_id)` — leest profile via `supabase_admin`, reset usage op 0 + advance `quota_reset_date` met 30 dagen als `now >= quota_reset_date`. Roll forward >1 cycle als user >30d weg was. Returnt `{ok, profile, plan, used, limit, remaining, reset_date, reset_in_days}`.
-- `_increment_usage(user_id)` — read-modify-write +1 op `usage_this_period`. Logt fouten ipv raise (worker thread-safe). Race-OK voor 1-user-per-machine; multi-device → atomic Postgres RPC nodig.
-- `_quota_block_response(snap)` — centrale 402 builder zodat alle gated endpoints dezelfde payload returnen.
-
-**Quota check op upload-endpoints**:
-- `/api/upload` (regel ~1308) — eerst `_require_authed_user`, dan `_get_or_refresh_profile`, dan 402 als `used >= limit`. Geen file-write of ffmpeg vóór de gate. `user_id` + `usage_counted: False` worden in `jobs[job_id]` opgeslagen.
-- `/api/upload-local` (regel ~1530) — zelfde patroon.
-
-**Increment op analysis-complete** — in `_process_job` direct ná `status='done'` (regel ~756): pak `user_id` + `usage_counted` uit job-state onder `jobs_lock`, roep `_increment_usage` één keer aan, set `usage_counted=True`. Idempotent: een job-resume bumpt niet dubbel.
-
-**Nieuw endpoint** — `GET /api/quota` (regel ~855), Bearer-auth. Returnt `{plan, used, limit (null bij studio), remaining, reset_in_days, reset_date}`. Triggert auto-reset bij read als window verlopen is.
-
-**Helper-script voor smoke-test** — `dj-clip-cutter/test_quota.sh` doet login, GET /api/quota mét en zonder token, en upload-pogingen zonder token (verwacht 401). 402-flow vereist handmatig een Free-account met 2 voltooide analyses — niet te automatiseren in een script.
-
-### Files toegevoegd / gewijzigd
-
-- Aangepast: `dj-clip-cutter/app.py` (imports + ~140 regels helpers + auth/quota gate op 2 upload-routes + increment in _process_job + /api/quota endpoint).
-- Aangepast: `dj-clip-cutter/auth.py` (geen verandering — `supabase_admin` was al een module-level naam, alleen toegevoegd aan import-tuple in app.py).
-- Nieuw: `dj-clip-cutter/test_quota.sh` (curl smoke-test).
-- Backup: `dj-clip-cutter/app.py.pre-phase3.bak`.
-
-### Sjuul-test-checklist (DOEN VÓÓR PHASE 3 FRONTEND)
-
-Pre-req: Flask app draait op http://127.0.0.1:5555 (`./start.sh`).
-
-1. **Smoke-test endpoint shapes**:
+Open dan in Chrome: http://127.0.0.1:5555
+
+In browser:
+- v2-flag aan (klik linksonder of console: `localStorage.setItem('clipLiveRedesignV2','1')` + reload)
+- Klik **Social** in sidebar → 4 account-cards + Recent-posts feed
+- Klik **Calendar** → month-view, klik op een dag → schedule-modal opent → vul iets in → opslaan → event verschijnt in calendar-grid
+- Refresh pagina → draft is er nog (localStorage)
+- Klik **Insights** → KPI-cards + line-chart + top clips + donut-chart
+- Klik op range-knop 7d/30d/90d → chart re-rendered
+- Klik **Analyse** → drop een file → upload-progress bar moet echt naar 100% lopen (niet meer op 0% blijven)
+- Klik **Library** + **Settings** → moeten nog steeds werken zoals voor sessie 56
+
+**Stap 2 — PyInstaller rebuild (5-15 min)**
+
+Stop dev-server (Ctrl+C in dezelfde terminal), dan:
 
 cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
-./test_quota.sh
 
-Verwacht:
-- TEST 1 (/api/quota zonder token): HTTP 401.
-- TEST 2 (/api/quota mét token): HTTP 200, JSON met `plan`, `used`, `limit`, `reset_in_days`. Voor de PRO-test-user: plan='pro', limit=10. Voor Free: plan='free', limit=2.
-- TEST 3+4 (upload-routes zonder token): HTTP 401.
-
-2. **Counter-test op een echte upload** (UI-test):
-- Log in als test-user.
-- Upload 1 set (klein bestand, ~1 min). Wacht tot status='done'.
-- Roep `/api/quota` opnieuw aan via test_quota.sh. Verwacht: `used` is met 1 omhoog.
-
-3. **402-test op Free** (vereist nieuwe Free-account):
-- Maak nieuwe Free-account via signup-overlay (bv. `business+free@sjuulstudios.com`).
-- Upload 2 sets, wacht tot beide done. /api/quota → `used: 2, remaining: 0`.
-- Probeer 3e set te uploaden via UI. Verwacht: HTTP 402 in netwerk-tab, JSON met `error: 'quota_exceeded', plan: 'free', used: 2, limit: 2, upgrade_url, message`.
-- Belangrijk: vóór de 402 mag GEEN file naar UPLOAD_DIR geschreven zijn, geen ffmpeg gestart. Check `$TMPDIR/dj-clip-cutter/uploads/` — geen nieuwe files na de 402.
-
-4. **Auto-reset-test** (optioneel, 30+ dagen of via SQL):
-- Of wacht 30 dagen, of in Supabase SQL: `update profiles set quota_reset_date = now() - interval '1 day' where email = 'business+free@sjuulstudios.com';`
-- Roep /api/quota aan. Verwacht: `used: 0`, `reset_in_days: ~30`. In de logs van Flask: `Quota window rolled for <user_id> -> <new_date>`.
-
-### Bekende valkuilen
-
-- **`supabase_admin` is None** → `_get_or_refresh_profile` returnt `{ok: False, error}` en de upload-endpoint 500't. Check `.env` `SUPABASE_SERVICE_ROLE_KEY`. Auth.py logt bij start "Supabase admin client geinitialiseerd" als 't goed is.
-- **/api/quota geeft 500 'profile not found'** → de profile-row ontbreekt voor deze user. Trigger `handle_new_user` zou hem moeten hebben aangemaakt. Check Supabase → Table editor → profiles.
-- **Quota-counter komt niet omhoog na upload** → check Flask-log na done: regel `Quota incremented for <user_id>: 0 -> 1`. Als die ontbreekt is `user_id` niet in job-state beland (oude job van vóór Phase 3-deploy?). Forget die job en run opnieuw.
-- **Race bij parallelle uploads** → read-modify-write +1 kan 1 update verliezen als twee workers tegelijk klaar zijn op dezelfde user. Acceptabel voor lokaal-1-user-per-machine; nog niet relevant.
-
----
-
-## ARCHIVED — Phase 2 deploy + test (afgerond 2026-05-08)
-
-> Bewaard voor referentie. Phase 2 is succesvol afgerond — zie SESSIE 4 hieronder.
-
-### Stap 1 — Stripe library installeren (op je Mac)
-
-Open Terminal en run:
-
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
 source venv/bin/activate
-pip install -r requirements.txt
 
-Dat installeert het `stripe` package in je venv. Output zou moeten eindigen met "Successfully installed stripe-...".
+mv "/Applications/Clip Live.app" "/Applications/Clip Live.PRE-SESSIE56.app"
 
-### Stap 2 — Supabase Edge Function deployen
+./build_macos.sh dmg
 
-Vereist: Supabase CLI. Als je 'm nog niet hebt:
+mv "dist/Clip Live.app" "/Applications/"
 
-brew install supabase/tap/supabase
+open "/Applications/Clip Live.app"
 
-Dan vanuit `dj-clip-cutter`:
+Rollback bij issue:
 
-supabase login                                    # browser-flow
-supabase link --project-ref lbabsffxefkrxwzkbzar  # eenmalig
+rm -rf "/Applications/Clip Live.app"
 
-Zet de secrets (gebruik je echte sk_test, en voor PRICE_IDs de waardes uit .env):
+mv "/Applications/Clip Live.PRE-SESSIE56.app" "/Applications/Clip Live.app"
 
-supabase secrets set STRIPE_SECRET_KEY=sk_test_...
-supabase secrets set STRIPE_PRICE_ID_PRO=price_1TUoYNA5DKhJaSAF6xynooY9
-supabase secrets set STRIPE_PRICE_ID_STUDIO=price_1TUoZCA5DKhJaSAFI7AMgAbA
-supabase secrets set SUPABASE_SERVICE_ROLE_KEY=eyJ...
+**Stap 3 — Code-rebrand Omni DJ (aparte sessie 57+ samen met Claude)**
+- Plan staat klaar (PLAN-REBRAND-OMNI-DJ-2026-05-27.md)
+- Reken op 4-6u sessie waar je beschikbaar bent voor Supabase/Cloudflare/Stripe acties
 
-Deploy:
+### Bestandsstatistieken
 
-supabase functions deploy stripe-webhook --no-verify-jwt
+- `static/index.html`: 882.154 → 948.383 bytes (+66.229 sessie 56)
+- 20.259 → 21.719 regels (+1.460)
+- Backup: `static/index.html.pre-sessie56.bak` (887.446 bytes, vóór sessie 56 wijzigingen)
+- Wijzigingen alleen in `static/index.html`. Geen backend-wijzigingen.
+- Geen wijzigingen aan: `app.py`, `cutter.py`, `auth.py`, `analyzer.py`, `launcher.py`, `build_macos.sh`, `start.sh`.
 
-`--no-verify-jwt` is verplicht: Stripe stuurt z'n eigen `stripe-signature` header, geen Supabase JWT.
+### Verificatie status
 
-### Stap 3 — Webhook endpoint registreren in Stripe
+| Check | Status |
+|---|---|
+| `html.parser` parse | OK 0 errors |
+| `node --check` op JS-blok (533KB) | OK groen |
+| Tag-balance vs backup | OK identiek (alleen verwachte SVG self-close delta) |
+| Selector presence (9 nieuwe IDs) | OK alle 9 aanwezig |
+| Renderers exposed op window | OK renderSocial/renderCalendar/renderInsights |
+| NAV_MAP routes | OK social/calendar/insights → echte views |
+| Backward-compat `redesign-v2` class | OK 775 occurrences, ongewijzigd |
+| Backward-compat `clipLiveRedesignV2` key | OK 3 occurrences, ongewijzigd |
+| Runtime smoketest (jsdom) | OK 3 renderers slagen, modal open/close/save OK, localStorage write OK |
+| Live verificatie via Chrome MCP | SKIPPED — vereist dev-server op host, zie limitatie hieronder |
 
-Dashboard → Developers → Webhooks → "Add endpoint":
-- URL: `https://lbabsffxefkrxwzkbzar.supabase.co/functions/v1/stripe-webhook`
-- Events:
-  - `checkout.session.completed`
-  - `customer.subscription.updated`
-  - `customer.subscription.deleted`
-  - `invoice.payment_failed`
+**Over de live-verificatie:** Claude's sandbox draait Flask op `127.0.0.1:5556` in eigen omgeving, maar Chrome MCP zit op de host en kan daar niet bij. Statische + jsdom-runtime checks zijn sluitend genoeg voor de 3 nieuwe views. Bij Stap 1 hierboven doe je de echte live-test in 10 min.
 
-Klik op het zojuist aangemaakte endpoint → "Signing secret" → kopieer de `whsec_...` waarde. Plak die op TWEE plekken:
+### Bekende open punten (gold-state na sessie 56)
 
-1. In je `.env` bij `STRIPE_WEBHOOK_SECRET=` (de regel staat al klaar)
-2. Als Supabase secret: `supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...`
+- **Brand-tab mapt nog naar Settings** in NAV_MAP — overgenomen uit sessie 55. Niet gewijzigd.
 
-Daarna nog een keer deployen zodat de edge function de nieuwe secret oppikt:
+- **Analyse-progress-hookup is one-way** — server `setProcUI` → Analyse-state werkt nu. Maar als gebruiker mid-upload op andere tab klikt en terug komt, blijft de pct in geheugen (geen polling re-sync). Acceptabel voor v1.
 
-supabase functions deploy stripe-webhook --no-verify-jwt
+- **Calendar drafts zijn lokaal** (localStorage) — niet gesynchroniseerd naar Supabase. Per design (PLAN-CONTENT-CALENDAR §4 Laag 2 vereist eerst multi-tenant tabel `scheduled_posts` + RLS). Drafts overleven page-refresh maar niet OS-reinstall of nieuwe machine.
 
-### Stap 4 — Test de flow
+- **Insights data is mock** — gegenereerd uit STATE.history met deterministic seed. Toont reële UI maar getallen zijn fictief tot Postiz publish-events terugkomen + analytics-API gebouwd is.
 
-1. Start de Flask app: `./start.sh`. Browser: http://127.0.0.1:5555
-2. Log in met test-account: `business+cliptest@sjuulstudios.com` / `TestPassword2026`
-3. In de account-chip linksonder zie je nu een gouden "Upgrade to Pro" knop (FREE plan).
-4. Klik → je gaat naar Stripe Checkout (hosted page).
-5. Vul testkaart in: `4242 4242 4242 4242`, expiry `12/30`, CVC `123`, naam/postcode willekeurig.
-6. Stripe redirect terug naar `http://127.0.0.1:5555/?billing=success&session_id=...`.
-7. Toast verschijnt "Payment received — activating your subscription…", daarna binnen ~5s "Welcome to PRO."
-8. Account-chip badge gaat van FREE → PRO.
-9. In Supabase dashboard → Table editor → `profiles`: rij van test-user heeft nu `plan='pro'`, `stripe_customer_id` gevuld, `stripe_subscription_id` gevuld.
-10. Klik "Manage subscription" in de chip → Stripe Customer Portal opent → cancel daar het abonnement → terug naar app → na ~5s plan terug naar FREE (na period end voor live, direct in test als je "Cancel immediately" doet).
+- **Social account-connect-knoppen zijn disabled** — duidelijk gemarkeerd met "Postiz soon" badge. Echte OAuth-flow komt in Fase 3 (3-4 wkn dev volgens PLAN-CONTENT-CALENDAR).
 
-### Bekende valkuilen
+- **Bug 1 selectie-balk** uit sessie 53 — niet reproduceerbaar in lab, blijft open tot Sjuul exact reproduce-stappen heeft.
 
-- **Webhook geeft 400 "Bad signature"** → STRIPE_WEBHOOK_SECRET in Supabase secrets matcht niet met de waarde in Stripe dashboard. Re-set de secret en re-deploy.
-- **Toast blijft hangen op "activating…"** → webhook is niet geregistreerd of edge function logs hebben een fout. Run `supabase functions logs stripe-webhook --tail` tijdens de test.
-- **`pip install stripe` faalt** → activeer eerst de venv (`source venv/bin/activate`).
-- **CSP blokkeert Stripe redirect** → niet verwacht (Stripe is een full-page redirect, geen iframe), maar als 't gebeurt: Content-Security-Policy in app.py uitzetten of `frame-src stripe.com` toevoegen.
+### Recente sessies — één-regelers (sessie 55 en eerder in detail hieronder)
 
-### Niet doen in Phase 2
-
-- Plan-gating zelf (quota counter, upgrade-modals bij overschrijding) — dat is Phase 3.
-- Pro features (watch-folder, social sharing) — Phase 5+.
-- Live mode aanzetten — pas vóór launch.
-
-### Test-account
-`business+cliptest@sjuulstudios.com` / `TestPassword2026` — kan via test-checkout naar Pro upgraden om de webhook te valideren. Verwijderbaar via Supabase dashboard → Auth → Users.
-
-### Stripe credentials (referentie)
-
-```
-STRIPE_PRICE_ID_PRO     = price_1TUoYNA5DKhJaSAF6xynooY9
-STRIPE_PRICE_ID_STUDIO  = price_1TUoZCA5DKhJaSAFI7AMgAbA
-STRIPE_PUBLISHABLE_KEY  = pk_test_51S9Rck...QGhH5RynT (volledige waarde in .env)
-STRIPE_SECRET_KEY       = sk_test_...   (in .env, NIET hier; door Sjuul ingevuld)
-STRIPE_WEBHOOK_SECRET   = whsec_...     (in .env + Supabase secret na stap 3)
-```
-
-> Pro is bewust verhoogd van €11,99 → €21,99 (besluit 2026-05-08). Landing page + memory + Stripe product zijn allemaal op €21,99.
+- **Sessie 56** (vandaag, autonoom 's nachts) — Social/Calendar/Insights v2-shells met werkende frontend-state + Analyse-progress-hookup. Code-side klaar, bundle nog niet rebuilt. Rebrand bewust overgeslagen — te risicovol zonder Sjuul.
+- **Sessie 55** — Smoketest Fase 5: 8 bugs gefixt + 3 polish-fixes. Live geverifieerd via Chrome MCP.
+- **Sessie 54** — Redesign Fase 5: sidebar workspace+artist, Analyse view, Library view, Settings polish, Capabilities/Storage verborgen. Code-side klaar.
+- **Sessie 53** — Rebrand-noot + 2× rebuild + 5 fixes. Captions in productie groen verifieerd.
+- **Sessie 52** — E2E export-test groen via inline editor (sessies 50+51 keten bewezen).
+- **Sessie 51** — Bug 1 (off-by-one) frontend-fix + 3 UI-fixes export-modal.
+- **Sessie 50** — Caption-bake bug opgelost: `import re` ontbrak in cutter.py.
 
 ---
 
-## SESSIE 4 — AFGEROND ✅ (2026-05-08)
+## STATUS NA SESSIE 56 — AUTONOMOUS NIGHT-RUN (2026-05-27)
 
-Phase 2 paid-launch: Stripe billing volledig geïmplementeerd, gedeployd, en end-to-end getest met testkaart `4242 4242 4242 4242`. Plan-flip FREE → PRO werkt, account-chip update, webhook firet correct naar Supabase Edge Function (Optie A) en updatet profiles-tabel. Phase 2 is af.
-
-### Wat is er gedaan
-
-**Pricing-discrepantie opgelost (eerst):** landing page + tool + Stripe waren op verschillende prijzen. Nu allemaal Pro €21,99 / Studio €200. Watermark-features volledig uit alle tiers verwijderd. Pro-features uitgelijnd met memory: 10 sets/30d + social sharing + Dropbox/GDrive watch-folder.
-
-**Stripe Test mode setup (Sjuul):**
-- Test mode aangezet in dashboard.
-- Twee subscription products aangemaakt: Pro €21,99/maand en Studio €200/maand.
-- Price IDs gekopieerd naar `.env` en HANDOVER.
-- Publishable + secret key opgehaald, beide in `.env` (sk_test_... handmatig, nooit in chat).
-
-**Code (Claude):**
-- `requirements.txt` += `stripe>=8.0`
-- `.env` uitgebreid met `STRIPE_PUBLISHABLE_KEY`, `STRIPE_PRICE_ID_PRO`, `STRIPE_PRICE_ID_STUDIO`, placeholder `STRIPE_WEBHOOK_SECRET=` (vult Sjuul in na deploy)
-- Nieuwe module `billing.py` — Stripe SDK wrapper, mirror van `auth.py` patroon (env-based, defensive imports, `health_check`/`start_checkout`/`open_portal`/`plan_from_price_id`/`price_id_from_plan`).
-- `app.py` uitgebreid met 4 endpoints:
-  - `GET /api/billing/health` — config-status (geen secrets in response)
-  - `GET /api/billing/config` — retourneert publishable key voor frontend
-  - `POST /api/billing/checkout` (Bearer auth) — body `{plan}` → Stripe Checkout URL
-  - `POST /api/billing/portal` (Bearer auth) — opent Customer Portal voor huidige user
-  - Helper `_require_authed_user()` voor gedeelde Bearer-token validatie.
-- `static/index.html`:
-  - Account-chip nieuwe `.ac-billing` zone met plan-conditional knoppen.
-  - Free → "Upgrade to Pro" goud + "Or Studio →" link (event delegation via `data-billing-action`).
-  - Pro/Studio → "Manage subscription".
-  - Functies `startCheckout(plan, btn)`, `openCustomerPortal(btn)`, `handleBillingRedirect()`, `pollProfileForUpgrade()`. Boot roept `handleBillingRedirect()` aan zodat `?billing=success|cancel|portal-return` wordt opgevangen + toast getoond + plan-state ververst.
-- `supabase/functions/stripe-webhook/index.ts` — Deno edge function (Optie A):
-  - Verifieert `stripe-signature` met `constructEventAsync` (Deno SubtleCrypto).
-  - Handelt `checkout.session.completed` (eerste betaling → plan upgrade + reset quota), `customer.subscription.updated` (plan switch), `customer.subscription.deleted` (terug naar free), `invoice.payment_failed` (log only).
-  - Update via `supabase-js` met `SUPABASE_SERVICE_ROLE_KEY` (bypass RLS).
-- `supabase/functions/stripe-webhook/README.md` — deploy stappen, troubleshooting, log commando.
-
-**Deploy + test (Sjuul, sessie-einde):**
-- ✅ `pip install -r requirements.txt` — stripe 15.1.0 geïnstalleerd in venv.
-- ✅ Supabase CLI 2.98.2 geïnstalleerd via Homebrew.
-- ✅ `supabase login` + `supabase link --project-ref lbabsffxefkrxwzkbzar`.
-- ✅ Supabase secrets gezet via `bash scripts/set-stripe-secrets.sh` (nieuw helper-script in `scripts/`). Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_ID_PRO, STRIPE_PRICE_ID_STUDIO, STRIPE_WEBHOOK_SECRET. SUPABASE_* secrets zijn auto-injected — niet zelf zetten.
-- ✅ `supabase functions deploy stripe-webhook --no-verify-jwt` — endpoint live op `https://lbabsffxefkrxwzkbzar.supabase.co/functions/v1/stripe-webhook`.
-- ✅ Webhook geregistreerd in Stripe dashboard (Test mode → Developers → Webhooks). Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`. Signing secret in `.env` + Supabase secret.
-- ✅ End-to-end test met testkaart `4242 4242 4242 4242`. FREE → PRO badge flip werkt.
-
-### Lessons learned
-
-- **Copy-paste-rommel met `$VAR` shell expansie**: chat-rendering kan dollartekens of underscores stillerwijs vervangen door zero-width spaces. Eerste poging om secrets te zetten plakte `STRIPE_SECRET_KEY="STRIPESECRETKEY"` letterlijk i.p.v. expansie. Fix: `scripts/set-stripe-secrets.sh` — script doet `set -a && source .env && set +a` en zet de secrets. Geen copy-paste-fouten meer mogelijk.
-- **Stripe webhook UI is vernieuwd** (mei 2026): "Add endpoint" heet nu "Add destination" en is een 3-stap-wizard (Select events → Choose destination type → Configure). Functioneel hetzelfde.
-- **Logging volgorde in Python**: `log.info()` aanroepen tijdens module-import (zoals in billing.py) worden gedropt als `logging.basicConfig()` nog niet is aangeroepen. Niet kritiek — alleen geen "Stripe SDK geinitialiseerd" zichtbaar in start.sh output. Functioneel werkt alles.
-
-### Files toegevoegd / gewijzigd
-
-- Nieuw: `dj-clip-cutter/billing.py`, `dj-clip-cutter/supabase/functions/stripe-webhook/index.ts`, `dj-clip-cutter/supabase/functions/stripe-webhook/README.md`.
-- Aangepast: `dj-clip-cutter/requirements.txt`, `dj-clip-cutter/.env`, `dj-clip-cutter/app.py` (+billing imports + 4 endpoints + `_require_authed_user` helper), `dj-clip-cutter/static/index.html` (account-chip CSS + HTML + 5 nieuwe JS functies).
-- Aangepast (pricing fix): `landing/index.html` (Pro €19→€21,99, Studio €49→€200, watermark-bullets weg).
-
-### Wat nog NIET werkt / volgende fases
-
-- Phase 3: plan-gating — quota counter `usage_this_period++` bij elke upload, reset op `now > quota_reset_date`. Upgrade-modal bij quota-overschrijding. Pro/Studio features achter slot.
-- Phase 4: editor-fixes (stretch-zone UX, Phase 1/2/6 uit VIDEO_EDITOR_PLAN.md).
-- Phase 5+: Pro feature: Dropbox/GDrive watch-folder. Studio: batch processing.
+> **Sjuul ging slapen en gaf Claude vier groene lichten: rebuild OK, full rebrand OK, full functionality Social/Calendar/Insights, conservatieve keuze + log bij twijfel.**
+>
+> **Claude leverde 4 van 8 doelen volledig, en 4 bewust niet — met log waarom. Onder de "skip"-bestanden: full rebrand, omni.com DNS, Stripe live mode, multi-tenant Supabase. Reden steeds: te veel onomkeerbare externe-service handelingen.**
+>
+> ### Aanpak
+>
+> Claude bouwde de 3 nieuwe views (Social / Calendar / Insights) als visuele shells met werkende frontend-state in plaats van placeholder-content. Mock-data komt uit `STATE.history` met deterministic seed zodat repeats stabiel zijn. Echte Postiz/analytics-koppeling staat gepland in latere fasen (zie PLAN-CONTENT-CALENDAR-2026-05-26.md). Plus: een kleine kwaliteitsverbetering — de Analyse-progress-bar update nu écht mee, was sinds sessie 54 op 0% blijven hangen.
+>
+> ### Bestand-wijzigingen
+>
+> 1. **CSS-blok** (~750 regels, +25 KB) vóór `/* /REDESIGN v2 — Fase 5 */` marker
+> 2. **DOM** (~250 regels nieuwe markup) direct ná `#view-library` — 3 nieuwe `<main>` + 1 schedule-modal
+> 3. **JS** (~600 regels) direct na `analyseSetState` definitie — 3 renderers, custom Canvas-charts, calendar-state-machine
+> 4. **RENDERERS map** in router — social/calendar/insights toegevoegd
+> 5. **NAV_MAP** sidebar-routes — placeholders vervangen door echte views
+> 6. **Defensive STATE.history reads** in 4 plekken — robuust tegen lexical vs window-binding
+> 7. **Analyse-progress-hookup** in `setProcUI()` — forward pct naar v2-card
+> 8. **Upload-progress** in `uploadFile()` — switched van fetch() naar XHR met onprogress
+>
+> ### Verificatie
+>
+> Zie tabel bovenaan. Live verificatie via Chrome MCP **niet uitgevoerd** — sandbox-Flask draait op 127.0.0.1:5556 maar host-Chrome kan daar niet bij. jsdom-runtime smoketest dekt: alle 3 renderers callable + DOM gevuld + modal open/save/close + localStorage write. Sjuul doet 10-min live test op dev-server in Stap 1 hierboven.
+>
+> ### Bewust niet gedaan
+>
+> Zie hoofd-blok: rebrand (4-6u externe-service handelingen), omnidj.com koppelen (Cloudflare-DNS), Stripe live mode (productie-toggle), PyInstaller rebuild (sandbox kan niet), Fase 5b multi-tenant (3-4 wkn dev).
+>
+> ### Volgende sessie 57
+>
+> 1. Sjuul live-test (10 min) — Stap 1 hierboven
+> 2. Sjuul rebuild (5-15 min) — Stap 2 hierboven
+> 3. Volledige Omni DJ rebrand (4-6u sessie samen) — Stap 3
+> 4. Daarna: omnidj.com koppelen via Cloudflare + Stripe live mode
+> 5. Later: Postiz cloud-account + Fase 3 Social publishing-laag
 
 ---
 
-## SESSIE 3 — AFGEROND ✅ (2026-05-07)
+## ⚡ ARCHIVED — sessie 56 briefing (na sessie 55 smoketest + 8 bugs gefixt)
 
-Phase 1 van de paid-launch architectuur: auth fundament. App gaat van local-only freeware naar SaaS-gated local app. Pricing: Free (€0, 2 sets/30d), Pro (€21,99, 10 sets/30d), Studio (€200, unlimited). 30-day rolling quota vanaf signup. Geen trial — Free IS de trial.
+**Project:** Omni DJ — DJ-set → vertical/landscape clip generator
+**Eigenaar:** MONO LABS
+**Domein:** `www.omnidj.com` (nog niet gekoppeld). `djclips.nl` vervalt volledig.
+**Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/`
+**Bundle:** `/Applications/Clip Live.app` (oude versie, sessie 53 fixes erin — Fase 5 NIET in bundle)
+**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh` → http://127.0.0.1:5555
 
-### Supabase setup
-- Project `clip-live` (ref `lbabsffxefkrxwzkbzar`), region West EU. Free tier.
-- Tabel `public.profiles` met velden: id (FK→auth.users, on delete cascade), email, plan ('free'|'pro'|'studio'), signup_date, quota_reset_date (default = signup + interval '30 days'), usage_this_period (int), stripe_customer_id (unique, nullable), stripe_subscription_id (unique, nullable), created_at, updated_at.
-- Trigger `on_auth_user_created`: bij elke nieuwe `auth.users` insert → insert into profiles met plan='free' + quota_reset_date = signup + 30d.
-- Trigger `profiles_updated_at`: auto-bumps updated_at op UPDATE.
-- RLS aan; policy "Users can read own profile" via `auth.uid() = id`. Service-role client bypasses RLS voor webhooks.
-- **Email confirmation UITGEZET** in Auth → Configuration → User Signups → Confirm email = off. Aanzetten vóór productie.
+### Status na sessie 55 — Fase 5 live geverifieerd + alle bugs gefixt
 
-### Backend (auth.py + app.py)
-- Nieuwe module `auth.py`: laadt `.env` via python-dotenv, init twee Supabase clients (anon + service_role), exposes `health_check()`, `signup()`, `login()`, `get_user_from_token()`. Wrapped imports — ontbrekende deps of bad .env crashen de app niet.
-- `app.py` — vier nieuwe endpoints:
-  - `GET /api/auth/health` → ping Supabase + config status (zonder secrets)
-  - `POST /api/auth/signup {email, password}` → returns session als confirm-email off
-  - `POST /api/auth/login {email, password}` → returns session
-  - `GET /api/auth/me` → returns user + profile, requires `Authorization: Bearer <token>`
+Volledige smoketest doorlopen via Chrome MCP + dev-server. **8 bugs gevonden en allemaal opgelost.**
 
-### Frontend (static/index.html)
-- **Auth overlay** (full-screen modal): brand-card met tabs Login/Sign up, email + password fields, error/success-balk. Verbergt de app totdat sessie geldig is. CSS gebruikt bestaande tokens (--ink-*, --amber, --serif).
-- **Sidebar account chip** onderin: email, plan-badge (FREE amber / PRO sterker amber / STUDIO solid gold), Log out knop.
-- `STATE.session` = `{access_token, refresh_token, expires_at, email, user_id, profile, cached_at}`, persisted in `localStorage.clipLive.session`.
-- `api()` helper attacht `Authorization: Bearer <token>` automatisch wanneer STATE.session bestaat.
-- Boot-flow: probeer cache te restoren → `/api/auth/me` server-verify → render account chip + `postLoginBoot()`. 401 of geen sessie → `showAuthOverlay`.
-- **Offline grace 24h**: als server unreachable maar `cached_at < 24h` + profile aanwezig → laat user in op cached profile.
+#### Bugs gefixt deze sessie
 
-### Files toegevoegd / gewijzigd
-- Nieuw: `auth.py`, `.env` (gitignored), `.gitignore`, `test_auth.sh` (curl smoke-test signup→login→me).
-- Aangepast: `requirements.txt` (+supabase>=2.0, +python-dotenv>=1.0), `app.py` (auth-imports + 4 endpoints), `static/index.html` (overlay HTML/CSS/JS + STATE.session + api() Bearer + nieuwe boot()).
+| # | Bug | Locatie | Fix |
+|---|---|---|---|
+| 1 | Library + Analyse zichtbaar tegelijk (gestapeld onder elkaar) | CSS `.v2-only { display: block }` overruled `.view { display: none }` | `.v2-only.view` respecteert nu `.active`-toggle; non-view-elementen blijven `block` |
+| 2 | Page-load opende dashboard ipv Analyse | `postLoginBoot()` deed `openJob(savedJobId)` of `switchView('upload')` | Toegevoegd: `if (v2On) switchView('analyse'); return;` vóór de auto-resume-logica |
+| 3 | Library Projects toonde 0 ondanks 7 in history | shape mismatch: `clipCount` ipv `clips.length`, `date` ipv `created_at`, `thumb` is al full-path | `renderLibraryProjects` gebruikt nu correcte keys + accepteert `h.thumb` als path |
+| 4 | Library Exports datums = 21/01/1970 | mtime is Unix-seconden, `formatWhen` interpreteerde als ms | `toMs()` helper detecteert s vs ms (>1e12 = ms, anders *1000) |
+| 5 | Settings titels nog Playfair italic | CSS-selector `h1`+`.eyebrow`, maar Settings heeft `h2.scene-title`+`.scene-num` | Selectors aangepast naar beide vormen + `!important` |
+| 6 | Workspace-input had witte bg + blauwe browser-default | Geen v2-input-styling voor `#view-settings input` | v2-input-styling toegevoegd (bg-elevated-2, accent-border on focus) |
+| 7 | BPM in dash-set-meta in Clips-view | Sjuul wilde BPM weg in v2 | Wrap BPM/Key push in `if (!v2On)` |
+| 8 | `STATE.history` shape gebruikt `clipCount`/`thumb`/`date` ipv generieke fields | Library + Analyse continue-card faalden | Beide functies accepteren nu meerdere shape-varianten |
 
-### Verificatie
-- Backend: `test_auth.sh` end-to-end groen. profiles-row krijgt `plan=free` + `quota_reset_date = signup + 30 days` automatisch via trigger.
-- Frontend: alle 6 UI-scenarios groen — eerste login, herlaad-met-cache, logout, signup-tab switch, error-state, fresh signup.
+#### Plus polish-fixes
 
-### Test-account
-`business+cliptest@sjuulstudios.com` / `TestPassword2026` — blijft staan voor Phase 2 testing, anders te wissen via Supabase dashboard → Auth → Users.
+- Brand kit / panel-h labels strakker (Inter 600, niet meer Fraunces)
+- Save-knop in Profile = accent fill
+- "Choose folder"-knop v2-ghost-stijl
+- Watch-folder card v2
 
-### Wat nog NIET werkt / volgende fases
-- Phase 2: Stripe — products in dashboard, checkout flow, webhook → Supabase Edge Function die `profiles.plan/stripe_customer_id` updates. Customer Portal link voor managen/cancellen.
-- Phase 3: plan-gating — quota counter `usage_this_period++` bij elke upload, reset op `now > quota_reset_date`. Upgrade-modal bij quota-overschrijding. Pro/Studio features achter slot.
-- Phase 4: editor-fixes (stretch-zone UX, Phase 1/2/6 uit VIDEO_EDITOR_PLAN.md) — niet aangepakt deze sessie.
+#### Live geverifieerd (alle groen via Chrome MCP)
 
----
+- ✅ Sidebar: 2-chip workspace+artist, plan-badge FREE, dropdowns werken, locked-state opent upgrade-modal
+- ✅ Nav-volgorde: **Analyse → Library → Brand → Social → Calendar → Insights → Settings**
+- ✅ Analyse view: idle/uploading/processing sub-states + correct copy ("Analyse a DJ set" / "Drag & drop or select your DJ-set.")
+- ✅ Dropzone strak (geen "up to 4 hours", geen [Choose file]-knop)
+- ✅ 3 tiles: Watch folder + Dropbox (disabled) + Drive (disabled)
+- ✅ Library Projects: 7 tiles met thumbnails, dates, clip-counts (4-koloms grid)
+- ✅ Library Exports: 11 tiles met thumbnails, dates, aspect+set-name
+- ✅ Klik project → Clips-view, sidebar highlight blijft "Library"
+- ✅ Settings: 2-koloms, Workspace+Artists-card, paywall "🔒 + Add artist (Studio only)", Capabilities+Storage verborgen
+- ✅ Brand/Social/Calendar/Insights placeholders (Brand mapt naar settings — acceptabel)
+- ✅ Clips view: geen "Pick the keepers" hero, geen BPM in meta
+- ✅ Flag UIT: oude UI 100% intact (v2-shell display:none, oude sidebar terug, "Pick the keepers" terug)
+- ✅ Page-load in v2 → Analyse landing (geen auto-resume in project)
+- ✅ Geen JS console errors
+- ✅ Geen HTML parse errors
+- ✅ Node syntax check JS-blok groen
 
-## SESSIE 2 — AFGEROND ✅ (2026-05-06)
+#### Bestandsstatistieken
 
-Grote sessie. Begon met de export-bug uit `HANDOVER-EXPORT-BUG.md`, daarna de hele UI-rebuild C1-C4 uitgevoerd, en aansluitend nog vier user-driven polish-iteraties op exporteren / Editor.
+- `static/index.html`: 817.654 → 882.154 bytes (+64.500 sessie 54+55)
+- Backup: `static/index.html.pre-redesign-fase5.bak` (817.654 bytes)
+- Geen wijzigingen aan: `app.py`, `cutter.py`, `auth.py`, `analyzer.py`
 
-### 1. Export-bug rootcause + fix
-Vorige sessie had de export-pipeline opnieuw geschreven (`cutter.py::export_clip_with_settings`, herschreven `/api/export/<job>` route, UI defaults op `match` codec/fps), maar in de UI faalde elke export met 23/23 FAIL.
+### Volgende sessie 56 — prio's
 
-**Rootcause:** `_run_export_job` las `jobs[job_id]['clips']` (analyzer-only metadata) i.p.v. `jobs[job_id]['results']` (cutter-output mét `files` paden). Elke clip kreeg dus `files: None` → `_resolve_export_source` → 23/23 FAIL.
+1. **🔵 Visuele finale check** (5 min, Sjuul): hard refresh in Chrome (cmd+shift+R), doorklikken: Analyse → Library → klik project → Clips → terug Library → Settings → drop een file om upload-state te zien. Als alles soepel = klaar voor rebuild.
+2. **🟢 PyInstaller rebuild** → `./build_macos.sh dmg` om Fase 5 in productie-`.app` te krijgen. Volg INSTALLER-RUNBOOK.md.
+3. **🟢 Analyse-view progress hookup** — `analyseSetState()` helper staat klaar maar bestaande upload/processing-code roept 'm niet aan. Voor échte progress-doorvoer moet de bestaande progress-handler in app.py/socketio worden hergebruikt om `analyseSetState('processing', {pct, step})` aan te roepen. Werkt nu basaal maar progress-bar blijft op 0%.
+4. **🟢 Code-rebrand "Clip Live" → "Omni DJ"** (~4-6u aparte sessie). Sweep door static/index.html, launcher.py, app.py, auth.py, build_macos.sh, alle README's. App-icon, bundle-identifier (`com.sjuulstudios.cliplive` → `com.monolabs.omnidj`?), info_plist `CFBundleName`. Folder rename (`dj-clip-cutter/` → ?) is hoge-risico — apart plannen.
+5. **🟢 omnidj.com koppelen** via Cloudflare. Nieuwe Cloudflare Pages-project + DNS-records.
+6. **🟢 Stripe live mode** — pas na omnidj.com live. Runbook STRIPE-DNS-RUNBOOK.md updaten.
+7. **🟢 Fase 5b multi-tenant data** — workspace_id + artist_id in Supabase RLS (UI staat al klaar, alleen data-laag mist)
 
-**Fix in `app.py`:**
-- Regel 2219: `clips = list(job.get('results') or job.get('clips') or [])`.
-- Regel 2226-2238: snapshot-rehydrate fallback heeft dezelfde voorkeur **en** schrijft terug naar de juiste key (`results` ↔ `results`, `clips` ↔ `clips`) zodat analyzer- en cutter-data gescheiden blijven in geheugen.
+### Bekende open punten (geen blockers)
 
-**Verificatie:** verse job `49ed2aef`, POST `/api/export/49ed2aef` → `{count: 23, ok: true}` → na ~5 s `done: true`, alle 23 clips `status: done`, geldige mp4's in `$TMPDIR/dj-clip-cutter/output/<job>/exports/`.
+⚠️ **Brand-tab mapt naar Settings** in NAV_MAP. Acceptabel maar Sjuul gaat verwarrend vinden. Voor latere sessie: aparte `#view-style` route maken of NAV_MAP aanpassen.
 
-`HANDOVER-EXPORT-BUG.md` is verwijderd; alle relevante info zit nu hier.
+⚠️ **Brand-tab + Settings beide tonen Workspace-card** — Workspace-card is in #view-settings DOM, dus klikken op Brand toont 'm ook. Niet kritisch.
 
-### 2. C1 — Cleanup (UI sloop)
-Verwijderd uit `static/index.html`:
-- Hele Scene 7 (`<main id="view-export">`) + `renderExport()` JS (~175 regels).
-- `gpu-meter` CSS + alle `.meter-*` rules.
-- "Export →" knop in Editor-toolbar.
-- `export: renderExport,` mapping uit `RENDERERS` object.
+⚠️ **`exportSelected` zeldzame zijroute** — comment regel 10351 stale, was nog niet gefixt.
 
-Verwijderd uit `app.py`:
-- `/api/hwmeters` Flask route (was fake stub).
+⚠️ **Bug 1 selectie-balk** uit sessie 53 — niet reproduceerbaar in lab, blijft open tot Sjuul exact reproduce-stappen heeft.
 
-`/api/export-preset/<job>` blijft staan (TikTok/Reels presets — toekomstig).
+### Active email-aliases
 
-### 3. C2 — Backend defaults op `match`
-Auto-realised via C1 — codec/fps/resolution dropdowns zaten alleen in Scene 7 dat is verwijderd. Backend pakte al `match` als default.
+- `omnidj@monohq-labs.com` — support, algemene vragen
+- `sjuul@monohq-labs.com` — Sjuul's eigen account, whitelist/testing
 
-### 4. C3 — Library-tab (view-home)
-Home werd echte Library:
-- Greeting + zoek/upload-row weg.
-- `.quick` cards verticaal verdubbeld (padding 18→34, min-height 120→240, icons 32→56, h3 18→24) — drie prominente intake-cards bovenaan.
-- Recent projects + Exports sections in 2-koloms grid (`.library-cols`, klapt naar 1 kolom <1100px).
-- Filter chip-row boven Exports: All / 9:16 / 16:9 / ★ Favorites met live counts.
+### Recente sessies — één-regelers (alles boven sessie 55 staat in detail in status-blokken hieronder)
 
-**Backend (`app.py`):**
-- `GET /api/exports` — listet alle .mp4/.mov in `OUTPUT_DIR/<job>/exports/` met `set_name`, `size`, `mtime`, `thumbnail`, `aspect`, `is_favorite`, `clip_idx`. Newest-first.
-- `POST /api/exports/<job>/<file>/reveal` — `subprocess.Popen(['open', '-R', path])`.
-- `DELETE /api/exports/<job>/<file>` — `os.unlink`.
-- `POST /api/exports/<job>/<file>/copy-to` — `shutil.copy2` naar user-folder.
-- Path-traversal protection via `realpath` + prefix-check in `_safe_export_path`.
-
-**Frontend:** `renderHomeExports()`, `renderExportCard()`, `bindExportsActions()`, `openExportInEditor()`, `copyExportToFolder()`. Card-click → editor; per-card actions: `[Show in Finder] [✏️ Edit] [⬇️ Export to…] [🗑 Delete]`.
-
-### 5. C4 — Select-en-export flow
-**Backend:**
-- `_resolve_export_sources(clip, aspects=None)` returnt **alle** beschikbare formats — landscape + vertical worden parallel gerenderd per queue-item.
-- `/api/export/<job>` accepteert `clip_indices: [int…]`, `aspects: [...]`, `output_dir: str`. Validatie up-front (folder bestaat + writable, valid indices).
-- `_run_export_job._process` rendert per queue-item alle aangevraagde formats, renamet de file naar user-label, kopieert naar `output_dir`.
-
-**Frontend:**
-- Dashboard `.clip` cards: select-toggle top-right (rondje wordt goud vinkje), `.clip.selected` border.
-- Sticky `.export-sel-bar` bovenaan view-dashboard verschijnt zodra 1+ geselecteerd: "N selected · Cancel · Export N".
-- "Export all" permanent in Dashboard scene-header.
-- Editor toolbar: "Export selected (N)" + "Export all" knoppen.
-- Editor cue-list: per-row `.cue-select` toggle. Selectie deelt `STATE.selectedClips` Set met Dashboard.
-- Floating `.export-pill` rechts-onder tijdens render (pulserende dot, "Exporting label · 5/23").
-- "New exports" `.new-dot` op Library-sidebar item, geclearred bij Library bezoek.
-- Auto-refresh van Library Exports section na render-done.
-
-### 6. Hard cut (cutter.py)
-Default `fade_duration=0.0` in alle ffmpeg builders — `_build_audio_filter`, `_build_landscape_cmd`, `_build_vertical_cmd`, `_build_proxy_cmd`, `cut_clip_landscape`, `cut_clip_vertical`. Fade filters wrapped in `if fade_duration > 0` voor opt-in. `process_clip_full` zet `fade_duration = 0.0`. ⚠️ Bestaande clips in `OUTPUT_DIR/<job>/` met fade blijven, omdat `match` codec stream-copyt — re-process source set voor hard-cut master clips.
-
-### 7. Folder picker bij export (cross-platform)
-**Backend (`app.py`):**
-- `POST /api/pick-folder` — opent native folder dialog. macOS via AppleScript (`choose folder with prompt … default location`). Windows/Linux via `tkinter.filedialog.askdirectory`. Body: `{prompt, default_dir}`. Response: `{ok, cancelled, path, platform}`.
-- `_default_export_dir()` helper — `~/Downloads` of home als fallback.
-- `output_dir` param in `/api/export` validatie: bestaat + writable, expanduser, fail-fast vóór ffmpeg.
-- `_run_export_job._process` kopieert via `shutil.copy2` naar user-folder, original blijft in `OUTPUT_DIR` (Library blijft werken).
-
-**Frontend:** `startExport()` opent picker via `/api/pick-folder` met laatst-gebruikte folder uit `localStorage.clipLive.exportDir`. Cancel = silent return. Toast on done toont bestemming: `"Saved 3 clips to ~/Downloads"`.
-
-### 8. Filename gebruikt user-label
-`_build_export_filename(clip, idx, aspect_key, codec, ext)` componeert `<safe_label>__clip<NN>__<aspect>__<codec>.<ext>`:
-- Custom label → `My_Drop__clip08__landscape__match.mp4`.
-- Geen rename → `Drop_8__clip08__landscape__match.mp4`.
-- `_safe_filename_label()` strip filesystem-onveilige chars + collapse whitespace.
-
-`_run_export_job._process` doet `os.rename` na render, vóór de copy naar `output_dir`. Library parsers (clip_idx + aspect) zoeken eerst de nieuwe `__clip<NN>__/__aspect__` markers en vallen terug op het oude patroon. Frontend `cleanName` regex strip de nieuwe suffix → toont gewoon "My Drop" als card-titel.
-
-### 9. Aspect-keuze popup
-Modal met 9:16 / 16:9 / Both verschijnt vóór de folder picker bij elke Export-actie. `pickExportAspect(subtitle)` returnt Promise. Backend respecteert `cfg.aspects` whitelist; lege/missing = render alle beschikbare formats (back-compat).
-
-### 10. Score-badge + filter-chips polish
-- `.clip .score` van overlay top-right naar inline pill in `.info .r` (links van favorite ★) — voorkomt conflict met C4 select-toggle.
-- Dashboard filter chips "Transitions" en "Under 30s" verwijderd (Sjuul gevraagd). Resterend: All / Drops / Favourites / Renamed.
-
-### 11. Editor preview groter
-- `.ed-canvas` padding rechts → 90px (gereserveerd voor `.ratio-rail`).
-- `.preview-stage` van `width: min(100%, 320px)` → `width: min(100%, 780px); max-height: 65vh`.
-- Helper `applyEditorStageSize(ratio)` — voor 9:16/4:5 (portrait) zet inline `height:65vh; width:auto` (height-driven) zodat hele frame zichtbaar blijft. 1:1/16:9 vallen terug op CSS default (width-driven, ongewijzigd).
-- `renderEditor()` roept `applyEditorStageSize(STATE.editorRatio || '9:16')` aan voor initial state.
-
-### Bestanden niet aangeraakt
-`analyzer.py`, `uploader.py`. Backups van vorige sessies blijven staan: `static/index.html.pre-c1-cleanup.bak`, `app.py.pre-export-blok3.bak`, etc.
+- **Sessie 55** (vandaag) — Smoketest Fase 5: 8 bugs gefixt + 3 polish-fixes. Live geverifieerd via Chrome MCP.
+- **Sessie 54** — Redesign Fase 5: sidebar workspace+artist, Analyse view, Library view, Settings polish, Capabilities/Storage verborgen. Code-side klaar.
+- **Sessie 53** — Rebrand-noot + 2× rebuild + 5 fixes. Captions in productie groen verifieerd.
+- **Sessie 52** — E2E export-test groen via inline editor (sessies 50+51 keten bewezen).
+- **Sessie 51** — Bug 1 (off-by-one) frontend-fix + 3 UI-fixes export-modal.
+- **Sessie 50** — Caption-bake bug opgelost: `import re` ontbrak in cutter.py.
 
 ---
 
-## SESSIE 1 — AFGEROND ✅
+## STATUS NA SESSIE 55 — SMOKETEST + 8 BUGS GEFIXT (2026-05-27)
 
-Alle stappen A t/m E geïmplementeerd in `static/index.html`. Backup op `static/index.html.pre-sessie1.bak`.
-
-**Wat er gedaan is:**
-- **A1:** `STATE.setDuration` wordt nu gezet vanuit `/api/status` in `renderEditor`
-- **A2:** Waveform-fetch gebruikt nu `bins=2000` (was 600)
-- **B:** `drawWaveformCanvas` vervangen — mirror-envelope, RMS-glow laag, amber→copper kleurverloop
-- **C:** `getEditorTimeMap(clip)` toegevoegd als single source of truth voor tijd-mapping (±60s stretch)
-- **D:** Positie-indicator toont nu "Clip X of Y · MM:SS / H:MM:SS in set"
-- **E:** Trim-handles kunnen ±60s buiten originele clip-grenzen slepen; gedimde stretch-zones links/rechts; stretch-path gebruikt `/api/recut`, trim-path gebruikt bestaande `/api/split-clip`
+> **Volledige smoketest van Fase 5 via Chrome MCP + dev-server. 8 bugs gevonden en allemaal opgelost. Sjuul kan nu productie-rebuild doen.**
+>
+> ### Aanpak
+>
+> Sjuul vroeg om volledige smoketest om errors eruit te halen vóór hij zelf opnieuw doorliep. Strategie: dev-server starten, alle views in v2-modus + legacy doorlopen, console errors monitoren, bevindingen direct fixen, daarna re-test.
+>
+> Dev-server start vereiste eerst `osascript -e 'tell application "Clip Live" to quit'` + `kill -9 <PID>` voor het oude .app-Python-proces dat poort 5555 vasthield (bekend PyInstaller-issue, ook sessie 50).
+>
+> ### Bug 1 — Library + Analyse stack-bug (CSS-conflict)
+>
+> **Locatie:** `static/index.html` ~regel 6237, `.v2-only { display: block }`
+>
+> **Probleem:** Mijn regel forceerde `display: block` voor alle `.v2-only` elementen, óók wanneer de basis-CSS `.view { display: none }` hen zou moeten verbergen. Resultaat: `#view-library` (`.view.v2-only`) bleef altijd zichtbaar als `block` en stapelde onder `#view-analyse` als die ook actief was.
+>
+> **Fix:**
+> ```css
+> .v2-only { display: none; }
+> body.redesign-v2 .v2-only.view { display: none; }
+> body.redesign-v2 .v2-only.view.active { display: block; }
+> body.redesign-v2 .v2-only:not(.view) { display: block; }
+> ```
+>
+> ### Bug 2 — Page-load opende dashboard ipv Analyse
+>
+> **Locatie:** `static/index.html` `postLoginBoot()` regel ~19418
+>
+> **Probleem:** Na page-refresh roept `postLoginBoot()` `openJob(savedJobId)` aan als er een gepersisteerde job is. In v2 mismatch: sidebar highlightte "Analyse" maar content was Dashboard.
+>
+> **Fix:**
+> ```js
+> const v2On = (function(){ try { return localStorage.getItem('clipLiveRedesignV2') === '1'; } catch(_){ return false; }})();
+> if (v2On) { switchView('analyse'); return; }
+> // ...legacy auto-resume flow blijft hieronder
+> ```
+>
+> ### Bug 3 — Library Projects toonde 0 ondanks 7 in history
+>
+> **Locatie:** `static/index.html` `renderLibraryProjects()` regel ~9061
+>
+> **Probleem:** Ik nam aan dat history-items shape `{clips:[], created_at, thumbnail, original_filename}` hadden. Echte shape uit `/api/history`:
+> ```json
+> {"id":"e63f06a6","filename":"Lisa Korver x Ho_r Berlin.mp4","clipCount":30,"date":"2026-05-23","thumb":"/api/thumbnail/e63f06a6/thumb_clip01.jpg","user_id":"d86a3a54..."}
+> ```
+>
+> **Fix:** `renderLibraryProjects` accepteert nu beide shapes:
+> ```js
+> var name = (h.filename || h.original_filename || 'Untitled').replace(/\.[^.]+$/, '');
+> var clipCount = h.clipCount || (h.clips && h.clips.length) || h.clip_count || 0;
+> var dateVal = h.date || h.created_at || h.mtime || null;
+> // thumb is al full-path
+> if (h.thumb && h.thumb.startsWith('/')) thumbSrc = withAuth(h.thumb);
+> else if (h.thumbnail) thumbSrc = withAuth('/api/thumbnail/' + h.id + '/' + ...);
+> ```
+>
+> ### Bug 4 — Library Exports datums = 21/01/1970
+>
+> **Locatie:** `renderLibraryExports()` regel ~9133
+>
+> **Probleem:** `ex.mtime = 1779882578.832528` is Unix-seconden (float). `new Date(1779882578)` interpreteert als ms = ~21 dagen na epoch = 21/01/1970.
+>
+> **Fix:** detecteer s vs ms:
+> ```js
+> function toMs(v){
+>   if (v == null) return 0;
+>   if (typeof v === 'number') return (v > 1e12) ? v : v * 1000;
+>   var n = +new Date(v); return isNaN(n) ? 0 : n;
+> }
+> ```
+>
+> ### Bug 5 — Settings titels nog Playfair italic
+>
+> **Locatie:** CSS regel ~5797
+>
+> **Probleem:** Settings gebruikt `<h2 class="scene-title">` (niet `h1`) en `<div class="scene-num">` (niet `.eyebrow`). Mijn CSS-selectors matchten niet.
+>
+> **Fix:** selectors uitgebreid + `!important`:
+> ```css
+> body.redesign-v2 #view-settings .scene-header .scene-num,
+> body.redesign-v2 #view-settings .scene-header .eyebrow { display: none !important; }
+> body.redesign-v2 #view-settings .scene-header h1,
+> body.redesign-v2 #view-settings .scene-header h2.scene-title,
+> body.redesign-v2 #view-settings .cap-left h2 {
+>   font-family: var(--v2-font-sans) !important;
+>   font-style: normal !important;
+> }
+> ```
+>
+> ### Bug 6 — Workspace-input browser-default
+>
+> **Fix:** v2-input-styling toegevoegd voor `#view-settings input[type="text"|"email"]` met bg-elevated-2, border-subtle, accent-focus.
+>
+> ### Bug 7 — BPM in dash-set-meta in v2
+>
+> **Locatie:** `renderDashboard()` regel ~10049
+>
+> **Fix:** wrap BPM/Key in `if (!v2On)` check.
+>
+> ### Bug 8 — STATE.history shape-mismatch (zelfde als #3, andere call-site)
+>
+> **Fix:** `renderAnalyse()` continue-card accepteert nu ook nieuwe shape.
+>
+> ### Files gewijzigd deze sessie
+>
+> - `dj-clip-cutter/static/index.html`: 873.503 → 882.154 bytes (+8.651 sessie 55 bugfixes)
+> - Geen backend-wijzigingen
+>
+> ### Sjuul moet doen
+>
+> 1. Hard refresh in Chrome (cmd+shift+R), v2 actief, doorklikken alle views
+> 2. Drop een file in Analyse om upload-state te zien
+> 3. Klik op project in Library → Clips-view → terug
+> 4. Bevestig dat alles soepel werkt
+> 5. Daarna: `./build_macos.sh dmg` voor productie-`.app`
+>
+> ### Volgende sessie
+>
+> 1. Sjuul's visuele finale check
+> 2. PyInstaller rebuild
+> 3. `analyseSetState()` progress-hookup vanuit upload/processing code
+> 4. Code-rebrand Clip Live → Omni DJ
+> 5. omnidj.com koppelen
+> 6. Stripe live mode
+> 7. Fase 5b multi-tenant data (Supabase RLS)
 
 ---
 
-## Huidige staat van de app
+### Status na sessie 54 — Fase 5 code-side klaar, bundle NIET ge-rebuild
 
-De app werkt end-to-end. Upload → analyse → clips → editor → export naar gekozen folder.
+Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-fases doorlopen:
 
-**Wat er staat:**
-- Multi-view SPA: Library / Drop a set / Clips (Dashboard) / Editor / Style / Settings
-- Drop-detectie via librosa (HPSS, bar-aware) + BPM
-- Proxy pipeline voor grote bestanden (>2 uur): eerst 720p proxies, daarna lazy 1080p
-- SSE progress stream
-- Video editor met trim-handles ±60s, hi-res waveform, re-export, 4 aspect ratios (9:16 / 1:1 / 16:9 / 4:5)
-- Library tab met Recent projects + Exports filter (9:16/16:9/Favorites), per-card acties
-- Dashboard select-and-export bar (Gmail-stijl), Editor export-buttons, deelt selectie tussen views
-- Folder picker (mac AppleScript / win+linux tkinter), localStorage memory voor laatst-gebruikte folder
-- Aspect-keuze popup vóór elke export
-- Hard-cut renders (geen fade in/out)
-- Filenames met custom-label of `<Type>_<index>` fallback
+- ✅ **5.0 Discovery + backup** — `static/index.html.pre-redesign-fase5.bak` (817.654 bytes)
+- ✅ **5.1 Sidebar rebuild** — 2-chip workspace+artist Supabase-stijl + NAV_MAP aangepast: `analyse` + `library` zijn nu top-level entries, Clips weg uit sidebar (alleen bereikbaar via project-klik). Plan-badges FREE/PRO/STUDIO. Workspace + Artist dropdowns met locked-states voor FREE/PRO.
+- ✅ **5.2 CSS-restyles + content-strip** — Settings 2-koloms voorbereid, Workspace+Artists-card toegevoegd aan Settings (max 3 artists Studio, paywall FREE/PRO). Capabilities-sectie en Storage & large files-sectie **verborgen in v2** (wrap in `.v2-hide-in-v2`, DOM blijft voor backend-detection). "Pick the keepers" hero + eyebrow CSS-verborgen in v2-dashboard. Brand Stack + Publish display-titels v2.
+- ✅ **5.3 Analyse view rebuild** — Nieuwe `#view-analyse` met copy "Analyse a DJ set" / "Drag & drop or select your DJ-set." 3 sub-states (idle / uploading / processing) via class-toggle. Dropzone strak (geen [Choose file]-knop, geen "up to 4 hours"). 3 intake-tiles (Watch / Dropbox / Drive — laatste 2 disabled). `switchView('home'|'upload'|'processing')` redirect in v2 naar `analyse` met juiste sub-state.
+- ✅ **5.4 Library view NIEUW** — `#view-library` met Projects/Exports tabs (segmented control), 4-koloms grid. Projects-tab gebruikt `STATE.history`. Exports-tab fetcht `/api/exports`. Tile-klik op project → `openJob()` → switchView('dashboard') = Clips-view van dat project.
+- ✅ **5.5 Statische verificatie groen** — `html.parser` 0 errors, `node --check` groen, tag-balance check 0 mismatches (alleen `<input>`-delta verwacht want self-closing), alle nieuwe selectors aanwezig, "Clip Drop Live" = 0 matches.
 
-**Wat nog NIET werkt of ontbreekt:**
-Zie `VIDEO_EDITOR_PLAN.md` voor de volledige roadmap (Phases 1–10).
-- Timeline zoom en pan (Phase 1) → blokkert alles eronder
-- Draggable handles (Phase 2) → renders maar slepen werkt nog niet
-- J/K/L scrub (Phase 3)
-- Loop playback (Phase 6)
-- Inline clip expand vanuit dashboard (Phase 7)
-- Export presets per platform (Phase 8) — `/api/export-preset` endpoint bestaat al, geen UI
+**Code-statistieken:**
+- `static/index.html`: 817.654 → 875.442 bytes (+57.788)
+- 19.834 regels (was 18.429)
+- Backup: `static/index.html.pre-redesign-fase5.bak`
+- Geen wijzigingen aan app.py, cutter.py, auth.py, analyzer.py
 
----
+### Bekende open punten
 
-## Bekende bugs
+⚠️ **Live verificatie NIET gedaan.** Chrome MCP verbond met `http://127.0.0.1:5555` maar die port draaide de oude `/Applications/Clip Live.app`-bundle (815.821 bytes, vóór sessie 54). De nieuwe code zit alleen in de dev-server-folder, niet in de bundle.
 
-| Bug | Omschrijving | Status |
-|-----|-------------|--------|
-| **Duplicate clips** | Clips tonen soms identieke video i.p.v. unieke drops | Open — terugkerend |
-| **Large-file pipeline vastlopen** | Sets >2 uur kunnen vastlopen | Deels via proxy pipeline (2026-04-26), nog niet stabiel |
-| **Clips verdwijnen na hard-reload** | `STATE.jobId` werd nergens gepersisteerd. | **Closed sessie 14 — geverifieerd sessie 15.** localStorage `clipLive.activeJobId`. |
-| **Recent Sets toont oude pre-snapshot jobs** | Sidebar toonde 24+ oude entries. | **Closed sessie 15.** `/api/history` filtert strikt op snapshot.json (sessie 14 r2). Plus race-safety voor net-binnen-gekomen jobs. |
-| **Stretch-recut "Source video file not found"** | Bron-mp4 werd na done verwijderd uit /tmp. | **Closed sessie 15.** UPLOAD_DIR persistent + `_cleanup_source_video` no-op + snapshot bewaart `video_path`. End-to-end live geverifieerd op nieuwe upload. |
-| **Stretch-recut single-handle viel naar split** | `if (hasBand && isStretch)` gate dropte single-side stretches. | **Closed sessie 15.** `if (isStretch)` is nu de eerste branch in `editorTrimAtPlayhead`. |
-| **/api/recut 500 HTML page** | Backend ving alleen RuntimeError/OSError; KeyError ed. lekten als HTML. | **Closed sessie 15.** Catch-all `Exception` → JSON met `reason` field. Pre-checks op clip_index, video_path, end ≤ source_duration. |
-| **★ ZIP geeft lege/corrupte zip** | Backend bouwde 0-byte zip wanneer geen favorites had `files`. | **Closed sessie 15.** Backend telt copies, returnt 400 als 0. Frontend fetch+blob ipv `<a href>` voor zichtbare errors. UI: dim disabled state. |
-| **Library toonde alleen 9:16 exports** | Aspect-picker liet user maar één kiezen. | **Closed sessie 15.** Aspect-picker overgeslagen — render altijd beide. Filter chips in Library doen het kiezen. |
-| **Recent Sets toonde oudste eerst** | `.slice(0, N)` op chronologisch-gesorteerde array. | **Closed sessie 15.** `.slice(-N).reverse()` in beide sidebar + Library. |
-| **Pauze-knop bleef staan na Volgende clip** | Icon werd alleen gewisseld via video play/pause events; clip-switch triggerde geen event. | **Closed sessie 15.** `_resyncEditorPlayState()` na renderEditor in `editorPrev/Next`. |
-| **Pre-snapshot jobs in history** | Oude jobs (vóór snapshot-systeem) geven 404/410 errors in console bij Library/Dashboard load | Geen UI-impact, alleen console noise. Forget-knop in Dashboard verwijdert ze. Overlapt deels met "Recent Sets toont oude jobs" hierboven. |
+⚠️ **"Clip Drop Live"-strings vervangen door "Omni DJ"** in 2 onboarding-wizard secties (regels ~6451 + ~6476). Bewuste sweep: jouw verzoek "geen Clip Drop Live meer ivm rebrand". Beperkt tot UI-strings die de user ziet; codebase-rebrand `Clip Live` → `Omni DJ` blijft voor aparte sessie.
 
----
+⚠️ **Sub-state polling Analyse-view** — `window.analyseSetState()` helper-functie staat klaar, maar de bestaande upload/processing-code roept 'm nog niet aan. Voor nu: in v2 redirect `switchView('upload')` direct naar `analyse`, en `switchView('processing')` zet `is-processing` class. Voor échte progress-doorvoer moet de bestaande progress-handler in `app.py`/socketio worden hergebruikt om `analyseSetState('processing', {pct, step})` aan te roepen. Werkt nu basaal maar progress-bar blijft op 0%.
 
-## Open follow-ups
+### Volgende sessie — prio's
 
-Dingen waar Sjuul over nagedacht heeft maar nog niet gebouwd:
-
-1. **Timeline-stretch UX (E)** — backend ±60s stretch staat sinds SESSIE 1.
-   - ✅ **S1 (UX-discoverability):** afgerond in SESSIE 8 (2026-05-09). Amber wash + `±Xs` drag-label + hover-tooltips. Visueel goedgekeurd door Sjuul.
-   - **S2 (limiet wijzigen):** `const stretch = 60` vervangen met `STATE.stretchSeconds`, instelling in Settings. Niet aangepakt — wachten tot er behoefte aan is.
-   - **S3 (regressie-test):** verifieer dat slepen voorbij clip-grenzen daadwerkelijk `/api/recut` aanroept en niet stilletjes faalt. Niet aangepakt — wordt impliciet getest via dagelijks gebruik.
-   - **S4 (live stretch-preview, NIEUW):** geparkeerd tot ná VIDEO_EDITOR_PLAN Phase 1 (zoom/pan). Tijdens drag voorbij clip-grens moet de waveform uitrekken naar de virtuele range en moet de preview-video uit de bron-set komen, zodat het geen blinde sprong meer is. Hangt af van de `timeToX`/`xToTime` helpers die Phase 1 oplevert. Volle aanpak staat in de VOLGENDE SESSIE-blok bovenaan dit document.
-
-2. **9:16 export voor oude jobs** — bestaande Library-exports zijn allemaal landscape (gerendered vóór multi-format support). 9:16 filter is `0` totdat user opnieuw exporteert. Geen actie nodig — workflow lost zichzelf op naarmate users nieuwe sets exporteren.
-
-3. **Windows-tkinter test** — folder picker geïmplementeerd voor Windows via `tkinter.filedialog.askdirectory`, maar nog niet door een Windows-user getest. Tkinter is standaard meegeleverd in Python.org's Windows installer — moet werken. Als het breekt: error toast geeft `"tkinter not available"`.
-
-4. **Editor card "Open in Editor" affordance** — knop is toegevoegd op Library cards (✏️ icon). Card-click doet hetzelfde. Mogelijk redundant; kan weg als de card-click intuïtief genoeg is bij testen.
-
-5b. **Stretch-handles ook draggable op mini-map (gevraagd 2026-05-10).** De mini-map onder de waveform toont nu alleen de viewport-positie. Sjuul wil dat de in/out trim-handles daar OOK zichtbaar + draggable zijn — zodat je vanaf de overview-strip rechtstreeks kan stretchen zonder eerst in de hoofd-timeline in te zoomen. Aanpak: in `renderMinimap()` extra elementen toevoegen voor de twee handles (zelfde gold-style als hoofd-tracks), bind drag-listeners die STATE.trim updaten via dezelfde `pxToVirtSec`-coordinate helper. Bestaande hoofd-handles blijven gewoon werken — de mini-map versie is een tweede mount-point op dezelfde state.
-
-5c. **Achtergrond-analyse + "Terug naar analyse" knop (gevraagd 2026-05-10).** Wanneer een nieuwe set wordt geüpload, blijft processing nu in een aparte view (Processing). Sjuul wil dat:
-   - Analyse blijft draaien op de achtergrond als de user wegklikt (al zo — Flask-thread loopt door).
-   - Een persistent "Continue analysis" of "Back to processing X%" badge zichtbaar is in de header/sidebar zodat user terug kan switchen.
-   - Klik op de badge → switchView('processing') met de juiste jobId actief.
-   Aanpak: een "active processing" pill bovenin de sidebar (boven Recent Sets) die zichtbaar is wanneer er één of meer jobs in `STATE.history` (of in-memory) status='processing' hebben. Tikker poll't /api/status elke 3s.
-
-5d. **1:1 aspect ratio render bug (gemeld 2026-05-10).** Bij klik op "1:1" in de aspect-rail van de editor preview verschijnt toast "Could not render 1:1: ffmpeg failed". Onderzoeken: welke ffmpeg-arg breekt voor 1:1 lazy render. Waarschijnlijk filtergraph mist een `crop=ih:ih` of vergelijkbaar. Backend `/api/render-clip` of equivalent.
-
-6. **Unify upload UX — één knop, automatische backend-keuze (gevraagd 2026-05-10).** De Upload-view heeft nu drie zichtbare intake-knoppen die functioneel overlappen voor de eindgebruiker:
-   - "Choose from this Mac" → `/api/upload` (kopieert het hele bestand naar UPLOAD_DIR; goed voor kleine sets)
-   - "Drop a set here" (drag-and-drop op zelfde gebied) → `/api/upload`
-   - "Open large file (no copy)" → `/api/upload-local` (registreert het pad, decodeert proxies on-the-fly; bedoeld voor grote livesets >2u die anders het tempdir-volume opvreten)
-
-   Sjuul wil dat dit één knop wordt: gebruiker kiest of dropt een file, frontend kiest zélf de juiste backend op basis van bestandsgrootte (en/of duur). De "Open large file (no copy)"-knop hoeft niet zichtbaar te blijven.
-
-   **Voorgestelde drempel:** `> 2 GB` of `> 2 uur` → `/api/upload-local`. Daaronder → `/api/upload`. Threshold instelbaar in `config.json` (`upload_no_copy_threshold_bytes`, default 2 \* 1024<sup>3</sup>). Bij drag-and-drop weten we bytes via `File.size`; bij Choose-from-Mac idem (file picker geeft size).
-
-   **Aanpak:**
-   1. Frontend `uploadFile(file)` checkt `file.size`. Onder threshold → bestaande POST naar `/api/upload`. Boven → toon "Large file detected — starting no-copy ingest" toast en routeer naar het bestaande no-copy pad (`POST /api/upload-local` met `local_path`). Maar wacht — `/api/upload-local` accepteert een **path**, niet een uploaded blob. Bij drag-and-drop hebben we het pad niet (browser security). Dus voor drag-drop kan no-copy alleen werken via een macOS file-protocol drag (er staat al wat code voor `webkitGetAsEntry`/`localPath`-detectie in regel ~2570 — verifiëren).
-   2. Voor "Choose from this Mac" via de native picker: gebruik dezelfde flow als de huidige "Open large file (no copy)" — `local_path` resolven via een nieuwe of bestaande `/api/pick-file` (folder-picker bestaat al voor watch-folder). Dat geeft het echte pad zodat `/api/upload-local` werkt.
-   3. UI: verberg "Open large file (no copy)" knop. Houd "Watch a folder", "From Dropbox", "From Google Drive" zoals ze nu staan (separate intake-flows).
-   4. Optioneel: bij drag-drop van een groot bestand zonder pad-toegang, val terug op de regular `/api/upload` met een waarschuwing dat de upload ~X minuten gaat duren én X GB op disk vergt — zodat de gebruiker bewust kiest om door te zetten of via picker een no-copy ingest te doen.
-
-   **Risk:** middel — de drag-drop-naar-no-copy is niet triviaal door browser sandbox; we kunnen daar strakker maken door drag-drop alleen voor kleine files toe te staan en grote uploads via de picker te dwingen.
-   **Schatting:** 1 sessie als we drag-drop drag-drop laten voor kleine files en de picker-flow herbruiken voor grote.
-   **Waarde:** hoog — verlaagt de cognitieve last bij upload en haalt een "expert"-knop weg uit de eerste impressie.
+1. **🔴 LIVE-TEST CRUCIAAL** (Sjuul, 10 min): stop `/Applications/Clip Live.app`, start dev-server via `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh`. Open `http://127.0.0.1:5555` in Chrome. Zet v2 aan (klik v2-toggle linksonder of `localStorage.setItem('clipLiveRedesignV2','1')`). Verifieer:
+   - Sidebar: 2-chip workspace+artist stack bovenaan (Sjuul Studios FREE + Artist name)
+   - Sidebar nav: **Analyse → Library → Brand → Social → Calendar → Insights → Settings** (geen "Clips"-entry!)
+   - Klik Analyse → drop-card + 3 tiles (Watch/Dropbox/Drive) + Continue editing (als history aanwezig)
+   - Klik Library → Projects-tab tiles in 4-koloms grid. Klik project → Clips-view van die set
+   - Klik Library → Exports-tab → exports tiles
+   - Klik workspace-chip → dropdown opent met Sjuul Studios + Manage workspace + Upgrade plan
+   - Klik artist-chip → dropdown met Artist (default actief) + locked "+ Second artist" + "Add more with Studio"
+   - Klik locked artist → upgrade-modal opent
+   - Klik Settings → 2-koloms layout, **Capabilities + Storage & large files NIET zichtbaar**, Workspace+Artists-card wel zichtbaar met "+ Add artist" lock-button
+   - Klik "+ Add artist" → upgrade-modal opent (FREE)
+   - Klik Clips-view (via project-klik in Library) → geen "Pick the keepers" hero meer
+2. **🟢 PyInstaller rebuild** als alles groen is → `./build_macos.sh dmg` om Fase 5 in productie-`.app` te krijgen
+3. **🟢 Analyse-view progress hookup** — `analyseSetState()` aanroepen vanuit bestaande upload/processing-handlers zodat de progress-bar binnen Analyse echt updatet (nu nog op 0%)
+4. **🟢 Bug 1 (selectie-balk)** — als Sjuul reproduce-stappen heeft
+5. **🟢 Code-rebrand Clip Live → Omni DJ** (~4-6u, aparte sessie)
+6. **🟢 omnidj.com koppelen + Stripe live mode** (Fase 3-4 launch)
 
 ---
 
-## Architectuur op één pagina
+## STATUS NA SESSIE 54 — REDESIGN FASE 5 (2026-05-27)
 
-```
-app.py            Flask entry point, alle /api/* routes, SSE, job state, export pipeline,
-                  folder picker, library endpoints (list/reveal/copy/delete)
-analyzer.py       Drop-detectie (librosa, HPSS, BPM, Demucs optioneel)
-cutter.py         Video snijden (ffmpeg), thumbnails, filmstrip, presets, split,
-                  export_clip_with_settings — fade defaults op 0 (hard cut)
-uploader.py       Platform upload stubs (YouTube, TikTok, Instagram, Facebook)
-static/           Frontend HTML/CSS/JS (SPA, één pagina ~205 KB)
-config.json       App instellingen
-job_history.json  Persistente job state
-OUTPUT_DIR        $TMPDIR/dj-clip-cutter/output/<job>/  — proxy/landscape/vertical/exports/
-                  + thumb_clipNN.jpg + clips.csv + job.json snapshot
-```
+> **Sidebar workspace+artist switcher, Analyse-view (vervangt home+upload+processing), Library-view (vervangt Clips als top-level), Capabilities+Storage uit Settings, multi-artist Studio-plan paywall (max 3). CSS+DOM+JS-only, geen backend-wijzigingen.**
+>
+> ### Sjuul's wijzigingsverzoeken (allemaal verwerkt)
+>
+> 1. Sidebar 2-chip Supabase-stijl: workspace + artist gestapeld
+> 2. Library vervangt Clips top-level; Clips alleen via project-klik
+> 3. Multi-artist = Studio-plan feature, **max 3 artists**, Stripe price-ID hergebruiken
+> 4. Default artist-naam = `Artist name` (placeholder), uit onboarding-`artist_name` veld
+> 5. Analyse-page copy: `Analyse a DJ set` + `Drag & drop or select your DJ-set.`
+> 6. Dropzone strak: geen "— up to 4 hours", geen [Choose file]-knop, geen "Or use:"-label, geen duplicate "Choose file / Local picker"-tile
+> 7. BPM-meter / "144 BPM" weg uit headers (CSS-restyle dash-set-meta)
+> 8. Capabilities-sectie en Storage & large files-sectie verborgen in v2-Settings (DOM blijft staan)
+> 9. Artist-dropdown header: `Artists` (kort)
+> 10. Library-tile-density: **4 per rij** desktop-default
+>
+> ### Files gewijzigd deze sessie
+>
+> - `dj-clip-cutter/static/index.html`: +57.788 bytes (875.442 totaal). +~1.400 regels CSS (Fase 5 blok ~5634-6000), +~250 regels nieuwe DOM (Analyse + Library views), +~400 regels JS (Workspace+Artist dropdowns + renderAnalyse + renderLibrary + analyseSetState + v2RenderArtistsList).
+> - `PLAN-REDESIGN-FASE5-2026-05-27.md`: nieuw plan v3 met alle 9 wijzigingen.
+> - `HANDOVER.md`: dit blok.
+> - Backup: `static/index.html.pre-redesign-fase5.bak` (817.654 bytes).
+>
+> ### Geen wijzigingen aan
+>
+> `app.py`, `cutter.py`, `analyzer.py`, `auth.py`, `start.sh`, `build_macos.sh`.
+>
+> ### Verificatie statisch (allemaal groen)
+>
+> - ✅ `html.parser`: 0 parse-errors
+> - ✅ `node --check` op JS-blok (490 KB): groen
+> - ✅ Tag-balance delta vs backup: 0 mismatches (alleen `<input>` self-closing delta)
+> - ✅ Alle nieuwe selectors aanwezig (1× #view-analyse, 1× #view-library, 1× .v2-ws-stack, 1× #v2WsChip, 1× #v2ArtistChip, 1× data-v2nav="analyse", 1× data-v2nav="library", 1× #settings-workspace)
+> - ✅ 0 matches voor "Clip Drop Live" (2 onboarding-strings vervangen door "Omni DJ")
+> - ✅ "Pick the keepers" hero blijft in legacy-DOM maar CSS-verborgen in v2-dashboard
+>
+> ### Verificatie live — NIET DOORGELOPEN
+>
+> Chrome MCP connectie met `http://127.0.0.1:5555` haalde 815.821 bytes binnen — dat is de oude `/Applications/Clip Live.app`-bundle, niet onze dev-server. Live-test vereist dat Sjuul de bundle stopt en `./start.sh` in de project-folder draait.
+>
+> ### Wat Sjuul nu moet doen
+>
+> ```
+> # 1. Stop de oude bundle
+> osascript -e 'tell application "Clip Live" to quit'
+> # of: pkill -f "Clip Live.app"
+>
+> # 2. Start dev-server
+> cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+> ./start.sh
+>
+> # 3. Open in Chrome
+> open "http://127.0.0.1:5555"
+> ```
+>
+> Daarna in browser:
+> - Console: `localStorage.setItem('clipLiveRedesignV2','1')` + reload
+> - Verifieer de checklist hierboven onder "🔴 LIVE-TEST CRUCIAAL"
+>
+> ### Bewust uit scope sessie 54
+>
+> - Analyse-view progress-hookup: `analyseSetState()` helper staat klaar maar bestaande upload/processing-code roept 'm niet aan
+> - PyInstaller rebuild (Sjuul doet handmatig na groene live-test)
+> - Multi-tenant Supabase-werk (Fase 5b — workspace_id + artist_id RLS)
+> - Per-artist Brand Stack data
+> - Code-rebrand `Clip Live` → `Omni DJ` strings overal (apart sessie)
+> - reset-password.html standalone polish
+>
+> ### Volgende sessie
+>
+> 1. Sjuul live-test (zie checklist hierboven)
+> 2. Eventuele restbugs fixen
+> 3. PyInstaller rebuild → bundle in /Applications
+> 4. Optioneel: Analyse-view progress-hookup
+> 5. Daarna: code-rebrand of Fase 5b multi-tenant
 
-**App starten:**
+---
+
+## ⚡ START HIER — sessie 54 briefing (2026-05-28+, NU AFGEROND)
+
+**Project:** Omni DJ (rebrand sessie 53, was Clip Live) — DJ-set → vertical/landscape clip generator
+**Eigenaar:** MONO LABS (de tools-divisie van Sjuul's bedrijf MONO)
+**Domein:** `www.omnidj.com` (nog niet gekoppeld). `djclips.nl` vervalt volledig.
+**Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/`
+**Bundle:** `/Applications/Clip Live.app` (intern nog "Clip Live" genaamd — code-rebrand staat los gepland)
+**App starten:** `open "/Applications/Clip Live.app"` (poort 5555). Of dev-server via `./start.sh`.
+
+### Status na sessie 53 — alles GROEN voor productie-bundle
+
+✅ Captions worden ge-baked in MP4 (sessies 50+51 fixes in bundle, E2E groen in productie via "SESSIE 53 TEST"-tekst test)
+✅ Single-clip-rename werkt voor zowel inline editor als 'Export selected' route (sessie 53 fix 4)
+✅ Multi-clip & multi-ratio export pipeline werkt
+✅ Brand-kit, watermark, logo, fonts, color wheels (sessies 41-48)
+✅ v2-redesign volledig live: shell + dashboard + editor + 5 modals
+✅ Auth + Supabase + Stripe (test mode) + rate limiting + RBAC + audit log
+✅ Bug 4 (`.duration` stretch in v2) opgelost — timestamp-pill staat correct rechtsonder
+✅ Eerste 8 thumbnails laden direct (`loading=eager`) — geen wazige first paint meer
+✅ Animation-default nieuwe text-layer = "None" ipv "Fade in"
+✅ Captions-info-tekst onder Export-modal toggle als geen overlays op selectie zitten
+
+### Bekende open punten (geen blockers)
+
+⚠️ **Bug 1** — Selectie-balk leek bij 2 clips niet zichtbaar in Sjuul's screenshot, maar NIET reproduceerbaar in Chrome MCP-lab. Mogelijk transition-race (`.22s ease-out` slide-in). Pas oppakken als Sjuul exact kan reproduceren met stappen.
+⚠️ **Rebrand code-side** — `static/index.html` + `launcher.py` + `app.py` + `auth.py` + `build_macos.sh` + README's bevatten nog "Clip Live"-strings. App-icon ongewijzigd. Map-namen ongewijzigd. ~4-6u dev voor volledige sweep (zie sessie 54 prio's).
+⚠️ **`exportSelected` zeldzame zijroute** — STATE.clips lookup match nu correct (sessie 53 fix 4), maar comment op regel 10351 zegt nog "1-based" — moet "0-based" worden (sessie 52 mini-bevinding 1).
+⚠️ **Multi-clip + multi-ratio E2E in productie** niet getest. Single-clip-route is bewezen, andere routes verwacht groen maar niet sluitend.
+
+### Volgende sessie — prio's in volgorde
+
+1. **🔵 Visuele sanity check** (5 min, Sjuul) — alle 5 sessie-53 fixes verifiëren in productie-`.app`:
+   - Dashboard: eerste rij thumbnails direct geladen (niet wazig)
+   - Dashboard: timestamp-pill rechtsonder in thumb (klein, ~10px), niet stretching
+   - Export selected (1 clip) → rename-veld prefilled met `Drop_N`
+   - Editor → Text-drawer → "+ Add text" → Animation dropdown = "None"
+   - Selecteer clip zonder caption → Export → info-tekst "Geen captions aanwezig op deze clips" onder toggle
+2. **🟢 Code-rebrand Clip Live → Omni DJ** (~4-6u) — string-sweep door static/index.html, launcher.py, app.py, auth.py, build_macos.sh, alle .md files. Plus: app-icon, bundle-identifier (`com.sjuulstudios.cliplive` → `com.monolabs.omnidj`?), info_plist `CFBundleName`, README's. Folder rename (`dj-clip-cutter/` → ?) is hoge-risico — apart plannen.
+3. **🟢 omnidj.com koppelen** via Cloudflare (was Fase 3 voor djclips.nl). Nieuwe Cloudflare Pages-project + DNS-records. Oude `djclips-nl-by-mono-labs` Pages-project mag verwijderd; GitHub-repo `sjuulstudios/djclips.nl-by-MONO-LABS` kan archive.
+4. **🟢 Stripe live mode** — pas na omnidj.com live. Runbook STRIPE-DNS-RUNBOOK.md moet inhoudelijk worden geupdate.
+5. **🟢 Multi-clip E2E in productie verifiëren** — 2+ clips selecteren waar beide caption-overlays op zitten, exporteren met multi-ratio (9:16 + 16:9), check of alle MP4's captions bevatten.
+6. **🟢 Fase 5 Content Calendar + Multi-artist** (zie `PLAN-CONTENT-CALENDAR-2026-05-26.md` v1.1) — 5a multi-tenant fundament, 5b calendar UI, 5c Postiz publishing, etc. 13-15 weken dev verspreid over fases.
+7. **Optioneel** — Sessie 52 mini-bevinding 1 (comment regel 10351 stale 1-based → 0-based), sessie 40 hardening (`admin.sign_out(scope='others')`), SMTP-provider als eigen email nodig.
+
+### Rebrand-noot
+
+**Product heet voortaan Omni DJ.** Eigenaar = **MONO LABS** (tools-divisie). Naar buiten toe alleen Omni DJ + MONO LABS. Intern (codebase + map-namen) nog "Clip Live" totdat sessie 54+ de code-rebrand doet.
+
+**Active email-aliases:**
+- `omnidj@monohq-labs.com` — support, algemene vragen
+- `sjuul@monohq-labs.com` — Sjuul's eigen account, whitelist/testing
+
+Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
+
+### Recente sessies — één-regelers (alles boven sessie 53 staat in detail in status-blokken hieronder)
+
+- **Sessie 53** (vandaag) — Rebrand-noot + 2× rebuild + 5 fixes. Captions in productie groen verifieerd.
+- **Sessie 52** — E2E export-test groen via inline editor (sessies 50+51 keten bewezen).
+- **Sessie 51** — Bug 1 (off-by-one) frontend-fix + 3 UI-fixes export-modal.
+- **Sessie 50** — Caption-bake bug opgelost: `import re` ontbrak in cutter.py.
+- **Sessie 49** — Rebuild groen sessies 41-48 + z-index fix aspect-modal + caption-bake bug geconfirmeerd.
+- **Sessie 48** — Redesign Fase 4 modals (auth/wizard/forgot/upgrade/aspect/export).
+- **Sessie 47** — Redesign Fase 3 editor/timeline.
+- **Sessie 46** — Redesign Fase 2 dashboard/clips-grid.
+- **Sessie 45** — Redesign Fase 1 shell (sidebar + workspace-switcher).
+- **Sessies 44, 43a+b** — Selectie-balk + 7 export-pipeline onderdelen.
+
+---
+
+## STATUS NA SESSIE 53 — REBRAND NAAR OMNI DJ + REBUILD #1 + BUG-ONDERZOEK + FIXES + REBUILD #2 (2026-05-27)
+
+> **Product hernoemd naar Omni DJ. Documentatie + memory bijgewerkt.
+> Rebuild #1 (sessies 50+51 fixes) groen. Captions-export E2E geverifieerd
+> in productie-`.app`. Smoketests deden 4 bugs aan het licht — 4
+> onderzocht, 1 echte CSS-bug + 1 img-loading-tweak + 1 rename-bug + 1
+> animation-default + 1 captions-UX. Rebuild #2 met alle 5 fixes
+> geïnstalleerd in /Applications.**
+>
+> ### Sessie-flow (chronologisch)
+>
+> 1. **Memory + HANDOVER** — Omni DJ rebrand-info vastgelegd
+>    (`project_omni_dj_rebrand.md`), HANDOVER hoofd-blok aangepast
+> 2. **Rebuild #1** — `./build_macos.sh dmg` op Sjuul's Mac. Bundle in
+>    `/Applications` geüpdatet (`Clip Live.PRE-SESSIE53.app` rollback bewaard).
+>    Sessies 50 + 51 fixes nu in productie.
+> 3. **Captions E2E test productie** — Housy Good vibes set 30min (487MB)
+>    geüpload via .app, geanalyseerd → 23 clips. Caption "SESSIE 53 TEST"
+>    toegevoegd op clip 3 via full-page editor → text-drawer. Export 9:16
+>    + captions ON → `Drop_3.mp4` (8.9MB) bevat de caption-tekst in de
+>    pixels (visueel geverifieerd via QuickTime preview). **Sluitend bewijs
+>    sessies 50+51 werken in productie.**
+> 4. **Smoketests sessies 43 + 44** — 4 issues gerapporteerd door Sjuul:
+>    - Selectie-balk bij 2 clips niet zichtbaar (1 of 3 wel)
+>    - Multi-clip-export geen captions ondanks toggle aan
+>    - Geen export-selected-overzicht in modal
+>    - Rare blurred-overlays met timestamps op clip-cards
+> 5. **Bug-onderzoek via Chrome MCP + osascript** (taak 8)
+> 6. **Fixes doorgevoerd** (taken 6, 7, 9, 10, 11)
+> 7. **Rebuild #2** met fixes → in /Applications
+>
+> ### Bug-onderzoek bevindingen
+>
+> **Bug 1 — Selectie-balk bij 2 clips niet zichtbaar:**
+> ⚠️ **niet reproduceerbaar in lab**. Via Chrome MCP getest met
+> `toggleClipSelect(0)` → `(1)` → `(2)` op dezelfde set (PID 11409,
+> Housy 23 clips): bij 1, 2 én 3 selecties krijgt
+> `#selection-preview-bar` `.on` class + `transform: translateY(0)` +
+> correct aantal tiles. Mogelijke verklaring van wat Sjuul zag:
+> race-condition tijdens de `.22s` CSS-transition (screenshot gemaakt
+> tijdens slide-in animatie), of een `clearSelection`-call tussendoor.
+> Géén code-fix gedaan zonder reproduce-stappen.
+>
+> **Bug 2 — Captions in multi-clip-export ontbreken:**
+> ✅ **geen bug, gewoon geen content.** API-call op `/api/clip-overlays/116f7d0a`
+> toonde dat alleen clip **3** een text-layer had (de manuele "SESSIE 53
+> TEST"). Clips 1 en 2 hadden geen overlays. Bij export wordt er dus
+> niks gebakt voor 1 en 2 — terecht. Sjuul verwachtte captions omdat de
+> toggle aanstond, maar er waren simpelweg geen captions aanwezig.
+> **UX-fix doorgevoerd** (fix 5 hieronder) om dit te voorkomen.
+>
+> **Bug 3 — Geen export-selected-overzicht in modal:**
+> ✅ **geen bug, design-keuze.** Modal toont alleen "Render 2 clips" als
+> korte beschrijving. Geen lijst van wélke clips. Feature-uitbreiding voor
+> later, niet kritisch.
+>
+> **Bug 4 — Blurred timestamp-overlays op clip-cards:**
+> 🔴 **echte CSS-bug + img-loading-vertraging gecombineerd.**
+> - **CSS root cause (static/index.html regel 4053-4064):**
+>   `body.redesign-v2 .clip-grid .clip .ph .duration` zette
+>   `right: 10px; bottom: 10px` maar liet de legacy `top: 10px; left: 10px`
+>   (regel 1086-1088) niet uitschakelen → alle 4 inset-properties gezet →
+>   `.duration` werd opgerekt over de hele `.ph` (247×454px) → leek op
+>   een wazige overlay van de hele card.
+> - **Img-loading separate:** alle thumbnails op `loading="lazy"` (sessie
+>   28+) + de img zit binnen aspect-ratio container → intersection
+>   observer triggert pas na scroll → eerste paint heeft `naturalSize 0x0`
+>   thumbnails → wazig.
+> - **Beide fixes doorgevoerd** (zie hieronder).
+>
+> ### Fixes doorgevoerd
+>
+> 1. **Fix 1 — Bug 4 CSS (`top: auto; left: auto;`)** in
+>    `static/index.html` regel ~4055. Sessie 53-comment toegevoegd.
+>    Duration-pill staat nu correct rechtsonder ipv stretching.
+> 2. **Fix 2 — Eager loading eerste 8 thumbnails** in `renderClipGrid()`
+>    regel ~9082: `loading="${i < 8 ? 'eager' : 'lazy'}"`. Eerste rij is
+>    direct geladen bij dashboard-open, rest blijft lazy om netwerk-storm
+>    bij 50+ clips te voorkomen.
+> 3. **Fix 3 — Captions-info-tekst** in export-modal: nieuw HTML element
+>    `#exs-captions-empty` ("Geen captions aanwezig op deze clips —
+>    voeg ze toe via de editor.") + async-fetch in `pickExportSettings`
+>    die `/api/clip-overlays/<job>` checkt voor de geselecteerde indices.
+>    Tekst verschijnt onder Captions-toggle alleen als géén overlays op
+>    de te exporteren clips zitten. Voorkomt Bug 2's "toggle aan maar
+>    geen output"-verwarring.
+> 4. **Fix 4 — Rename-bug `exportSelected`** regel 10000: `c.index === idx`
+>    → `c.index === idx + 1`. Sessie 52 mini-bevinding 2 was dus geen
+>    zeldzame zijroute — het was de hele "Export selected met 1 clip"
+>    route die single-clip rename brak.
+> 5. **Fix 5 — Animation-default op "None"** (taak 6, Sjuul's verzoek):
+>    `defaultLayer` factory `anim: 'fade'` → `'none'`, plus
+>    `<option value="none" selected>` in de dropdown (was fade).
+>
+> ### Files gewijzigd deze sessie
+>
+> - `dj-clip-cutter/static/index.html`: +1502 bytes (5 fixes + 2
+>   sessie-53-comments). Backup: `static/index.html.pre-sessie53-fixes.bak`
+>   (796KB, vóór alle fixes).
+> - **GEEN backend-wijzigingen** — `app.py`, `cutter.py`, `auth.py`
+>   ongewijzigd.
+> - Memory: `project_omni_dj_rebrand.md` aangemaakt + MEMORY.md index
+>   bijgewerkt.
+>
+> ### Bundle-status
+>
+> - `/Applications/Clip Live.app` — Rebuild #2 (sessie 53 fixes) ✅
+> - `/Applications/Clip Live.PRE-SESSIE53.app` — verwijderd (was rebuild
+>   #1, vervangen door de oudere)
+> - `/Applications/Clip Live.PRE-SESSIE53b.app` — rebuild #1 als
+>   rollback bewaard
+> - `dist/Clip Live.app` + `dist/Clip Live.dmg` — verse bouw
+>
+> ### Wat Sjuul nog moet (visuele verificatie)
+>
+> Een korte check in de productie-`.app`:
+> 1. Dashboard openen → bevestigen dat **eerste rij thumbnails meteen
+>    zichtbaar** is (niet wazig)
+> 2. Bevestigen dat **timestamp-pill rechtsonder** in elke thumb staat
+>    (klein, ~10px font, niet stretching)
+> 3. Selecteer 1 clip → "Export selected" → bevestig dat **rename-veld
+>    prefilled** is met `Drop_N` (was `null` voor sessie 53)
+> 4. In editor → Text-drawer → "+ Add text" → bevestig dat
+>    **Animation dropdown standaard op "None"** staat
+> 5. Selecteer een clip waar **geen** caption op zit → Export → bevestig
+>    dat onder Captions-toggle de info-tekst "Geen captions aanwezig op
+>    deze clips" verschijnt
+>
+> ### Bewust niet gedaan deze sessie
+>
+> - Code-side rebrand "Clip Live" → "Omni DJ" in
+>   index.html/launcher.py/app.py/build_macos.sh/auth.py + alle README's.
+>   Aparte rebrand-sessie waard (~4-6u dev).
+> - Folder renames `dj-clip-cutter/` + `Clip Live/`. Hoge risico,
+>   raakt alle build-paden.
+> - App-icon vervangen.
+> - omnidj.com koppelen (Fase 3 van launch-plan; runbook moet eerst
+>   omschreven van djclips.nl → omnidj.com).
+> - Stripe live mode (Fase 4).
+> - Bug 1 (selectie-balk) — pas oppakken als Sjuul kan reproduceren met
+>   stappen.
+>
+> ### Volgende sessie
+>
+> 1. Visuele verificatie (5 checks hierboven) en eventuele restbugs
+> 2. Code-side rebrand "Clip Live" → "Omni DJ" (aparte sessie ~4-6u)
+> 3. omnidj.com koppelen via Cloudflare (was djclips.nl)
+> 4. Daarna Stripe live mode
+
+---
+
+## STATUS NA SESSIE 52 — E2E EXPORT-TEST GROEN (2026-05-27)
+
+> **Sluitend bewijs dat sessies 50 + 51 samen werken. Caption-export via UI
+> levert een MP4 op met de tekst in de pixels. Geen code-wijzigingen, alleen
+> verificatie. Sjuul kan nu PyInstaller rebuilden.**
+>
+> ### Doel
+>
+> Sessie 51 sloot af met de E2E-test expliciet "uit scope — sessie 52".
+> Sessie 50's fix (`cutter.py` regel 20: `import re`) en sessie 51's fix
+> (`static/index.html` regel 9548-9550: `exportIdx = backendIdx - 1`) waren
+> elk geverifieerd, maar niet samen via de échte UI-route. Sessie 52 sluit
+> dat gat.
+>
+> ### Aanpak
+>
+> Geen code-wijzigingen. Dev-server (PID 3264, system Python 3.9, 1u05min
+> oud, draait vanuit project-cwd op poort 5555) lag al klaar. Strategie:
+> - Code-marker-check: `cutter.py` regel 20 = `import re` ✅, `static/index.html`
+>   regel 9542 = `SESSIE 51 fix — Bug 1` ✅. Geladen JS in browser bevat
+>   beide markers.
+> - UI-route: inline editor (NIET full-page editor) → Save→Export-knop in
+>   drawer onder dashboard-card → `_ceCommitReexport` → `startExport` →
+>   `POST /api/export`. Dit is de route die sessie 51's frontend-fix raakt.
+> - Bewijs-laag 1: monkey-patch `window.fetch` om de outgoing POST body op
+>   te vangen → kijken of `clip_indices` 0-based is.
+> - Bewijs-laag 2: ffmpeg frame-extract uit output-MP4 op t=3s → visueel
+>   inspecteren of "CAPTION"-tekst in de pixels zit.
+>
+> ### Stappen
+>
+> 1. Server-check via `lsof -nP -iTCP:5555 -sTCP:LISTEN`: PID 3264 luistert,
+>    cwd via `lsof -p 3264 -a -d cwd` = `dj-clip-cutter/`. `curl HTTP 200`
+>    op `/`.
+> 2. Code-markers op disk geverifieerd via grep + in geladen pagina via
+>    `document.documentElement.outerHTML.includes(...)`. Beide groen.
+> 3. Setup-status in Chrome MCP: Sjuul al ingelogd via Supabase
+>    session-restore, redesign-v2 flag aan, dashboard toont Lisa Korver-set
+>    `e63f06a6` met 30 clips. Belangrijk: `window.STATE === undefined` maar
+>    `typeof STATE === 'object'` werkt vanuit eval (STATE zit in module-scope
+>    IIFE). Direct refereren met `STATE.clips[2].index` werkt wel.
+> 4. `text_overlays.json` op disk bevestigt clip 3 heeft nog steeds layer
+>    "CAPTION" (bold 14% wit op 80% Y, fade, in_sec=0/out_sec=63.29). Sessie
+>    50's `Drop_3.mp4` (15.028.117 bytes) hernoemd naar
+>    `Drop_3.SESSIE50.mp4` zodat verse export niet verward wordt met de
+>    oude.
+> 5. Klik op `.ph` van clip 3 (data-idx=2) opende per ongeluk de full-page
+>    editor, niet de inline drawer. Code-inspectie regel 9224 + 9551
+>    bevestigt: `toggleInlineEditor(idx, btnEl)` opent de drawer, en `_ceCommitReexport`
+>    in die drawer raakt de sessie 51-fix. Inline drawer geopend met
+>    `toggleInlineEditor(2, card.querySelector('.ce-adjust-btn'))`. Drawer
+>    toont knoppen "Reset" + "Export".
+> 6. Monkey-patch:
+>    ```js
+>    window.__sess52 = { exportCalls: [] };
+>    var origFetch = window.fetch;
+>    window.fetch = function(u, opts){
+>      if(typeof u === 'string' && u.indexOf('/api/export/') !== -1 && opts && opts.method === 'POST'){
+>        var b = (typeof opts.body === 'string') ? JSON.parse(opts.body) : opts.body;
+>        window.__sess52.exportCalls.push({url: u, body: b, time: Date.now()});
+>      }
+>      return origFetch.apply(this, arguments);
+>    };
+>    ```
+> 7. Klik Export-knop in drawer → export-settings-modal opent
+>    (`#export-settings-modal.aspect-back.on`). Modal-velden:
+>    - `#exs-rename` = "Drop_3" (sessie 43 prefilled rename werkt)
+>    - 9:16 standaard aan
+>    - `#exs-captions-input` = false
+>    - `#exs-watermark-input` = false
+>    - Submit-knop = `#exs-continue` "Exporteren"
+>    Rename gezet naar `Drop_3_SESSIE52_TEST`, captions-toggle aangeklikt via
+>    `#exs-toggle-captions.click()` → checked=true.
+> 8. Klik `#exs-continue` → monkey-patch ving op:
+>    ```json
+>    {
+>      "url": "/api/export/e63f06a6",
+>      "body": {
+>        "aspects": ["vertical"],
+>        "codec": "match",
+>        "fps": "match",
+>        "resolution": "source",
+>        "overlays": {"captions": true, "watermark": false, "logo": true},
+>        "labels": {"3": "Drop_3_SESSIE52_TEST"},
+>        "output_dir": "/Users/sjuulsmits/Downloads/",
+>        "clip_indices": [2]
+>      }
+>    }
+>    ```
+>    **`clip_indices: [2]` is 0-based, exact wat sessie 51's fix oplevert.**
+>    `backendIdx=3` (clip.index, 1-based) → `exportIdx=2` (sessie 51 conversie)
+>    → backend `clips[2]` = clip met `index=3` = clip mét overlay ✅.
+>    `labels` map gebruikt 1-based key "3" (matched text_overlays.json keys).
+> 9. Output landt in `~/Downloads/Drop_3_SESSIE52_TEST.mp4` (15.028.117 bytes,
+>    identiek aan sessie 50's baked-MP4 — `_baked_for_export` cache hit) +
+>    sidecar `Drop_3_SESSIE52_TEST.mp4.meta.json` met `clip_index: 3`
+>    (1-based naar gebruiker).
+> 10. Visuele verificatie:
+>     ```
+>     ffmpeg -y -ss 3 -i ~/Downloads/Drop_3_SESSIE52_TEST.mp4 \
+>            -frames:v 1 -q:v 2 -update 1 /tmp/sess52_frame_t3.jpg
+>     ```
+>     Frame op t=3s toont scherp witte "CAPTION"-tekst gecentreerd op ~80% Y
+>     bold, exact zoals `text_overlays.json` specificeert. Lisa Korver (DJ)
+>     herkenbaar in beeld — juiste clip. Frame visueel geïnspecteerd via Read
+>     tool op de jpg.
+>
+> ### Bewezen keten
+>
+> ```
+> cutter.py:20 `import re` (sessie 50)
+>   → _write_layer_textfile faalt niet meer
+>     → recut_clip lukt
+>       → _prebake_clip_for_export returnt baked-path (i.p.v. None)
+>         → _run_export_job gebruikt baked-MP4
+>           → captions in pixels
+>             → ffmpeg frame-extract bevestigt visueel
+> ```
+>
+> Werkt voor de **single-clip-editor-export** route na sessie 51's
+> frontend-fix.
+>
+> ### Niet getest deze sessie (uit scope)
+>
+> - Multi-clip select-and-export via `exportSelected` (al 0-based
+>   pre-sessie51, geen regressie verwacht — maar niet expliciet geverifieerd)
+> - Export All (`exportAll` → `startExport(null, ...)`)
+> - Editor full-page export-route (de Export-knop in de full-page editor
+>   tool-rail) — onbekend of die ook `_ceCommitReexport` hergebruikt of een
+>   eigen call-site heeft
+> - Watermark-bake
+> - Multi-ratio export (9:16 + 16:9 tegelijk)
+> - Queue-bar UX bij ≥2 jobs
+>
+> ### Mini-bevindingen voor later (NIET kritisch, niet sessie 52-werk)
+>
+> 1. `static/index.html` regel 10351: comment op `startExport` zegt
+>    "indices = array of 1-based clip-indices". Sinds sessie 51 is dat
+>    **0-based**. Comment-update is 1 regel; valt onder
+>    documentatie-hygiene.
+> 2. `static/index.html` regel 10000 in `exportSelected`:
+>    `const clip = (STATE.clips || []).find(c => (c.index ?? null) === idx);`
+>    met `idx` 0-based vs `clip.index` 1-based → matched **nooit**. `clip`
+>    blijft `undefined`, `opts.singleClip` wordt nooit gezet. Komt enkel
+>    voor in zeldzame zijroute (multi-select met precies 1 item geselecteerd
+>    → de rename-prefill in modal mist dan). Geen kritisch pad, geen
+>    beta-blocker.
+>
+> ### Files gewijzigd deze sessie
+>
+> Geen code wijzigingen. Alleen:
+> - `~/Downloads/Drop_3.SESSIE50.mp4` ← hernoemd van Drop_3.mp4 (was sessie 50's
+>   bewijs-MP4 binnen `dj-clip-cutter/output/e63f06a6/exports/`, dus
+>   technisch verkeerd genoteerd in eerste lijst — staat **NIET** in
+>   Downloads maar in de project-output folder)
+> - `~/Downloads/Drop_3_SESSIE52_TEST.mp4` + `.meta.json` (verse export, mag
+>   weggegooid worden)
+>
+> Correctie: de rename gebeurde op:
+> `dj-clip-cutter/output/e63f06a6/exports/Drop_3.SESSIE50.mp4` (van
+> `Drop_3.mp4`). De **nieuwe** export landde in `~/Downloads/` omdat dat de
+> default `output_dir` in de export-modal was.
+>
+> ### Wat Sjuul nu kan doen
+>
+> 1. **PyInstaller rebuild** — `./build_macos.sh dmg`. Sessies 50 + 51 fixes
+>    gaan dan mee in de productie-.app. Geen blockers meer voor de bundle.
+> 2. **Test-artefact weggooien** — `~/Downloads/Drop_3_SESSIE52_TEST.mp4`
+>    (+ meta.json) mag in de prullenbak. Sessie 50's bewijs-MP4 in
+>    `dj-clip-cutter/output/e63f06a6/exports/Drop_3.SESSIE50.mp4` blijft als
+>    referentie.
+> 3. **Optioneel** — Visuele controle in echte browser dat de v2
+>    export-modal toggle-bolletjes in ON-state oranje pill met witte cirkel
+>    rechts zijn (sessie 51's CSS-fix, was via MCP-screenshot al groen).
+>
+> ### Dev-server status
+>
+> Draait nog op poort 5555 (PID 3264, system Python 3.9). Cmd+Tab Terminal
+> → Ctrl+C als je 'm wil stoppen. Belangrijk om te weten: deze instance
+> draait met **system Python**, niet venv. Werkt voor de export-keten
+> (librosa+demucs zitten kennelijk ook in system-Python op deze Mac), maar
+> als je opnieuw start gebruik dan `./start.sh` voor de venv-Python.
+>
+> ### Volgende sessie
+>
+> 1. PyInstaller rebuild als Sjuul nog niet gedaan heeft → captions in
+>    .app verifiëren via UI
+> 2. Optioneel: mini-bevinding 1 + 2 fixen (comment-update regel 10351 +
+>    `exportSelected` find-by-index) als tech-debt opruim-batch
+> 3. Optioneel: andere export-routes (Export All, multi-clip, full-page
+>    editor) bevestigen om 100% dekking te krijgen
+> 4. Anders: vooruit met Fase 5 redesign (Social/Calendar/Insights echte
+>    features) of nieuwe features uit moat-plan (PLAN-MOAT-FEATURES.md)
+
+---
+
+## STATUS NA SESSIE 50 — CAPTION-BAKE BUG OPGELOST (2026-05-27)
+
+> **Bug 2 (root cause) gefixt met 1-regel-edit. Bug 1 (off-by-one) gevonden,
+> bewust nog OPEN voor sessie 51. Caption-export werkt nu in dev-server.**
+>
+> ### Aanleiding
+>
+> Sessie 49 confirmde: caption-bake pipeline (sessie 43a/43b) werkt niet in
+> de bundle. Diagnose-log werd niet zichtbaar door PyInstaller `runw`
+> stdout-redirect, dus blocker werd doorgeschoven naar sessie 50 met aanpak
+> "dev-server gebruiken waar stdout wel zichtbaar is".
+>
+> ### Diagnose-aanpak
+>
+> 1. Hangende Clip Live `.app` proces (PID 93126) op poort 5555 gekild via
+>    `osascript do shell script "kill 93126"` (Cmd+Q sloot UI maar liet
+>    Python-backend draaien — bekend PyInstaller-patroon op Mac).
+> 2. Dev-server gestart in achtergrond:
+>    ```
+>    cat > /tmp/clip-live-launch.sh << 'EOF'
+>    #!/bin/bash
+>    export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
+>    cd '/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter'
+>    source venv/bin/activate
+>    exec python app.py 5555
+>    EOF
+>    chmod +x /tmp/clip-live-launch.sh
+>    nohup /tmp/clip-live-launch.sh > /tmp/clip-live-dev.log 2>&1 &
+>    ```
+>    Werkt omdat `osascript do shell script` PATH minimaal heeft → ffmpeg
+>    moet expliciet in PATH. Venv-activate zorgt dat de juiste Python +
+>    dependencies (librosa, demucs, etc.) geladen worden.
+> 3. 4 SESSIE50_DIAG-prints in `_run_export_job._process` op exacte regels:
+>    5854 (raw_overlays + overlays_cfg), 5892 (clip_index + layer_info +
+>    want_captions + needs_prebake), 5901 (prebake-result), 5917 (final
+>    sources vóór ffmpeg).
+> 4. Sjuul ingelogd in Chrome (account `business+dmgtest1@sjuulstudios.com`,
+>    user_id `d86a3a54-aa47-472e-875f-e17347e406df`). Job `e63f06a6` (Lisa
+>    Korver x Ho_r Berlin, 30 clips, 144 BPM) had al een
+>    `text_overlays.json` met overlay "CAPTION" op clip 3 (bold 14% wit op
+>    80% Y, fade-anim).
+> 5. Export-call via JS (gebruikt jouw auth-token, exact zoals frontend):
+>    ```js
+>    fetch('/api/export/e63f06a6', { method:'POST', headers:{...auth},
+>      body: JSON.stringify({
+>        aspects:['vertical'], codec:'match', fps:'match',
+>        resolution:'source',
+>        overlays:{captions:true, watermark:false, logo:false},
+>        clip_indices:[3]
+>      })
+>    })
+>    ```
+>    Test 1 (`clip_indices:[3]`) → backend pakte `clip_index=4`
+>    (= `clips[3]` 0-based) → `has_text_layers=False` → **off-by-one
+>    bug ontdekt (Bug 1)**.
+>    Test 2 (`clip_indices:[2]`) → backend pakte `clip_index=3` correct →
+>    `has_text_layers=True, needs_prebake=True, baked=None` → log toonde
+>    `ERROR prebake: recut_clip failed for clip 3: name 're' is not defined`
+>    → **Bug 2 (root cause) gevonden**.
+>
+> ### Root cause Bug 2
+>
+> `dj-clip-cutter/cutter.py` regel 274 in `_write_layer_textfile`:
+> ```python
+> safe_id = re.sub(r'[^A-Za-z0-9_-]', '', str(layer_id or 'layer'))[:32] or 'layer'
+> ```
+> `re`-module nooit geïmporteerd in cutter.py. Stacktrace volledig in log:
+> ```
+> recut_clip (cutter.py:1862)
+>   → cut_clip_vertical (1721)
+>     → _build_vertical_cmd (1135)
+>       → _maybe_compose_brand_vf (753)
+>         → _build_text_layer_filters (310)
+>           → _write_layer_textfile (274) ← NameError here
+> ```
+> `_prebake_clip_for_export` (app.py:5754-5768) heeft een blanket
+> `except Exception` die de NameError opvangt en `None` returnt. Caller
+> (`_run_export_job._process` regel 5915) logt alleen een `log.warning`
+> en valt terug op live-files. Daarom was de bug stil voor de gebruiker —
+> export voltooit "succesvol" maar zonder captions.
+>
+> Waarschijnlijke oorzaak: import-regel per ongeluk verwijderd tijdens
+> sessie 41/42 (Fase 5 fonts + color wheels), waar `cutter.py` flink
+> herstructureerd is. Geen regressie-test ving 'm omdat de meeste flows
+> die `_write_layer_textfile` raken via een ander pad lopen of er waren
+> geen E2E export-tests met overlays in CI.
+>
+> ### De fix (Bug 2)
+>
+> **Bestand:** `dj-clip-cutter/cutter.py`
+> Regel 20 toegevoegd, alfabetisch tussen `platform` en `shutil`:
+> ```python
+> import subprocess
+> import os
+> import json
+> import csv
+> import platform
+> import re          ← NIEUW
+> import shutil
+> from concurrent.futures import ProcessPoolExecutor, as_completed
+> from pathlib import Path
+> ```
+>
+> Eén regel. Eén bestand. Zero functionele risico's. Geen tests gebroken
+> want `re` is stdlib — geen extra dependency.
+>
+> ### Verificatie sessie 50
+>
+> Statisch:
+> - ✅ `python3 -c 'import ast; ast.parse(open("cutter.py").read())'` → SYNTAX OK
+> - ✅ `python3 -c 'import ast; ast.parse(open("app.py").read())'` → SYNTAX OK (na cleanup DIAG-prints)
+> - ✅ `grep -n '^import re' cutter.py` → regel 20
+> - ✅ `grep SESSIE50_DIAG app.py` → 0 matches (DIAG-prints schoon weg)
+>
+> Runtime (post-fix dev-server herstart):
+> - ✅ Server start zonder errors/tracebacks (log: `Running on http://127.0.0.1:5555`)
+> - ✅ Export-call `clip_indices:[2]` produceert `baked={'vertical': '.../e63f06a6/_baked_for_export/e63f06a6_clip03_drop_vertical.mp4'}` — niet meer `None`
+> - ✅ Definitieve MP4 `output/e63f06a6/exports/Drop_3.mp4` (15.028.117 bytes, met sidecar `.meta.json`)
+> - ✅ Frame-extract (`ffmpeg -ss 3 -frames:v 1`) toont scherpe witte "CAPTION"-tekst op 80% Y zoals gespecificeerd
+> - ✅ `_baked_for_export/` opgeruimd na succesvolle export (cleanup-stap app.py:5994-6002 werkt)
+>
+> ### Bug 1 — OPEN voor sessie 51
+>
+> **Locatie:** mismatch tussen frontend en `app.py` regel 6160-6165.
+> Frontend (`static/index.html` regel 9488): `startExport([st.backendIdx],
+> ...)` waar `backendIdx = clip.index` (1-based, matched `text_overlays.json`-keys).
+> Backend interpreteert `clip_indices` als 0-based array-positie:
+> ```python
+> selected_idx = sorted({int(i) for i in raw_sel
+>                        if isinstance(i, (int, float)) and 0 <= int(i) < len(clips)})
+> ```
+> Comment op regel 6158 zegt expliciet "0-based" — maar frontend doet
+> nergens `-1`. Bug zit dus in semantiek-afspraak, niet in code-defect.
+>
+> **Impact:** UI-selectie "clip 3" → backend exporteert clip 4. Voor de
+> meeste gebruikers onzichtbaar omdat naburige clips lijken (zelfde set).
+> Werd zichtbaar bij overlays omdat alleen specifieke clip-indices captions
+> hebben (van de Lisa Korver-set: clips 1, 2, 3 — met off-by-one pakte
+> backend clips 2, 3, 4 → clip 4 mist altijd captions). Dit maskeerde
+> sessie 49's diagnose: de DIAG-output had moeten zien dat een clip met
+> overlays `has_text_layers=True` had, maar door off-by-one zag 'ie steeds
+> de "next" clip die geen overlays had.
+>
+> **Fix-opties:**
+> - **Optie A (aanbevolen):** in `app.py` regel 6164:
+>   ```python
+>   selected_idx = sorted({int(i) - 1 for i in raw_sel
+>                          if isinstance(i, (int, float)) and 1 <= int(i) <= len(clips)})
+>   ```
+>   Plus comment-update regel 6157-6159 ("1-based, matches clip.index in UI").
+>   Eén regel codewijziging, één commentaarwijziging. Sluit aan op
+>   `text_overlays.json` keys + UI-display.
+>
+> - **Optie B:** in `static/index.html` regel 9488, stuur `st.backendIdx - 1`.
+>   Risico: andere `startExport` call-sites (regels 9940 + 9948) moeten
+>   óók aangepast, plus toekomstige call-sites kunnen het vergeten.
+>
+> Optie A is concentratie-fix, Optie B is verdeel-fix. Aanbeveling = Optie A.
+>
+> ### Bestanden gewijzigd deze sessie
+>
+> - `dj-clip-cutter/cutter.py`: +1 regel (`import re` op regel 20).
+> - `dj-clip-cutter/app.py`: DIAG-prints toegevoegd op regels ~5854/5892/5901/5917, dan weer verwijderd. Netto 0 wijziging.
+>
+> ### Wat Sjuul nog moet doen
+>
+> 1. **PyInstaller rebuild** zodra je captions in de productie-`.app` wil
+>    hebben. De fix zit in dev-server-code; bundle in `/Applications` heeft
+>    'm nog niet. Procedure: zie `INSTALLER-RUNBOOK.md` of
+>    `LESSONS-LEARNED.md`. Command: `./build_macos.sh dmg`.
+> 2. **Sessie 51 plannen** voor:
+>    - Bug 1 fixen (Optie A aanbevolen)
+>    - UI-fixes export-modal: toggle-bolletjes (oranje fill + checkmark als
+>      aan), label "CAPTIONS INBAKKEN" → "CAPTIONS", description-tekst
+>      weghalen
+>    - Rebuild .app/.dmg na fix
+> 3. **Dev-server draait nog** (PID 2562, op poort 5555). Cmd+Tab → Terminal
+>    → Ctrl+C als je 'm wil stoppen. Of laat 'm draaien tot je een nieuwe
+>    sessie begint.
+>
+> ### Bewust uit scope sessie 50
+>
+> - Bug 1 fixen (afgesproken: alleen Bug 2 nu om regressie-oppervlak klein
+>   te houden)
+> - UI-fixes export-modal toggles + labels (sessie 51)
+> - PyInstaller rebuild (Sjuul doet dat zelf)
+> - Andere export-paden (multi-clip, Export All, Editor-export) — alleen
+>   single-clip-export getest. Bug 2 (NameError) raakt alle paden die
+>   `_write_layer_textfile` triggeren, dus is gefixt voor alle paden. Bug 1
+>   raakt alleen single-clip-select-and-export, niet "alle clips".
+>
+> ### Volgende sessie
+>
+> 1. Bug 1 fixen via Optie A in `app.py` regel 6164 + comment-update
+> 2. UI-fixes export-modal (toggle-bolletjes + label + description)
+> 3. Verificatie via dev-server + Chrome-MCP zoals sessie 50
+> 4. PyInstaller rebuild → .app → .dmg
+
+---
+
+## STATUS NA SESSIE 48 — REDESIGN FASE 4 (2026-05-26)
+
+> **Modals in v2-stijl. CSS-only. Geen JS/backend wijzigingen.**
+>
+> ### Aanpak gekozen na inventarisatie
+>
+> Net als bij sessies 45/46/47: alle 5 modals in `static/index.html` hebben
+> heldere DOM-structuur (één scrim-element met klasse + één direct-child
+> "card"-div). Pure CSS-restyle volstaat — geen JS aanrakingen,
+> geen DOM-IDs hernoemen. Resultaat: **0% risico op functionele regressie**
+> op login/signup/forgot/upgrade/aspect/export-flows.
+>
+> ### Beslissingen
+>
+> 1. **Volledige scope** — alle 5 modals tegelijk in v2-stijl (Sjuul akkoord).
+> 2. **Reset-password.html bewust UIT scope** — standalone landingspagina,
+>    geen onderdeel van SPA, geen flag-aware logica. Krijgt eigen polish
+>    later als Sjuul dat wil.
+> 3. **Generieke scrim-tokens** — alle 5 modals delen scrim `rgba(8,8,10,0.78)`
+>    + `backdrop-filter: blur(14px) saturate(140%)`. Eén plek wijzigen = alle
+>    modals updaten.
+> 4. **Accent spaarzaam** — alleen submit-buttons en active-states krijgen
+>    `#D97742` fill. Geen oranje vlakken op cards/scrim.
+> 5. **Upgrade-modal premium-detail** — subtiele 2px accent-gradient bovenaan
+>    de kaart (`linear-gradient(90deg, transparent, accent, transparent)` met
+>    opacity 0.6) als enige sierelement. Premium-feel zonder zwaar te zijn.
+>
+> ### Wat is gewijzigd
+>
+> **Bestand:** `dj-clip-cutter/static/index.html`
+> - Bytes 786.023 → 810.655 (+24.632)
+> - Nieuw CSS-blok ingeprikt vóór `</style>` op regel ~4906
+> - Blok-marker in code: `/* REDESIGN v2 — Fase 4 (Modals, 2026-05-26) */`
+> - 185 nieuwe `body.redesign-v2` modal-selectors verdeeld over 5 modals:
+>   - 49 op `.auth-overlay`
+>   - 28 op `.auth-wizard`
+>   - 15 op `.forgot-modal`
+>   - 37 op `.upgrade-modal`
+>   - 27 op `#aspect-modal`
+>   - 29 op `#export-settings-modal`
+>
+> ### Selectors toegevoegd (clusters, alle scoped onder `body.redesign-v2`)
+>
+> ```
+> # GENERIEK
+> .auth-overlay / .forgot-modal / .upgrade-modal / #aspect-modal / #export-settings-modal
+>   → scrim rgba(8,8,10,0.78) + backdrop-filter blur(14px) saturate(140%)
+>
+> # AUTH OVERLAY (login + signup)
+> .auth-card                        → bg-elevated + border-subtle + radius 16 + drawer-shadow
+> .auth-brand / .auth-left / .auth-hero → linear-gradient #0E0E0F→#15151A→#1A1A22
+> h1/h2/h3                          → text-primary + Inter 600
+> p / label / .auth-sub             → text-secondary
+> .auth-tabs / [role=tablist]       → segmented control (bg-elevated-2 + padding 3px)
+> .auth-tab[aria-selected=true]     → bg-hover + inset border-strong
+> input[email|password|text]        → v2-input (bg-elevated-2 + radius 8)
+> input:focus                       → accent border
+> button[type=submit] / .btn-primary → accent fill + #0E0E0F text
+> a / .auth-link                    → accent
+> .auth-error                       → soft red bg/border
+> .auth-success                     → soft green bg/border
+>
+> # AUTH WIZARD (onboarding)
+> .wiz-step / .wiz-card             → bg-elevated-2 + radius 12
+> .wiz-dot                          → border-strong default, accent + scale(1.2) bij active
+> .wiz-nav button                   → v2-iconbutton stijl
+> .wiz-nav button.primary           → accent fill
+> .wiz-skip                         → transparent + tertiary text + underline
+> .wiz-option / .wiz-tile           → bg-elevated + radius 10 + border-subtle
+> .wiz-option.is-selected           → accent-muted + accent border + accent text
+>
+> # FORGOT MODAL
+> .forgot-modal-card                → bg-elevated + radius 14 + drawer-shadow + max-width 420
+> #forgot-modal-title               → Inter 600 17px primary
+> #forgot-modal-email               → v2-input
+> #forgot-modal-submit              → accent fill
+> #forgot-modal-close               → v2-iconbutton 28×28
+> #forgot-modal-success             → soft green bg/border
+>
+> # UPGRADE MODAL
+> .upgrade-card                     → bg-elevated + radius 16 + drawer-shadow + max-width 540
+> .upgrade-card::before             → 2px accent-gradient lijn bovenaan (opacity 0.6)
+> #upgrade-title                    → Inter 600 22px primary
+> .upgrade-price / .price           → accent 26px Inter 700
+> .upgrade-features li / .feat      → border-subtle dividers
+> .upgrade-cta / #upgrade-cta       → accent fill
+> .upgrade-cancel / button.secondary → bg-elevated-2 + border-subtle + secondary text
+> .quota-line / .upgrade-quota      → bg-elevated-2 + JetBrains Mono 12px tertiary
+>
+> # ASPECT MODAL + EXPORT SETTINGS MODAL (delen .aspect-back scrim)
+> .aspect-card                      → bg-elevated + radius 14 + drawer-shadow + max-width 480
+> #aspect-modal-title / #exs-title  → Inter 600 16px primary
+> #aspect-modal-sub                 → text-secondary 13px
+> #aspect-modal-opts                → grid auto-fit minmax(120px, 1fr) gap 8
+> #aspect-modal-opts button         → kaartje bg-elevated-2 + radius 10 + hover lift -1
+> #aspect-modal-opts button.on      → accent-muted + accent border + accent text
+> #aspect-modal-cancel / .aspect-cancel → bg-elevated-2 + border-subtle
+> .modal-confirm / button.primary   → accent fill
+> #export-settings-modal label      → uppercase tertiary 11px
+> #export-settings-modal input/select/textarea → v2-input
+> #export-settings-modal input[type=checkbox] → accent-color: accent
+> #export-settings-modal .toggle-row → bg-elevated-2 + border-subtle + flex space-between
+>
+> # GENERIEKE MODAL-CLOSE in alle 5 modals
+> .modal-close                      → v2-iconbutton 28×28
+> ```
+>
+> ### Backup sessie 48
+>
+> - `static/index.html.pre-redesign-fase4.bak` (786.023 bytes, identiek aan
+>   stand na sessie 47).
+>   Rollback: `cp static/index.html.pre-redesign-fase4.bak static/index.html && ./start.sh`
+>
+> ### Verificatie sessie 48
+>
+> Statisch:
+> - ✅ JS-blok bytes-identiek aan sessie 47 (467.780 → 467.780, delta = 0)
+> - ✅ `node --check` op het JS-blok: exit 0 (groen)
+> - ✅ Python `html.parser` over hele file: 0 parse errors (bak + new)
+> - ✅ Tag-balance delta vs backup: 0 voor html/body/head/div/span/aside/main/section/style/script/button/input/form/select/textarea
+> - ✅ `<style>` / `</style>` count ongewijzigd (2/1)
+> - ✅ Marker open + close = 1
+> - ✅ 185 nieuwe `body.redesign-v2` modal-selectors aanwezig (49+28+15+37+27+29)
+>
+> Live geverifieerd via Chrome MCP op Sjuul's dev-server (localhost:5555):
+>
+> Met flag AAN (`localStorage.clipLiveRedesignV2='1'`):
+> - ✅ Alle 5 modals krijgen scrim `rgba(8, 8, 10, 0.78)`
+> - ✅ Auth-card: bg `rgb(22,22,24)` = `#161618`, border subtle 1px, radius 16px, drawer-shadow
+> - ✅ Forgot-card: bg `#161618`, border subtle, radius 14px, drawer-shadow
+> - ✅ Forgot-email input: bg `rgb(26,26,29)` = bg-elevated-2, border subtle, radius 8px
+> - ✅ Forgot-submit button: bg `rgb(217,119,66)` = `#D97742` accent, color `rgb(14,14,15)`, radius 8px, border 0
+> - ✅ Upgrade-card, aspect-card, expset-card allemaal in nieuwe stijl
+> - ✅ CSS-vars actief: `--v2-accent=#D97742`, `--v2-bg-elevated=#161618`, `--v2-text-primary=#F5F2EC`
+>
+> Met flag UIT (`localStorage.clipLiveRedesignV2='0'`):
+> - ✅ `body.className = ""` (geen `redesign-v2`)
+> - ✅ auth-card radius 28px (oude waarde, niet 16)
+> - ✅ forgot-card radius 20px (oude waarde, niet 14)
+> - ✅ forgot-input radius 14px (oude waarde, niet 8)
+> - ✅ forgot-submit bg `rgb(232,183,102)` = oude warm-amber `#E8B766` (niet `#D97742`)
+> - ✅ scrim `rgb(10,8,5)` (oude warm-dark, niet `rgba(8,8,10,0.78)`)
+> - ✅ Oude UI 100% intact, geen residu
+>
+> ### Bestanden gewijzigd deze sessie
+>
+> - `dj-clip-cutter/static/index.html`:
+>   - +~425 regels CSS (Fase 4 modals) vóór `</style>`
+>   - Geen JS-aanrakingen
+>   - Geen DOM-IDs hernoemd of toegevoegd
+>   - Reset-password.html niet aangeraakt
+>
+> ### Wat Sjuul nog moet doen (runtime-tests die niet via Chrome MCP gedekt zijn)
+>
+> 1. **Interactietest auth-overlay (flag AAN):**
+>    - Log uit (Settings → Sign out) → auth-overlay verschijnt in v2-stijl
+>    - Tabs Sign in / Sign up switchen → segmented control on-state pakt
+>    - Verkeerd password → error-bg verschijnt in soft red
+>    - "Forgot password?" klikken → forgot-modal opent in v2
+>    - Email invoeren + Submit → success-bg verschijnt in soft green
+>    - Sign up flow → auth-wizard (als die actief is) → dots + tiles in v2
+> 2. **Interactietest upgrade-modal (flag AAN):**
+>    - Quota opgebruiken (of /api endpoint forceren) → upgrade-modal opent
+>    - Lijst features, price-tag in accent, CTA-knop in accent
+>    - Cancel → modal sluit
+> 3. **Interactietest aspect-modal + export-settings-modal:**
+>    - Export single clip → aspect-modal opent, kies 9:16 → optie krijgt accent-state
+>    - Export multi-clip met settings → export-settings-modal opent
+>    - Captions/watermark toggles, output-folder input, Submit
+> 4. **Smoketests sessies 43+44+47 nog open** (komen vanzelf bij volgende interactie-test)
+>
+> ### Bewust uit scope sessie 48
+>
+> - `reset-password.html` → standalone pagina, krijgt eigen polish-sessie indien gewenst
+> - Brand Stack modal (Sjuul gebruikt momenteel een view, geen modal — geen aanpassing nodig)
+> - Lichte aanpassing aan oude warm-amber tokens in legacy-modus (we raken alleen v2 aan)
+> - PyInstaller rebuild → **volgende stap** als alle interactietests groen zijn
+>
+> ### Volgende sessie
+
+> 1. Interactietests sessie 48 draaien (auth/upgrade/aspect/export-flows)
+> 2. Smoketests sessies 43/44/47 afronden
+> 3. Als alles groen: **PyInstaller rebuild** → .app → .dmg
+>    (procedure: zie `LESSONS-LEARNED.md` + `INSTALLER-RUNBOOK.md`)
+> 4. Optioneel daarna: **Fase 5 — Social/Calendar/Insights echte features**
+>    (placeholder-cards vervangen door werkende screens)
+
+---
+
+## STATUS NA SESSIE 47 — REDESIGN FASE 3 (2026-05-26)
+
+> **Editor / Timeline polish in v2-stijl. CSS-only. Geen JS/backend wijzigingen.**
+>
+> ### Aanpak gekozen na inventarisatie
+>
+> Net als bij sessies 45/46 was het bestaande DOM-skelet rijk genoeg om
+> met pure CSS naar de v2-look te brengen. De editor-shell (`#view-editor`)
+> heeft heldere klassen (`.editor`, `.ed-top`, `.ed-tools`, `.ed-body`,
+> `.ed-left`, `.ed-canvas`, `.ed-right`, `.timeline`, `.tl-toolbar`,
+> `.tl-scroll`, `.tl-minimap`, `.ed-text-drawer`, `.ed-track-drawer`)
+> waardoor de hele restyle in één CSS-blok kan, zonder JS aanrakingen
+> en zonder DOM-IDs hernoemen. Resultaat: **0% risico op functionele
+> regressie** op trim/recut/slice, BPM/snap/loop, text-layer rendering,
+> font-pickers, track-keyframes, waveform/spec toggle, mini-map.
+>
+> ### Beslissingen
+>
+> 1. **Volledige editor-restyle** (niet alleen drawers) — match aanbevolen
+>    scope: ed-shell + toolbar + waveform-frame + timeline + cue-rows +
+>    trim-handles + alle drawers.
+> 2. **Toolbar-stijl = dashboard-stijl uit Fase 2** — subtle border, bg-elevated,
+>    radius 8, accent oranje alleen op de primary play-button + trim-handles +
+>    accent-toggles (Snap/Loop on-state) + de actieve cue-row + time-cursor.
+> 3. **Trim als primary action gemarkeerd** met border-strong (i.p.v. border-subtle),
+>    krijgt op hover de accent-kleur — visuele hint dat dit de hoofd-actie is
+>    zonder zwaar oranje vlak te plaatsen.
+> 4. **Geen wijziging aan track-drawer DOM-classes** — track-drawer is een
+>    minder vaak gebruikt panel, krijgt dezelfde basis-styling (bg/border/
+>    drawer-shadow) + accent op de primary button. Volledige content-restyle
+>    komt zodra Sjuul aangeeft dat hij Track-flow doorloopt en daar bugs/
+>    styling-gaps tegenkomt.
+>
+> ### Wat is gewijzigd
+>
+> **Bestand:** `dj-clip-cutter/static/index.html`
+> - Bytes 762.228 → 786.023 (+23.795)
+> - Nieuw CSS-blok ingeprikt vóór `</style>` op regel ~4226
+> - Blok-marker in code: `/* REDESIGN v2 — Fase 3 (Editor / Timeline polish, 2026-05-26) */`
+> - 145 nieuwe `body.redesign-v2 #view-editor`-selectors
+>
+> ### Selectors toegevoegd (alle scoped onder `body.redesign-v2 #view-editor`)
+>
+> ```
+> # SHELL
+> .canvas                      → bg-base + padding 16px
+> .editor                      → bg-elevated + border-subtle + radius 14
+> .ed-top                      → border-bottom + padding 12/16
+> .ed-top .crumbs + b          → typografie v2 (sans 13px primary/secondary)
+> .ed-back-btn                 → v2-iconbutton stijl
+>
+> # TOOLS-TABS
+> .ed-tools .t                 → pill (bg-elevated-2 + border-subtle + radius 8)
+> .ed-tools .t:hover           → bg-hover + border-strong
+> .ed-tools .t.on              → accent-muted + accent-border + accent-text
+>
+> # CUE PANEL (left)
+> .ed-left                     → bg-elevated + border-right
+> .ed-left .panel-h .ti/.ct    → primary + mono-tertiary
+> .ed-left .filter-row .chip   → radius-16 pill (mockup-stijl)
+> .cue-list .cue-row           → kaartje (bg-elevated-2 + border-subtle)
+> .cue-list .cue-row.is-active → accent-muted + accent-border
+>
+> # PREVIEW (center)
+> .ratio-rail                  → segmented (bg-elevated + padding 3px)
+> .ratio-rail button.on        → bg-hover + text-primary
+> .preview-stage               → border-subtle + radius 12 + #050505
+>
+> # TOOLS-RAIL (right)
+> .ed-right                    → bg-elevated + border-left + padding 12/10
+> .ed-right .tool-btn          → kaartje + radius 10 + hover lift -1
+> .ed-right .tool-btn.on       → accent-muted + accent-border + accent-text
+> .ed-right .tool-btn.ed-blade-btn → primary-hint (border-strong, hover=accent)
+> .ed-export-wrap              → margin-top auto (sticky-bottom)
+> .ed-export-btn               → kaartje + aria-expanded=true → accent-muted
+> .ed-export-menu              → bg-elevated + radius 12 + shadow
+> .ed-export-menu .ed-export-item → radius 8 hover-row
+>
+> # TIMELINE
+> .timeline                    → bg-elevated + border-top
+> .tl-toolbar                  → padding 10/14 + border-bottom
+> .tl-toolbar .btn             → v2-iconbutton
+> .tl-toolbar .btn.play        → accent fill (#0E0E0F text)
+> .tl-toolbar .tl-divider      → border-subtle
+> .tl-toolbar .time b          → accent (cursor)
+> .tl-toolbar .snap-toggle/.loop-toggle → pill, on-state=accent-muted
+> .tl-zoomwrap .ruler          → bg-elevated + border-bottom
+> .tl-zoomwrap .tracks .track  → bg-elevated + border-bottom
+> .tl-zoomwrap .clip-block     → bg-elevated-2 + border-subtle + radius 6
+> .trim-region .trim-band      → accent-muted (10% oranje) + accent borders
+> .trim-region .trim-handle    → accent fill
+> .trim-band-label             → accent border + accent text + mono
+> .playhead/.playhead-knob     → text-primary
+> .tl-analyzer-mark            → border-strong + mono-tertiary label
+> .ed-wave-toggle              → segmented mini (bg-elevated)
+> .tl-minimap                  → bg-elevated + border-top
+> .tl-mini-window              → accent border + accent-muted
+> .tl-mini-trim                → accent fill
+> .ed-trim-loading             → bg-base/75 + backdrop-blur
+> .ed-trim-loading-bar         → accent fill
+>
+> # DRAWERS (text + track)
+> .ed-text-drawer              → bg-elevated + border-left + shadow
+> .ed-tx-head + .ed-tx-title   → border-bottom + 13px primary
+> .ed-tx-close                 → v2-iconbutton 24×24
+> .ed-tx-layers .ed-tx-layer   → kaartje (bg-elevated-2)
+> .ed-tx-layers .ed-tx-layer.on → accent-muted + accent-border
+> .ed-tx-add                   → dashed border, hover=accent
+> .ed-tx-editor                → border-top + bg-base + padding 12
+> .ed-tx-field label           → uppercase tertiary 11px
+> .ed-tx-field textarea/input/select → v2-input (bg-elevated + border-subtle + radius 6)
+> .ed-tx-field *:focus         → accent border
+> .ed-tx-align button.on       → accent-muted + accent
+> .ed-tx-bg-controls .bg-btn.on → accent-muted + accent
+> .ed-tx-font-refresh          → v2-iconbutton mini 22×22
+> .ed-track-drawer             → bg-elevated + border-left + shadow
+> .ed-track-drawer button.primary → accent fill
+> .ed-frame                    → pill mono 10.5px
+> .ed-left-scroll scrollbar    → border-subtle thumb 10px
+> ```
+>
+> ### Backup sessie 47
+>
+> - `static/index.html.pre-redesign-fase3.bak` (762.228 bytes, identiek aan
+>   stand na sessie 46).
+>   Rollback: `cp static/index.html.pre-redesign-fase3.bak static/index.html && ./start.sh`
+>
+> ### Verificatie sessie 47
+>
+> Statisch:
+> - ✅ `node --check` op het 467.780 byte JS-blok: groen (JS-blok bytes-identiek aan sessie 46)
+> - ✅ Python `html.parser` over hele file: 0 parse errors
+> - ✅ Tag-balance delta vs backup: 0 voor div/span/aside/main/section/style/script/button/input
+> - ✅ `<style>` / `</style>` count ongewijzigd (2/1)
+> - ✅ 145 nieuwe `body.redesign-v2 #view-editor` selectors aanwezig
+> - ✅ Alle 21 sub-component-clusters bevestigd via grep-count (.ed-top, .ed-tools .t, .cue-list .cue-row, .ratio-rail, .ed-right .tool-btn, .ed-export-menu, .tl-toolbar, .trim-region, .ed-text-drawer, .ed-track-drawer, etc.)
+>
+> Live geverifieerd via Chrome MCP (Sjuul's dev-server, set "Ediine x Ho_r Berlin", 33 clips):
+>
+> Met flag UIT:
+> - ✅ Oude Clip Live shell volledig terug (Clip Live logo + Drop a set / Library / Clips 33 / Brand Stack / Settings / Cloud sync / PRO 6/10)
+> - ✅ Dashboard in oude styling, geen residu
+> - ✅ v2 OFF rechtsonder
+>
+> Met flag AAN:
+> - ✅ V2-sidebar (Sjuul Studios · Pro plan / Clips / Brand / Social / Calendar / Insights + Settings + account-footer)
+> - ✅ Dashboard in Fase 2 v2-stijl
+> - ✅ Editor opent in v2-stijl:
+>   - Crumbs "Clips › Ediine x Ho_r Berlin › Clip 01 · drop @ 00:04:13" + v2 back-button
+>   - ed-tools-strip: Edit (accent-active), Style, Brand, Export selected (disabled), Export all
+>   - Cue-points-panel: titel + meta "33 cues · 129 BPM (clip)", filter-chips als radius-16 pills, cue-rows als kaartjes met actieve-rij in accent-border
+>   - Ratio-rail segmented control 9:16/1:1/16:9/4:5 (9:16 active)
+>   - Tool-rail rechts: Trim/Text/Track + Export-pill onderaan
+>   - Klik op Text → drawer opent rechts: header + close-btn + empty-state + dashed "+ Add text" knop
+>   - Klik op "+ Add text" → per-layer editor verschijnt: layer-tegel in accent-border, TEXT/FONT/COLOUR/WEIGHT velden met uppercase tertiary labels en v2-inputs, swatches, SIZE-slider, BACKGROUND Off/On-toggle (Off in accent), X/Y-sliders, ALIGN-grid
+>   - Caption-overlay zichtbaar op preview-video ("Caption here")
+> - ✅ Timeline:
+>   - Tl-toolbar: zoom −/fit/+, snap-toggle, prev/play(accent)/next, loop-toggle, time "00:00:00.00 / 00:00:16.73 · frame 0 · 129 BPM" met accent-cursor en frame-pill
+>   - Ruler met seconden-labels in mono secondary
+>   - Trim-region: accent-handles + duration-pill "16.7s" (accent border + tekst), EXTEND-knoppen aan beide kanten
+>   - Waveform-band met WAVE/SPEC-segmented control rechtsboven
+>   - Filmstrip onderaan
+>
+> ### Bestanden gewijzigd deze sessie
+>
+> - `dj-clip-cutter/static/index.html`:
+>   - +~440 regels CSS (Fase 3 editor/timeline/drawers) vóór `</style>`
+>   - Geen JS-aanrakingen
+>   - Geen DOM-IDs hernoemd of toegevoegd
+>
+> ### Wat Sjuul nog moet doen (runtime-tests die niet via Chrome MCP gedekt zijn)
+>
+> 1. **Interactietest editor — flag AAN:**
+>    - Klik Trim-knop → /api/slice draait, clip wordt opnieuw gerendered (geen styling-regressie op handles/playhead)
+>    - Sleep IN-handle naar binnen → trim-band krimpt, label updatet
+>    - Sleep OUT-handle voorbij rand → EXTEND-knop laadt extra audio
+>    - Snap-toggle aan → grid verschijnt; sleep handle → snap werkt
+>    - Loop-toggle aan → play loopt binnen in/out
+>    - Wave/Spec toggle → schakelt naar spectrogram
+>    - Mini-map: drag window om te pannen, klik buiten = jump
+>    - Track-drawer: open via Track-knop, voeg keyframe toe, export vertical → kijk of accent-knoppen werken
+>    - Brand-knop → Settings/Brand-Stack-view opent (krijgt zijn eigen Fase 4-restyle)
+> 2. **Smoketests sessies 43+44 nog open:**
+>    - Export single met rename → MP4 bevat captions + heet exact zoals getypt
+>    - Export multi-clip × multi-ratio → queue-bar verschijnt
+>    - Selectie-preview-balk onderaan editor werkt nog
+>
+> ### Bewust uit scope sessie 47
+>
+> - Modals (auth/upgrade/onboarding/Brand Stack) → **Fase 4**
+> - Echte Social/Calendar/Insights features → **Fase 5**
+> - PyInstaller rebuild naar .app/.dmg → **na Fase 4** (auth-modals zijn first-impression voor nieuwe users)
+> - Track-drawer content-restyle (alleen shell + primary-button gestyled, panel-content krijgt aandacht zodra Sjuul de Track-flow gebruikt)
+> - Lichte aanpassing aan oude amber-tokens in legacy-modus (we raken alleen v2 aan)
+>
+> ### Volgende sessie
+
+> 1. Smoketests interactie editor + sessies 43/44 draaien
+> 2. Als alles groen: starten met **Fase 4 — Modals + overige schermen**
+>    - Auth-modals (login/signup/forgot/reset) → v2-stijl
+>    - Upgrade-modal → v2-stijl
+>    - Onboarding-wizard → v2-stijl
+>    - Brand Stack modal → v2-stijl
+> 3. Na akkoord Fase 4: PyInstaller rebuild → .app → .dmg
+>    (procedure: zie `LESSONS-LEARNED.md` + `INSTALLER-RUNBOOK.md`)
+
+---
+
+## STATUS NA SESSIE 46 — REDESIGN FASE 2 (2026-05-26)
+
+> **Dashboard / clips-grid in v2-stijl. CSS-only. Geen JS/backend wijzigingen.**
+>
+> ### Aanpak gekozen na inventarisatie
+>
+> Tijdens discovery bleek dat het bestaande markup-skelet uit
+> `renderClipGrid()` (regel 7270) rijk genoeg is om met pure CSS naar de
+> v2-look te brengen. Geen JS-aanrakingen nodig → **0% risico op functionele
+> regressie** op hover-scrub, selectie, filmstrip-loader, inline editor,
+> rename, export-menu, favourite-toggle.
+>
+> ### Beslissingen
+>
+> 1. **Type-pill boven thumbnail NIET toegevoegd** — backend kent buildup,
+>    niet alleen drop, maar UI laat zien dat we historisch "Drops" als
+>    label gebruiken; geen visuele toevoeging die verwarring kan geven.
+> 2. **Filter-set blijft op huidige 4** (All / Drops / Favourites / Renamed).
+>    Mockup-set (All/Drops/Build-ups/Vocals) is schijn-feature; "Build-ups"
+>    en "Vocals" bestaan niet als classificatie in onze backend.
+>    Alleen visuele restyle van de chips.
+>
+> ### Wat is gewijzigd
+>
+> **Bestand:** `dj-clip-cutter/static/index.html`
+> - Regels 16.595 → 16.943 (+348)
+> - Bytes 750.144 → 761.556 (+11.412)
+> - Nieuw CSS-blok ingeprikt vóór `</style>` op regel ~3868
+> - Blok-marker in code: `/* REDESIGN v2 — Fase 2 (2026-05-26) */`
+>
+> ### Selectors toegevoegd (alle scoped onder `body.redesign-v2`)
+>
+> ```
+> .clip-pick .pick-head      → flex header met border-bottom
+> #dash-subhead              → titel + meta links
+> #dash-set-title / #dash-set-meta → typografie (Inter 15px + mono 11px)
+> #dash-filters .chip        → mockup .filter-chip (radius 16, subtle border)
+> #dash-filters .chip.on     → active state (bg-hover + border-strong)
+> #dash-ratio-toggle         → segmented control (bg-elevated, radius 6)
+> #dash-ratio-toggle .chip   → naadloze pill, .on krijgt bg-hover
+> .clip-grid                 → grid auto-fill minmax(260px, 1fr) + gap 16px
+> .clip-grid .clip           → kaart bg-elevated + border-subtle + radius 14
+> .clip-grid .clip:hover     → border-strong + translateY(-1px)
+> .clip-grid .clip.selected  → accent-border (oranje rand)
+> .clip-grid .clip.fav       → zachte gouden accent-rand
+> .clip-grid .clip .ph       → aspect-ratio 9/16, gradient #1A1A1D→#0F0F11
+> .clip-grid.ratio-landscape .clip .ph → 16/9
+> .clip-grid .clip .ph::before → decorative orange-halo + bottom-shadow
+> .clip-grid .clip .ph .thumb-img / .hover-vid → cover-fit + z-index ordering
+> .clip-grid .clip .select-toggle → rond top-left, opacity 0 → 1 op hover,
+>                                  accent-fill bij selected
+> .clip-grid .clip .ph .duration → bottom-right mono pill met backdrop-blur
+> .clip-grid .clip .ph .cap → bottom-left caption-strip met backdrop-blur
+> .clip-grid .clip .ph .unmute-pip → consistent gestyled
+> .clip-grid .clip .dash-strip → 28px filmstrip, opacity 0.85
+> .clip-grid .clip .info → padding + border-top + flex space-between
+> .clip-grid .clip .info .l/.r/.mini-btn/.icon-mini/.info-div → consistente icon-buttons
+> #export-sel-bar → bg-elevated + border-subtle + accent CTA
+> #dash-clips-root .empty-state → dashed border + secondary text
+> .dashboard .head .actions .btn → consistent met v2-tokens
+> .clip-grid .clip .ce-panel → bg-elevated-2 + border-top
+> ```
+>
+> ### Backup
+>
+> - `static/index.html.pre-redesign-fase2.bak` (750.144 bytes, identiek aan
+>   stand na sessie 45).
+>   Rollback: `cp static/index.html.pre-redesign-fase2.bak static/index.html && ./start.sh`
+>
+> ### Verificatie sessie 46
+>
+> - ✅ `node --check` op het 467.780 byte JS-blok: groen (JS-blok 218 bytes
+>   groter dan sessie 45 door 1 micro-edit beneden)
+> - ✅ Python `html.parser` over hele file: 0 parse errors
+> - ✅ `<div>` open/close delta vs backup = 0
+> - ✅ `<style>` / `</style>` count ongewijzigd
+> - ✅ 30 nieuwe `body.redesign-v2 .clip-grid .clip` selectors aanwezig
+> - ✅ 3 nieuwe `body.redesign-v2 #dash-filters .chip` selectors aanwezig
+> - ✅ 4 nieuwe `body.redesign-v2 #dash-ratio-toggle` selectors aanwezig
+> - ✅ v2-tokens-referenties verdubbeld
+>
+> ### Live geverifieerd via Chrome MCP (Sjuul's dev-server, set "Ediine x Ho_r Berlin", 33 clips)
+>
+> Tijdens de runtime-smoketest kwamen 2 bugs aan het licht die ik meteen
+> heb gefixt — beide carry-over uit sessie 45:
+>
+> **Bug 1 — Mount-selector mist klasse `.app`** (sessie 45 carry-over)
+> - `v2Mount()` (regel ~16814) gebruikte
+>   `body > .view, body > #app, body > main` als selector. De oude Clip Live
+>   shell heeft echter klasse `.app` (geen ID). Resultaat: `v2-content-wrap`
+>   bleef leeg, oude `.app` (5452px hoog) bleef body-level onder de v2-shell
+>   prikken — de v2-sidebar overlapte met de oude sidebar.
+> - **Fix:** selector aangevuld naar
+>   `body > .view, body > #app, body > .app, body > main`. Inline comment
+>   toegevoegd. Eén-regel-edit.
+>
+> **Bug 2 — Dubbele sidebar** (gevolg van bug 1 na fix)
+> - Na het mounten van `.app` binnen `v2-content-wrap` werd de oude
+>   `<aside id="sidebar" class="sidebar">` opnieuw zichtbaar in de
+>   2-koloms grid van `.app`.
+> - **Fix:** twee CSS-regels toegevoegd onder `body.redesign-v2`:
+>   ```
+>   body.redesign-v2 .v2-content-wrap > .app { grid-template-columns: 1fr !important; }
+>   body.redesign-v2 .v2-content-wrap > .app > aside.sidebar { display: none !important; }
+>   ```
+>
+> ### Smoketest-resultaten (alle groen)
+>
+> Met flag UIT:
+> - ✅ Oude UI 100% intact (sidebar links: Clip Live / Drop a set / Library /
+>   Clips 33 / Brand Stack / Settings / Cloud sync / PRO 6/10 sets)
+> - ✅ Pick-head, header, filter-chips, ratio-toggle in oude oranje-pill-stijl
+> - ✅ Clip-cards in oude stijl, hover-preview werkt
+>
+> Met flag AAN:
+> - ✅ V2-sidebar (Sjuul Studios · Pro plan / Clips actief / Brand / Social /
+>   Calendar / Insights / Settings + account-footer)
+> - ✅ Topbar met breadcrumb "Clips"
+> - ✅ Pick-head + 33-clips-titel + meta (129 BPM · 55 min set)
+> - ✅ Filter-chips als v2 radius-16 pills (All 33 / Drops (33) / Favourites (0)
+>   / Renamed (0)), click op "Drops" → `activeFilter: drops` + chip krijgt
+>   on-state
+> - ✅ Ratio-toggle segmented control (9:16 actief), click op 16:9 →
+>   `gridCls: clip-grid ratio-landscape`, cards switchen naar 16:9
+> - ✅ Hover op clip-card → `is-hovering` class + select-toggle opacity 0→1
+>   (rond cirkeltje links-boven)
+> - ✅ Klik select-toggle → card krijgt `selected` class + accent-border +
+>   checkmark-fill. `export-sel-bar` verschijnt bovenaan ("1 selected" + Cancel
+>   + oranje Export 1). **Sessie 44 selectie-preview-balk** verschijnt
+>   onderaan met tile-thumb + label + Clear-knop.
+> - ✅ Klik op een clip-card body → oude Editor-view opent (heeft nog oude
+>   styling, dat is correct — Fase 3 is voor Editor)
+> - ✅ Cap-tekst (`drop · #1 · 00:04:13`) leesbaar binnen thumb, mono-font,
+>   backdrop-blur pill
+> - ✅ Duration-pill linksboven (`00:00:16`) met backdrop-blur
+> - ✅ Filmstrip onder thumb in 16:9-modus (sessie 20 IntersectionObserver
+>   lazy-load werkt)
+> - ✅ Info-row onder card met start-time + ★ + Adjust + Download + → buttons
+>   in v2-icon-button-stijl
+> - ✅ Flag terug uit → oude UI weer compleet, geen residu
+>
+> ### Bestanden gewijzigd deze sessie
+>
+> - `dj-clip-cutter/static/index.html`:
+>   - +348 regels CSS (Fase 2 grid + filters + ratio-toggle + cards) vóór `</style>`
+>   - +4 regels JS-comment + 1-regel-fix in `v2Mount()` selector
+>   - +5 regels CSS aan einde Fase 2-blok voor de oude-sidebar-suppressie
+>
+> ### Wat Sjuul nog moet doen (runtime-tests)
+>
+> 1. `./start.sh` — dev-server starten
+> 2. **Smoketest Fase 2 — flag UIT:**
+>    - Open http://127.0.0.1:5555
+>    - App opent zoals altijd (oude UI) ✓
+>    - Upload set → dashboard toont oude-stijl clip-cards ongewijzigd
+>    - Hover-preview, selectie, favourite, Adjust-drawer, Export-menu,
+>      Rename — alles werkt zoals voor sessie 46
+> 3. **Smoketest Fase 2 — flag AAN:**
+>    - Klik linksonder `v2 shell`-knopje (of in DevTools:
+>      `localStorage.setItem('clipLiveRedesignV2','1')` + reload)
+>    - Sidebar verschijnt + clip-grid wordt automatisch v2-stijl
+>    - Filter-chips (All/Drops/Favourites/Renamed) zijn nu radius-16 pills
+>    - Ratio-toggle (9:16/16:9) is nu segmented control
+>    - Clip-cards: donkere bg, subtle border, hover lift, ronde select-toggle
+>      verschijnt op hover, duration-pill en caption rechtsonder/linksonder
+>    - Selecteer een clip → border wordt oranje + select-toggle fill oranje
+>    - Hover-scrub video werkt nog
+>    - Adjust-knop opent inline editor onder de kaart
+>    - Export-menu opent nog
+>    - Klik op clip → editor opent
+>    - Rename via rechtermuisknop op label werkt nog
+> 4. **Switchen tussen flag aan/uit:**
+>    - Klik nogmaals op `v2 shell` → terug naar oude UI, alles intact
+>
+> ### Bewust uit scope sessie 46
+>
+> - Editor / timeline polish → **Fase 3**
+> - Modals herstijlen (auth, upgrade, onboarding) → **Fase 4**
+> - Echte Social/Calendar/Insights features → **Fase 5**
+> - PyInstaller rebuild naar .app/.dmg → **pas na Fase 3** (Editor is
+>   langste interactie, daar maakt het visuele verschil het meeste uit)
+> - Type-pill boven thumbnail (besloten weg te laten — geen Build-ups/Vocals)
+>
+> ### Volgende sessie
+
+> 1. Smoketests draaien (v2-shell uit sessie 45 + v2-grid uit sessie 46 +
+>    nog open 43+44 smoketests)
+> 2. Als alles groen: starten met **Fase 3 — Editor / Timeline polish**
+>    - Editor-shell + drawers (track/text/brand) krijgen v2-styling
+>    - Knoppen-toolbar consistent met v2-buttons
+>    - Waveform-rendering, BPM-detectie, trim-handles, /api/recut+/api/slice
+>      blijven onaangeraakt
+> 3. Na akkoord Fase 3: PyInstaller rebuild → .app → .dmg
+
+---
+
+---
+
+## 📂 Bestandsstructuur van deze handover
+
+Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te blijven:
+
+- **`HANDOVER.md`** (dit bestand) — actieve handover: huidige status (sessie 40), recente sessies 27–39 ingedikt, openstaande prioriteiten, werkwijze
+- **`HANDOVER-ARCHIVE.md`** — chronologisch archief van sessies 1–26 (lossless). Alleen raadplegen voor historische context
+- **`LESSONS-LEARNED.md`** — terugkerende bugs, werkmanieren die werken, vaakgestelde vragen + canonieke antwoorden
+
+**Backups van het origineel (322 KB, 80K tokens):** `HANDOVER.md.backup-2026-05-26` (naast origineel) en `.backups/HANDOVER-pre-compact-2026-05-26.md`.
+
+---
+
+## STATUS NA SESSIE 45 — REDESIGN FASE 1 (2026-05-26)
+
+> **Premium dark-mode shell live achter feature-flag. Volledig non-destructief.**
+> Geen backend wijzigingen. Sessie 43 + 44 code-side onveranderd.
+>
+> ### Aanleiding
+>
+> Sjuul wil de tool een premium look-and-feel geven (referenties: Supabase dark
+> dashboard, Linear, Notion sidebar, opus.pro). Eerst is een
+> mockup gebouwd (`clip-live-redesign-v2.html` in projectroot) — akkoord
+> gekregen. Daarna split in 5 fases (`PLAN-REDESIGN-MIGRATION-2026-05-26.md`).
+> Sessie 45 = Fase 1.
+>
+> ### Design-richting (vastgelegd, niet meer ter discussie)
+>
+> - **Dark-mode first** (light komt later)
+> - **Warm cream tekst** (#F5F2EC) op near-black (#0E0E0F)
+> - **Oranje accent** (#D97742) heel spaarzaam — géén glow, géén gradient
+> - **Sidebar:** Supabase-stijl shell met workspace-switcher boven,
+>   TIMA-stijl categorie-groepen in het midden, settings-footer onderin
+> - **Sidebar-namen:** Clips · Brand · Social · Calendar · Insights
+> - **Toekomst-ready voor:** multi-artist (workspace-switcher), Content
+>   Calendar (Postiz), Ads (Intellijend model), Brand Stack uitbreiden
+>
+> ### ✅ Fase 1 — App shell (sidebar + topbar + design tokens)
+>
+> **Strategie:** non-destructief feature-flag. Alle v2-CSS/HTML/JS is
+> volledig gescoped onder `body.redesign-v2`. Standaard staat de flag uit
+> en is de tool 100% identiek aan vóór sessie 45. Bij activeren mount de
+> JS de bestaande `.view`-containers in de nieuwe `.v2-content-wrap` —
+> géén DOM-IDs hernoemd, géén handlers vervangen.
+>
+> **Feature-flag aan/uit:**
+> - Toggle linksonder in de UI: knop `v2 shell` (klein, met label "ON"/"OFF")
+> - Of via DevTools: `localStorage.setItem('clipLiveRedesignV2','1')` + reload
+> - Of uitzetten: `localStorage.setItem('clipLiveRedesignV2','0')` + reload
+>
+> **CSS toegevoegd (`static/index.html` ~regel 3624, vóór `</style>`):**
+> - 16 v2-tokens (`--v2-bg-base`, `--v2-text-primary`, `--v2-accent` etc.),
+>   allemaal alleen actief onder `body.redesign-v2`
+> - `.v2-app` grid (sidebar 240px / main 1fr, fixed `inset:0` over de hele
+>   viewport)
+> - `.v2-sidebar` met `.v2-workspace`, `.v2-nav`, `.v2-sidebar-footer`
+> - `.v2-nav-item` met active-state (oranje 2px linker-rand + oranje tekst
+>   + `--v2-accent-muted` background)
+> - `.v2-main` met `.v2-topbar` (52px, breadcrumb links) + `.v2-content-wrap`
+> - `.v2-placeholder` voor Social/Calendar/Insights (nog geen feature)
+> - `.v2-hide-when-on` helper voor oude chrome
+> - Responsive: ≤768px collapse de sidebar naar 64px
+>
+> **HTML toegevoegd (direct na `<body>`, vóór auth-overlay):**
+> - `<div class="v2-app" id="v2App" style="display:none">` — root shell
+> - Sidebar met workspace-button ("Sjuul Studios · Pro plan"), 5 nav-items
+>   (Clips/Brand/Social/Calendar/Insights), settings-footer (Settings-knop
+>   + account-tegel met initialen/naam/email)
+> - Topbar met breadcrumb (`#v2Breadcrumb`)
+> - Content-wrap (`#v2ContentWrap`) — leeg bij mount, JS verplaatst views
+>
+> **JS toegevoegd (vóór `</script>`, IIFE `v2Init`):**
+> - `isV2On()` / `setV2(on)` — flag-state via localStorage
+> - `v2Mount()` — verplaatst eenmalig alle `body > .view, body > #app,
+>   body > main` (behalve `#auth-overlay`, de v2-app zelf, en de flag-knop)
+>   in `.v2-content-wrap`. Markeert via `dataset.mounted='1'`. Voegt
+>   `body.redesign-v2` toe. Roept `v2HydrateAccount()` aan voor
+>   footer-tegel. Synct active-nav via `v2SyncActiveNav()`.
+> - `v2Unmount()` — verplaatst views terug naar body, verwijdert
+>   `body.redesign-v2`, verbergt de v2-app. Volledig reversibel.
+> - `v2SyncActiveNav()` — mapt `STATE.view` (`dashboard`/`settings`/etc.)
+>   naar bijbehorende nav-item, kleurt die als active.
+> - `v2ShowPlaceholder(key)` — toont een placeholder-card voor schermen die
+>   nog niet bestaan (Social, Calendar, Insights).
+> - `v2HydrateAccount()` — leest `window.AUTH` of `STATE.user`, vult
+>   naam/email/initialen in de footer-tegel.
+> - Click-handler op `[data-v2nav]` — roept `window.switchView(targetView)`
+>   aan voor bestaande screens, of `v2ShowPlaceholder()` voor nieuwe.
+> - Toggle-handler op `#v2FlagToggle` — flipt flag + paint knop.
+> - Boot-hook op `DOMContentLoaded` — als flag aan, mount automatisch.
+>
+> **Sidebar-naar-view mapping (`NAV_MAP` in JS):**
+> ```
+> clips    → switchView('dashboard')
+> brand    → switchView('settings')   (Brand Stack zit in settings)
+> social   → placeholder
+> calendar → placeholder
+> insights → placeholder
+> settings → switchView('settings')   (footer-knop)
+> ```
+>
+> ### Bestanden gewijzigd
+>
+> - `static/index.html` — 16.096 → 16.595 regels (+499). Bytes 728.985 → 750.144.
+>
+> ### Backup sessie 45
+>
+> - `static/index.html.pre-redesign-v2.bak` (728.985 bytes, identiek aan
+>   stand na sessie 44). Rollback: `cp static/index.html.pre-redesign-v2.bak
+>   static/index.html && ./start.sh`.
+>
+> ### Verificatie sessie 45
+>
+> - ✅ `node --check` op het hele 467KB JS-blok: groen
+> - ✅ Python `html.parser` over hele file: 0 parse errors
+> - ✅ Tag-balance check: géén nieuwe onbalans toegevoegd (de bestaande
+>   +1 `<div>` delta zat al in het origineel, vermoedelijk in een
+>   commentaar of template-literal)
+> - ✅ Geen Jinja-tokens in `static/index.html` (wordt direct geserveerd
+>   via `send_from_directory`, geen render_template — `app.py:1121`)
+> - ✅ Alle v2-DOM-IDs aanwezig: `#v2App`, `#v2ContentWrap`,
+>   `#v2Breadcrumb`, `#v2FlagToggle`, `#v2AccountName/Email/Avatar`
+> - ✅ 5 nav-buttons in sidebar + 1 settings-knop + 1 account-knop in
+>   footer, allemaal met `data-v2nav` attribuut
+>
+> ### Wat Sjuul nog moet doen (runtime-tests)
+>
+> 1. `./start.sh` — dev-server starten
+> 2. **Smoketest v2-shell:**
+>    - App opent zoals altijd (flag uit, oude UI) ✓
+>    - Klik linksonder op `v2 shell`-knopje → sidebar verschijnt, oude
+>      content zit nu rechts in de wrap
+>    - Klik Clips in sidebar → dashboard zichtbaar (active nav-item oranje)
+>    - Klik Brand → Brand Stack / settings view
+>    - Klik Social/Calendar/Insights → placeholder-cards
+>    - Klik Settings (footer) → settings-view
+>    - Klik nogmaals op `v2 shell` → terug naar oude UI, alles werkt nog
+> 3. **Smoketests sessie 43 + 44** (gecombineerd, ~45min) — staan nog
+>    open uit vorige sessies. Doe deze nu in v2-mode, dat scheelt later
+>    dubbel werk:
+>    - Upload nieuwe set → Processing → Dashboard met clips ✓
+>    - Editor opent, trim werkt, text-layer toevoegen ✓
+>    - Export single clip met rename → MP4 bevat captions ✓
+>    - Export multi-clip met meerdere ratios → folder-picker werkt ✓
+>    - Selectie-preview-balk verschijnt onderaan met thumbs + hover-scrub ✓
+>
+> ### Bewust uit scope sessie 45
+>
+> - Dashboard/clips-grid herstijlen → **Fase 2**
+> - Editor/timeline polish → **Fase 3**
+> - Modals herstijlen → **Fase 4**
+> - Echte Social/Calendar/Insights features → **Fase 5**
+> - PyInstaller rebuild naar .app/.dmg → **pas na Fase 2** (anders ziet
+>   een tester nieuwe sidebar maar oude content binnen = halfslachtig)
+>
+> ### Volgende sessie
+
+> 1. Smoketests draaien (v2-shell + 43 + 44 gecombineerd)
+> 2. Als alles groen: starten met **Fase 2 — Dashboard/Clips-grid in v2-stijl**
+>    - `renderDashboard()` produceert v2-style clip-cards
+>    - Filter-chips boven grid in v2-stijl
+>    - Aspect-ratio toggle (9:16 / 16:9)
+>    - Mockup-referentie: zie clips-grid in `clip-live-redesign-v2.html`
+> 3. Na akkoord Fase 2: PyInstaller rebuild → .app → .dmg
+>    (procedure: zie `LESSONS-LEARNED.md` + `INSTALLER-RUNBOOK.md`)
+
+---
+
+## STATUS NA SESSIE 44 (2026-05-26)
+
+> **Onderdeel 8 uit `SESSIE43-EXPORT-PIPELINE-PLAN.md` code-side klaar.**
+> Volledig frontend-only — geen backend wijzigingen.
+>
+> ### ✅ Onderdeel 8 — Selectie-preview-balk in timeline-editor
+>
+> **Wat:** Horizontale balk onderaan scherm die verschijnt zodra ≥1 clip is
+> aangevinkt (vinkje in dashboard-card of cue-row in editor). Verdwijnt
+> zacht via CSS transform-animatie zodra de selectie leeg is.
+>
+> **HTML (`static/index.html` ~regel 5210):**
+> ```
+> #selection-preview-bar
+>   .selbar-inner
+>     .selbar-meta (count + "selected" label)
+>     .selbar-tiles (horizontaal scrollbaar)
+>     .selbar-actions (Clear-knop)
+> ```
+>
+> **CSS (~regel 539):**
+> - `position:fixed; bottom:0`; `transform:translateY(100%)` → off-screen.
+> - `.on` class → `translateY(0)` met 0.22s ease-out transitie.
+> - `body.has-export-queue #selection-preview-bar.on` → `translateY(-72px)`
+>   zodat de export-queue-bar (eigen z:9000) niet overlapt. `body`-class wordt
+>   gezet door `showExportQueueBar/hideExportQueueBar`.
+> - Tile-grid horizontal-scroll met amber thin scrollbar.
+> - Hover op tile → ×-knop verschijnt (`opacity 0 → 1`).
+> - `is-scrubbing` class fade't de scrub-video over de poster heen.
+>
+> **JS (~regel 7600 e.v.):**
+> - `_renderSelectionBar()` — idempotent: bouwt/diff't tiles op basis van
+>   `STATE.selectedClips`. Hergebruikt bestaande tiles via een Map-cache
+>   zodat hover-scrub state niet flikkert tussen renders.
+> - `_buildSelbarTile(idx, clip)` — bouwt één tile DOM element:
+>   - 120×75 thumbnail wrap (16:10 aspect-ratio, `object-fit:cover`)
+>   - Thumb via `/api/thumbnail/<job>/<file>` met `withAuth` (cross-account
+>     security uit sessie 28). Fallback: label-tekst tegen donker vlak.
+>   - ×-knop top-right, klik → `toggleClipSelect(idx, null)`.
+>   - Meta-rij: label (`custom_label` of `${kind} · #${index}`) + tijdmarker
+>     `@ MM:SS` (of `H:MM:SS` voor sets ≥1u via `_fmtSelbarTime`).
+>   - Tile-click (buiten ×) → `selectClipInEditor/setSelectedClipIdx` als die
+>     bestaat. Pure visuele hint nu — geen backend call.
+> - Hook: `updateExportSelBar()` (al de single source of truth voor selectie-
+>   UI updates) roept aan het eind `_renderSelectionBar()` aan. Alle paden
+>   die de selectie wijzigen (toggleClipSelect / clearSelection / cue-row
+>   buttons / dashboard select-toggle) gaan hierdoor.
+>
+> **Hover-scrub:**
+> - `_attachSelbarScrub(tile, clip)` registreert mouseenter/leave listeners
+>   en stasht `scrubSrc` op `tile.dataset`. Video element wordt pas op
+>   eerste hover gecreëerd (lazy).
+> - `_selbarScrubStart` maakt `<video.selbar-scrub>` met `preload="metadata"`
+>   + `playsInline + muted + disablePictureInPicture`. Bij `loadedmetadata`
+>   doet hij 4 `currentTime` seeks gespreid over 1.2s — geeft een mini-
+>   teaser zonder de hele clip te streamen.
+> - `_selbarScrubStop` cleared de interval, pauseert de video en doet
+>   `video.removeAttribute('src')` + `.load()` om de decoder vrij te geven
+>   (memory cleanup voor sets met 20+ geselecteerde clips).
+> - Bij selectie wegnemen (×, Clear, of leeg na export): `_detachSelbarScrub`
+>   verwijdert listeners en cleart de video.
+>
+> **setActiveJobId fix:** bij job-wissel wordt nu `clearSelection()` aangeroepen
+> zodat een oude set z'n stale selectie niet meeneemt naar een nieuwe set.
+> Voorkomt dat de balk tiles toont uit een job-id die niet meer in
+> `STATE.clips` zit.
+>
+> **Bewust uit scope deze sessie:**
+> - Drag-to-reorder tiles (zou volgorde van export-queue beïnvloeden — apart
+>   traject met backend `clip_indices` reorder logica).
+> - Persistente selectie tussen page-reloads (selectie is sessie-lokaal in
+>   `STATE.selectedClips`, niet in localStorage).
+> - Hover-scrub volume / unmute knop (tile-thumb is intentioneel muted).
+>
+> ### Verificatie sessie 44
+>
+> ✅ `node --check` op het 460.8KB JS-blok in `static/index.html` OK
+> ✅ Alle 4 nieuwe DOM-IDs aanwezig (`#selection-preview-bar`, `#selbar-clear`,
+>    `#selbar-count`, `#selbar-tiles`)
+> ✅ 7 nieuwe JS-functies geëxporteerd op `window` (`_renderSelectionBar`,
+>    `_buildSelbarTile`, `_attachSelbarScrub`, `_detachSelbarScrub`,
+>    `_selbarScrubStart`, `_selbarScrubStop`, `_fmtSelbarTime`)
+>
+> Wat Sjuul nog moet doen (combineer met smoketests sessie 43):
+> 1. Dev-server herstarten (`./start.sh`)
+> 2. Smoketests sessie 44:
+>    - 0 selectie → bar onzichtbaar
+>    - 1 clip aanvinken (dashboard óf cue-row) → bar slidet omhoog met 1 tile
+>    - Deselect via × op tile → tile weg, dashboard checkmark ook weg
+>    - Selecteer 5 clips → bar toont 5 tiles, count = 5
+>    - 20+ clips → balk scrollt horizontaal, geen layout-overflow
+>    - Hover op tile → ×-knop verschijnt + thumb scrubt 3-4 frames door clip
+>    - Clear-knop → bar slidet weg
+>    - Tijdens actieve queue-bar export → selectie-balk schuift ~72px omhoog
+>    - Wissel naar andere set → selectie wordt vanzelf gecleared
+>
+> ### Backup sessie 44
+>
+> - `static/index.html.pre-sessie44.bak` (712.5KB)
+
+---
+
+## STATUS NA SESSIE 43a + 43b (2026-05-26)
+
+> **Alle 7 onderdelen uit `SESSIE43-EXPORT-PIPELINE-PLAN.md` code-side klaar.**
+> Sessie 44 (selectie-balk) bewust uitgesteld op verzoek van Sjuul.
+>
+> ### ✅ Onderdeel 1 — Auto-bake captions in export (BLOCKER opgelost)
+>
+> Root cause: `_run_export_job` gebruikte bestaande `clip['files']` zonder
+> text_overlays.json of brand-assets te lezen, dus exports van clips met
+> captions kwamen kaal uit. Trim deed wel layer-injection via `/api/recut`,
+> maar Export sloeg dat over.
+>
+> **Backend fix:**
+> - Nieuwe `slice_clip()` in `cutter.py` ~regel 1875: lichtgewicht trim-only
+>   variant van `recut_clip` zonder text/logo/watermark inbakken (track-mode
+>   keyframes wel meegenomen — geometrische crop, geen overlay).
+> - Nieuwe `/api/slice/<job_id>` endpoint in `app.py` ~regel 4329: zelfde
+>   signature als `/api/recut` zodat frontend simpel kan switchen.
+> - `_detect_layers_for_clip()` (`app.py`) check per clip of er text_overlays,
+>   logo, watermark of tracking aanwezig zijn (skip-fast-path voor kale clips).
+> - `_prebake_clip_for_export()` (`app.py`) bakt overlays + branding in naar
+>   tmp-paden onder `output/<job>/_baked_for_export/` vóór de codec-conversie.
+>   Roept `recut_clip` aan met huidige clip-grenzen, respecteert caption-toggle
+>   uit modal (kopieert `text_overlays.json` óf schrijft lege overlays als
+>   captions=off). Tmp-dir wordt na succesvolle export opgeruimd.
+> - `_run_export_job._process` integreert pre-bake: als `needs_prebake`, swap
+>   baked-sources in als source voor `export_clip_with_settings`. Anders snelle
+>   pad via bestaande `clip['files']`.
+>
+> **Frontend fix:**
+> - `editorTrimAtPlayhead()` (`static/index.html` ~regel 9269): `/api/recut` →
+>   `/api/slice`. Trim doet vanaf nu écht alleen slicen, overlays blijven als
+>   WYSIWYG live-laag in de editor, worden pas bij Export ingebakken.
+>
+> ### ✅ Onderdeel 2 — Rename-veld in export-modal
+>
+> - Nieuwe `<input id="exs-rename">` boven codec-select. Alleen zichtbaar bij
+>   single-clip flow (via `opts.singleClip` in `pickExportSettings(label, opts)`).
+> - Multi-clip + Export-all: rename-row verborgen.
+> - Bij OK: `settings.renameTo` wordt als `labels: {"<index>": "Naam"}` mee
+>   gestuurd naar `/api/export`.
+> - Backend `_run_export_job._process` past per-clip `custom_label` aan op een
+>   kopie van het clip-object (`clip_for_export = dict(clip)`) — origineel
+>   blijft in jobs-snapshot tot user op /api/rename de naam permanent maakt.
+> - Editor "Export"-knop + Dashboard "Export selected" met N=1 sturen nu
+>   `{ singleClip: clip }` mee.
+>
+> ### ✅ Onderdeel 3 — Schonere filenames + sidecar JSON
+>
+> - `_build_export_filename` levert nu schone namen op: `Drop_3.mp4` (9:16 +
+>   match-source), `Drop_3_landscape.mp4` (16:9), `Drop_3_h265.mp4` (codec
+>   override). Geen `__clip{NN}__{aspect}__{codec}` ruis meer in Finder.
+> - `_write_export_sidecar` schrijft `<filename>.meta.json` náást elk export-
+>   bestand met `{clip_index, aspect, codec, label, written_at, schema}`.
+> - `/api/exports` parser (app.py ~regel 5826): probeert eerst sidecar JSON,
+>   valt terug op `__clip<NN>__` regex (sessie 22+ exports) en daarna op
+>   `_clip<NN>_` regex (pre-sessie 22). Schone namen zonder suffix worden
+>   gemapped op 9:16 (de default-aspect) of via `_landscape`/`_square`/`_portrait`
+>   detectie. Library blijft dus zichtbaar voor álle bestaande exports.
+> - `/api/exports/<job_id>/<filename>` DELETE ruimt nu ook de sidecar JSON op.
+> - `_build_export_filename_legacy` blijft beschikbaar als fallback maar wordt
+>   niet aangeroepen — alleen voor documentatie van het oude patroon.
+>
+> ### ✅ Onderdeel 4 — Visuele ratio-tiles (multi-select)
+>
+> - 4 tegels (9:16 / 16:9 / 1:1 / 4:5) met inline SVG rechthoek-iconen in
+>   `#exs-ratio-grid`. Multi-select via `<input type="checkbox">` met visuele
+>   `is-checked` class (amber border + checkmark dot).
+> - Backend mapping: `9:16 + 4:5` → `vertical`, `16:9` → `landscape`, `1:1` →
+>   `vertical` (square als post-crop op vertical — backend kent in v1 alleen
+>   landscape/vertical formats; 1:1 en 4:5 worden in een follow-up sessie
+>   echt aparte aspect_filter keys).
+> - Default = 9:16, last-used persist in `localStorage['clipLive.exportSettings'].ratios`.
+> - 0 tiles aangevinkt → OK-knop disabled + tooltip "Selecteer minstens één formaat".
+>
+> ### ✅ Onderdeel 5 — Caption + watermark toggles met inline upload
+>
+> - Twee iOS-stijl switches in `#exs-toggle-captions` + `#exs-toggle-watermark`.
+> - Caption-toggle default **aan** (sluit aan bij Onderdeel 1 auto-bake).
+> - Watermark-toggle default **aan** als `STATE.brandKit.watermark.file`
+>   bestaat, anders **uit**.
+> - **Inline upload-flow:** als watermark-toggle aan staat én er nog geen
+>   watermark in brand-kit is, verschijnt `#exs-watermark-upload` panel. Klik
+>   op "Watermark kiezen…" → `/api/pick-file` (native picker) → POST naar
+>   `/api/brand-kit/watermark` met JSON `{path: "/abs/path.png"}`.
+> - **Backend (`app.py` regel 2819):** `upload_brand_watermark` accepteert nu
+>   twee modes — multipart-upload (legacy, brand-kit panel) én JSON `{path}`
+>   (sessie 43b inline flow). JSON-mode doet magic-byte check, size-cap, en
+>   `shutil.copy2` naar `BRAND_WATERMARK_DIR`.
+>
+> ### ✅ Onderdeel 6 — Direct-to-folder met user-home whitelist
+>
+> - `#exs-folder-row` met truncated pad-display + "Kies map…" knop + "Reset"
+>   knop. `~`-prefix replace voor leesbaarheid.
+> - localStorage `clipLive.lastExportDir` voor sticky keuze tussen sessies.
+> - `/api/pick-folder` bestond al uit sessie 39 — bewust hergebruikt.
+> - **Backend security (`app.py` ~regel 6018):** nieuwe whitelist check op
+>   `output_dir`. `os.path.realpath` van target vergelijken met realpath van
+>   `os.path.expanduser('~')`. Target moet `== home OR startswith(home + sep)`.
+>   Voorkomt dat exports in `/etc`, `/System`, `/Library` belanden. Geeft een
+>   duidelijke 400 error "Voor de veiligheid mag de export-map alleen binnen
+>   je gebruikersmap liggen".
+>
+> ### ✅ Onderdeel 7 — Export-queue + globale loading bar
+>
+> - `#export-queue-bar` fixed onderaan scherm, `display:none` bij 0 jobs.
+> - Verschijnt automatisch als `totalJobs > 1` OR `aspects.length > 1` (multi-
+>   clip × multi-ratio). Single-clip + single-ratio gebruikt nog de bestaande
+>   `#export-pill`.
+> - Toont "Exporting X/Y · Z%" + horizontale progress bar + Cancel-knop.
+> - `updateExportQueueBar(done, total, failed, label)` wordt door
+>   `pollExportStatus` aangeroepen elke 1.5s.
+> - Cancel-knop stopt alleen het pollen (soft-cancel — geen abort-endpoint
+>   in MVP; lopende ffmpeg-jobs ronden achtergrond af).
+> - **Backend keuze:** Optie A (sequentieel via bestaande `EXPORT_MAX_PARALLEL`
+>   ThreadPoolExecutor — `_run_export_job` is unchanged). Optie B (parallelle
+>   workers met semafoor) uitgesteld naar follow-up sessie zoals afgesproken.
+>
+> ### Backend cfg-validatie uitgebreid
+>
+> `/api/export` accepteert nu 3 nieuwe velden:
+> - `overlays: {captions, watermark, logo}` — alle bool. Default = alles aan.
+>   Onbekende keys negeren. Non-dict → 400 `bad_overlays`.
+> - `labels: {"<index>": "Naam"}` — values gecapt op 200 chars, niet-strings
+>   genegeerd. Non-dict → 400 `bad_labels`.
+> - `output_dir` — nu mét user-home whitelist (zie Onderdeel 6).
+>
+> Geen wijziging aan SSE/status-endpoint nodig — frontend leest dezelfde
+> `items[]` shape, queue-bar berekent done/total client-side.
+>
+> ### Verificatie sessie 43a + 43b
+>
+> ✅ `python3 -m py_compile app.py` OK
+> ✅ `python3 -m py_compile cutter.py` OK
+> ✅ `python3 -c "import cutter; assert hasattr(cutter, 'slice_clip')"` OK
+> ✅ `node --check` op het 449.7KB JS-blok in `static/index.html` OK
+> ✅ Alle nieuwe modal-IDs aanwezig in DOM (23 exs-* + 4 exqb-* IDs).
+>
+> Wat Sjuul nog moet doen:
+> 1. Dev-server herstarten (`./start.sh`)
+> 2. Smoketests (zie `LESSONS-LEARNED.md` voor patronen):
+>    - Clip met text-layer → Trim → mp4 ververst MAAR ZONDER tekst (alleen geslicet)
+>    - Clip met text-layer → Export → mp4 op disk HEEFT tekst
+>    - Rename in modal → mp4 op disk heet exact zoals getypt
+>    - Bestandsnaam in Finder = "Drop_3.mp4" (zonder __clip__ ruis)
+>    - Watermark toggle in modal werkt zonder brand-kit (inline upload-flow)
+>    - Folder buiten `~` → 400 error in toast
+>    - 2 clips × 2 ratios = 4 jobs → globale queue bar verschijnt
+> 3. Pas bij groen alles → rebuild .app via `bash build_macos.sh dmg`
+>
+> ### Backups sessie 43a + 43b
+>
+> - `app.py.pre-sessie43-autobake.bak` (255.7KB)
+> - `cutter.py.pre-sessie43-autobake.bak` (89.6KB)
+> - `static/index.html.pre-sessie43-autobake.bak` (688.6KB)
+>
+> ### Bewust uit scope deze sessie
+>
+> - **Sessie 44 — Selectie-preview-balk** in timeline-editor (Onderdeel 8).
+>   Verschoven naar aparte sessie zoals Sjuul aangaf bij start.
+> - **1:1 en 4:5 als echte aspect-keys** in backend. Nu mapped op
+>   vertical/landscape. Volgende sessie: aparte aspect-filter waarden +
+>   crop-logica in `cutter.cut_clip_vertical` / `cut_clip_landscape`.
+> - **Optie B parallel export-queue** (apart traject, zie plan).
+> - **Export-queue Cancel = hard abort** (vereist subprocess-handle bijhouden,
+>   complexer dan MVP toelaat).
+
+---
+
+## STATUS NA CONTENT CALENDAR PLAN (2026-05-26)
+
+> **Planning-only sessie, geen code aangeraakt.** Sjuul vroeg om uitwerking
+> van Content Calendar + Multi-artist workspaces + Ads-management in Clip Live.
+> Plan-document `PLAN-CONTENT-CALENDAR-2026-05-26.md` opgesteld na onderzoek
+> naar Postiz (publishing-laag), DJ-tool businessmodellen en Meta/TikTok/Google
+> Ads API-vereisten.
+>
+> ### Wat het plan voorstelt — 6 fasen + research-fase
+>
+> **Fase 1 — Multi-tenant fundament (3–4 wkn dev):**
+> - Migratie 004+005+006: `workspaces` + `workspace_members` + `workspace_id`
+>   op alle resource-tabellen
+> - Data-migratie: voor elke bestaande user 1 default workspace aanmaken
+> - Backend + frontend workspace-switcher (zoals Slack)
+> - `profiles.max_workspaces` voor tier-grenzen
+>
+> **Fase 2 — Content Calendar UI (2–3 wkn dev):**
+> - Migratie 007: `scheduled_posts` tabel
+> - Maand/week-view kalender, drag-to-reschedule
+> - "Plan in Calendar"-knop in sessie 43b export-modal
+> - Drafts-systeem (publishen pas in Fase 3)
+>
+> **Fase 3 — Postiz publishing (3–4 wkn dev):**
+> - Migratie 008: `social_accounts` tabel
+> - Postiz Cloud + Public API + OAuth2 Developer App
+> - Per workspace 1 Postiz-org (multi-tenant workaround voor open issue #975)
+> - Upload + schedule via Postiz, autopublish + safety-cap
+>
+> **Fase 4 — Polish + Mobile companion (4+ wkn):**
+> - Approval-flow, watch-folder + auto-draft, Ollama-captions
+> - Mobile push voor approve-flow
+>
+> **Fase 4a — Ads research (2–3 wkn research, geen dev):**
+> - Geld-flow-vraag: Model A (agency) vs. B (PSP-vergunning) vs. C (Stripe Connect)
+> - NL-jurist + fiscalist (~€500–€1.500)
+> - Meta + TikTok reseller-policy onderzoek
+> - **Dan pas** Meta Business Verification + TikTok For Business starten
+>
+> **Fase 5+6+7 — Ads-platform (was prioriteit in v1.0, verschoven naar einde):**
+> - Meta Ads orchestrator + TikTok Ads + later Google
+> - Mix-en-matchen-budget voor managers (per Sjuul-wens)
+>
+> ### Beslissingen vastgelegd in plan v1.1
+>
+> 1. **Postiz Cloud akkoord** — geen self-host in v1
+>    - Tool blijft 100% lokaal tot user op "Connect TikTok/IG" of "Plan in
+>      Calendar" klikt — pas dan online
+>    - MP4 + caption gaan naar Postiz Cloud op moment van plannen (anders kan
+>      Postiz niet om 19:00 publishen als laptop dicht is)
+>    - Studio-tier krijgt opt-out: manual export only, geen Postiz-koppeling
+> 2. **Ads-systeem allerlaatst bouwen** — vereist meer research
+>    - Sjuul wil geld via Clip Live (mix-en-matchen budget tussen klant-accounts)
+>    - Dat raakt PSP-vergunning of agency-of-record-constructie — apart traject
+>    - Meta/TikTok verificaties NIET nu starten (kan wachten tot Fase 4a)
+> 3. **Pricing geparkeerd** — Sjuul wil nog niet vastleggen
+>    - Onderzoek-data (Soundcharts/Chartmetric/Beatchain) blijft in plan als ref
+>    - Geen Stripe-products aanmaken, geen pricing-page updaten
+>
+> ### Totale werk-schatting (v1.1)
+>
+> - **v1 (Fase 1–4, zonder ads):** 13–15 weken dev = 3–3,5 maand
+> - **v2 (Fase 1–7, inclusief ads):** 28–35 weken dev = 7–9 maanden + reviews
+>
+> Aanbeveling: launch v1 eerst als paid product. Ads erbij in v2 zodra
+> research klaar is.
+>
+> ### Niets gebouwd, geen migraties uitgevoerd
+>
+> Deze sessie was puur planning. Beslissing-uitvoering pas na sessie 43 +
+> djclips.nl + Stripe live. **Volgorde blijft:** 43a → 43b → 44 → Cloudflare
+> DNS → Stripe live → DAN Fase 1 (multi-tenant).
+>
+> ### Memory-entries toegevoegd
+>
+> - `project_content_calendar_plan.md` — pointer naar plan v1.1
+> - MEMORY.md index bijgewerkt
+
+---
+
+## STATUS NA SESSIE 43 VOORBEREIDING (2026-05-26)
+
+> **Planning-only sessie, geen code aangeraakt.** Sjuul vroeg om twee nieuwe
+> features bovenop het bestaande sessie 43 plan:
+>
+> 1. **Selectie-preview-balk in timeline-editor** — horizontale balk onderaan
+>    die verschijnt bij ≥1 geselecteerde clip. Per clip: mini-thumb, naam,
+>    tijdmarker (`@ 12:34`), hover-scrub (3-4 frames), hover-`×` om uit
+>    export-batch te halen.
+> 2. **Visuele resolutie-tiles in export-modal** — aanvinkbare iconen
+>    (9:16 / 16:9 / 1:1 / 4:5) i.p.v. dropdown, multi-select.
+>
+> Aanvullend tijdens gesprek geadopteerd:
+> - **Caption-toggle** + **Watermark-toggle** in export-modal (los van Brand Kit).
+>   Watermark-toggle heeft inline upload-flow als nog geen watermark ingesteld.
+> - **Direct-to-folder** met whitelist (user-home subfolders only).
+> - **Export-queue + horizontale loading bar** onderaan scherm bij multi-clip
+>   × multi-ratio exports. **Optie A (sequentieel) gekozen voor MVP**; Optie B
+>   (parallelle workers) uitgesteld naar latere sessie.
+>
+> ### Plan-document uitgebreid 3 → 8 onderdelen, en gesplitst
+>
+> `SESSIE43-EXPORT-PIPELINE-PLAN.md` heeft nu:
+>
+> **Sessie 43a (~4-4,5u) — beta-blocker fix, MUST DO FIRST:**
+> - Onderdeel 1: auto-bake captions in `_run_export_job` via nieuwe `/api/slice`
+>   endpoint + bestaande `_recut_with_layers` als pre-bake step
+> - Onderdeel 2: rename-veld in `pickExportSettings` modal (single-clip only)
+> - Onderdeel 3: sidecar `.meta.json` per export, schone bestandsnamen op disk
+>   (weg met `__clip__` token), backward-compat regex blijft werken
+>
+> **Sessie 43b (~5,5-6u) — modal-redesign, NA 43a:**
+> - Onderdeel 4: visuele ratio-tiles (9:16/16:9/1:1/4:5) multi-select
+> - Onderdeel 5: caption-toggle + watermark-toggle met inline upload-flow
+>   (hergebruikt bestaande `/api/brand-kit/watermark` endpoint uit sessie 31)
+> - Onderdeel 6: direct-to-folder, `/api/pick-file?type=folder` uitbreiding,
+>   whitelist `~/`, `~/Desktop`, `~/Documents`, `~/Downloads`, `~/Movies` + children
+> - Onderdeel 7: export-queue + globale loading bar (Optie A sequentieel)
+>
+> **Sessie 44 (~3-4u) — frontend-only, NA 43b:**
+> - Onderdeel 8: selectie-preview-balk in timeline-editor
+>
+> ### Beslissingen vastgelegd in plan
+>
+> - **Optie A (sequentieel) voor MVP** export-queue; Optie B parallel later
+> - **Whitelist user-home** voor folder-picker (geen system-folders)
+> - **Caption-toggle default aan** (sluit aan bij auto-bake fix)
+> - **Watermark inline upload** = modal blijft open, file-picker via bestaande
+>   `/api/pick-file`, POST naar bestaande `/api/brand-kit/watermark`
+> - **Rename-veld alleen single-clip flow** (multi-clip krijgt geen veld)
+>
+> ### Niets gebouwd, geen backups gemaakt
+>
+> Deze sessie was puur planning + plan-document. Code-aanrakingen pas in
+> sessie 43a in nieuwe chat. Start daar met `LESSONS-LEARNED.md` raadplegen
+> en bestaande backups archiveren als routine.
+>
+> ### Memory-entries toegevoegd
+>
+> - `project_sessie43_split_plan.md` — split-rationale + sessie-volgorde
+> - MEMORY.md index bijgewerkt
+
+---
+
+## STATUS NA SESSIE 42 (2026-05-26)
+
+> **Wat gedaan deze sessie — Fase 5 grotendeels klaar + UI cleanup:**
+>
+> ### ✅ Color wheels voor text + background (Fase 5 / C+D)
+>
+> Eigen mini-picker `ClipLivePicker` ingebouwd, **geen externe library** (Sjuul wilde geen Coloris dependency in frontend). HSV-canvas + hue-strip + hex-input + optionele opacity-slider. ~280 regels JS/CSS inline in `static/index.html`.
+>
+> - **Text-kleur:** `+`-knop met regenboog-icoon naast bestaande quick-swatches (`#ed-tx-color-picker`). Bestaande swatches blijven werken.
+> - **Background:** `Off`/`On` toggle + swatch-tile (opent picker) + opacity-slider 0-100%. Schema: `L.bg = null` OR `L.bg = true` (legacy) OR `L.bg = {color, opacity}`.
+> - **Cutter (`cutter.py` regel 335-355):** nieuwe dispatch leest dict-schema `{color, opacity}`, valt terug op legacy `bg=true` voor backward-compat.
+> - **Live preview:** rgba-styling toegepast via inline style op `.ed-tx-live` nodes.
+>
+> ### ✅ Built-in fonts library (11 fonts, 3,7 MB)
+>
+> Fonts in `dj-clip-cutter/static/fonts/builtin/` met OFL-licenties:
+> Alfa Slab One, Anton, Archivo Black, Bebas Neue, Inter, Montserrat, Open Sans, Oswald, Roboto, Roboto Condensed, Roboto Mono. Manifest in `manifest.json`.
+>
+> - **Backend (`app.py` ~regel 2510-2680):** `GET /api/builtin-fonts` returnt manifest. Static files via Flask's `static_url_path`. PyInstaller bundelt automatisch (datas=[('static','static')]).
+> - **Frontend:** `loadFontLibraries()` parallel met auth-boot, `_renderBuiltinFontFaces()` injecteert @font-face eager (alle 11), `STATE.builtinFonts`.
+>
+> ### ✅ System-font auto-scan (438 fonts op test-Mac)
+>
+> Lokale scan via Python `os.walk`, **geen netwerk**. macOS scant `/System/Library/Fonts`, `/Library/Fonts`, `~/Library/Fonts`. Windows + Linux paths ook geconfigureerd.
+>
+> - **Backend (`app.py`):** `_scan_system_fonts()` filtert op `.ttf` / `.otf` / `.ttc` (inclusief Mac TrueType Collections — Helvetica, Times, etc.). 30s in-memory cache + persisted naar `DATA_DIR/system_fonts_cache.json` zodat cutter.py de paden kan lezen.
+> - **Endpoints:** `GET /api/system-fonts` (met `?refresh=1`), `GET /api/system-fonts/file/<id>` voor browser @font-face load.
+> - **Frontend:** lazy `@font-face` — pas geladen bij selectie van een system-font (anders 438× HTTP-requests).
+> - **Cutter (`cutter.py` ~regel 320-380):** `_load_system_fonts_cache()` + `_load_builtin_fonts()` worden gemerged in `brand_fonts` lijst. `_build_text_layer_filters` resolved alles via één pad.
+>
+> ### ✅ Font picker UI: 4 secties + search + refresh-knop
+>
+> Font-dropdown (`#ed-tx-font`) wordt nu gerendert met 4 optgroups: System sans / Built-in / System fonts (438) / Brand Stack. Live filter via `#ed-tx-font-search` input boven de dropdown. Refresh-knop `↻` (12×12 SVG) naast Font-label triggert `/api/system-fonts?refresh=1` met spinner-animatie.
+>
+> Empty-state placeholder: "Geen fonts gevonden voor X" bij 0 hits.
+>
+> **Belangrijke fix tijdens sessie:** `_paintEditorTextLive` (regel ~11151) keek aanvankelijk alleen in `STATE.brandKit.fonts`. Uitgebreid naar alle 3 bronnen + lazy `_ensureSystemFontFaceLoaded()` zodat live preview werkelijk in de gekozen font rendert.
+>
+> ### ✅ PREVIEW-badge weg uit video editor
+>
+> `<div class="stage-tag">● Preview</div>` (regel 3980) + bijbehorende CSS (regel 1014-1018) verwijderd. Sjuul vond hem niets toevoegen — video stage is nu schoon.
+>
+> ### 🔴 ONTDEKT BUG (BLOCKER voor sessie 43): Captions niet in export
+>
+> Sjuul testte: clip met text-layer → "Done" geklikt → Export → mp4-bestand op disk bevat **geen tekst**. Root cause: `_run_export_job` (app.py regel 5355) gebruikt bestaande `clip['files']` paths zonder text_overlays.json te lezen. Trim doet wel layer-injection (via `/api/recut`), maar Export skipt dat.
+>
+> **Plan voor sessie 43 staat in `SESSIE43-EXPORT-PIPELINE-PLAN.md`** met 3 onderdelen:
+> 1. Auto-bake captions in export (kritiek, ~2,5u, raakt brand-pipeline)
+> 2. Rename-veld in `pickExportSettings` modal (~30-45min)
+> 3. Filename op disk schoner — sidecar JSON ipv `__clip__` token in filename (~1u)
+>
+> Trim-knop moet ENKEL slicen (in/out) na sessie 43 — geen text/branding meer. Editorrechts-paneel knoppen `ed-trim-big` + `ed-trim-toolbar` blijven, maar `editorTrimAtPlayhead()` switcht van `/api/recut` naar nieuwe `/api/slice` endpoint.
+>
+> ### Backups sessie 42
+>
+> - `static/index.html.pre-sessie41.bak` (646K) — vóór color wheels
+> - `static/index.html.pre-sessie42.bak` (663K) — vóór fonts
+> - `static/index.html.pre-sessie42-rename.bak` (673K) — na PREVIEW-badge, vóór rename-werk (nog ongebruikt voor sessie 43)
+> - `cutter.py.pre-sessie41.bak` (85K) + `cutter.py.pre-sessie42.bak` (85K)
+> - `app.py.pre-sessie42.bak` (241K) + `app.py.pre-sessie42-rename.bak` (250K)
+>
+> ### Verificatie sessie 42
+>
+> Alle wijzigingen live geverifieerd via Chrome MCP connector — Sjuul's eigen dev-server:
+> - Color wheels werken voor text + bg + opacity
+> - Built-in fonts (Bebas Neue + Helvetica) renderen visueel zichtbaar in canvas
+> - Search-input filtert correct, refresh-knop triggert nieuwe scan
+> - PREVIEW-badge afwezig in DOM na hard refresh
+> - Smoketest 5/5 groen op font picker (search → select → empty-state → clear → built-in)
+
+---
+
+## STATUS NA SESSIE 40 (2026-05-26)
+
+> **Wat gedaan deze sessie — twee grote wins:**
+>
+> ### ✅ Fase 1 — Clip-render bug in .app gefixt
+>
+> **Root cause:** `BASE_DIR = os.path.dirname(__file__)` in `app.py` regel 176 wijst in een PyInstaller bundle naar `Contents/Frameworks/` — dat is **read-only** voor unsigned .apps op macOS. `os.makedirs(UPLOAD_DIR, exist_ok=True)` op regel 201 gooide `PermissionError(1, 'Operation not permitted')` op startup. Dev-server had geen probleem omdat `BASE_DIR` daar `dj-clip-cutter/` was (schrijfbaar). `launcher.py` had de oplossing al voorbereid (`USER_DATA_DIR` op regel 58, `os.environ.setdefault("CLIP_LIVE_USER_DATA", ...)` op regel 65), maar `app.py` las die env-var nooit.
+>
+> **Fix in `app.py` regel 176-205:**
+> - Nieuwe regel 183: `DATA_DIR = os.environ.get("CLIP_LIVE_USER_DATA", BASE_DIR)` — leest env-var, valt anders terug op `BASE_DIR` (dev-server gedrag onveranderd).
+> - 7 paden gewijzigd: `UPLOAD_DIR`, `OUTPUT_DIR`, `SETTINGS_PATH`, `HISTORY_PATH`, `WATCH_FOLDER_PATH`, `BRAND_KIT_PATH`, `BRAND_KIT_DIR` (`BRAND_FONTS_DIR`/`BRAND_LOGO_DIR`/`BRAND_WATERMARK_DIR` zijn child-paths van `BRAND_KIT_DIR`).
+>
+> **Verificatie:** rebuild via `build_macos.sh dmg`, smoketest met Housy Good vibes set (30min) — 200/206 responses op `/api/clip/...mp4`, geen PermissionError meer in `launcher.log`, clips renderen + spelen af in editor.
+>
+> **Backup:** `app.py.pre-sessie40.bak` (237K).
+>
+> ### ✅ Fase 2 — Password-reset flow volledig end-to-end
+>
+> **Backend (`auth.py` ~regel 442 + verder):**
+> - `_EMAIL_RE`, `_COMMON_PASSWORDS` blacklist (20 entries — uitbreidbaar post-launch)
+> - `_is_valid_email(email)` — lengte-cap 254 + regex
+> - `_is_strong_password(pw)` — NIST-conform: 8-128 chars + niet in blacklist + letter + cijfer/symbool. Géén verplichte hoofdletter/symbool (NIST 2017 onderzoek: dat verzwakt wachtwoorden)
+> - `_reset_redirect_url()` — env-var `RESET_REDIRECT_URL`, default `http://127.0.0.1:5555/static/reset-password.html`
+> - `forgot_password(email)` — fail-silent, returnt ALTIJD `{ok: true}` (account-enumeration protection)
+> - `reset_password(access_token, refresh_token, new_password)` — `set_session()` → `update_user()` → tokens terug. **Bug tijdens test gevonden:** `set_session()` in supabase-py 2.30 returnt `AuthResponse` met `.session.access_token`, niet `.access_token` direct. `update_user()` returnt `UserResponse` zonder `.session`. Fix: leest tokens uit `sess.session.access_token` met fallback naar input-tokens (die zijn nog steeds geldig).
+>
+> **Backend endpoints (`app.py` regel 1185 e.v.):**
+> - `POST /api/auth/forgot-password` met dubbele rate-limit: 3/u per IP + 5/u per email (via `_forgot_email_key`). Audit-log `auth.password_reset_requested`.
+> - `POST /api/auth/reset-password` met 5 per 10 min per IP. Audit-log `auth.password_reset` of `auth.password_reset_failed`.
+>
+> **Frontend nieuw bestand `static/reset-password.html`:**
+> - Standalone pagina, brand-tokens inline (Inter + Fraunces), invalid-state als hash leeg is, hash-clearing binnen 100ms na load (security), tokens uit `#access_token=...&refresh_token=...&type=recovery`, password+confirm check, fetch `/api/auth/reset-password`, schrijft success naar `localStorage['clipLive.session']` (zelfde shape als `saveSessionToStorage()` in index.html → auto-login na redirect naar `/`).
+>
+> **Frontend `static/index.html`:**
+> - "Wachtwoord vergeten?" link onder Log in-knop, alleen zichtbaar in login-mode (CSS `data-auth-mode="signup"` verbergt 'm)
+> - Forgot-modal HTML rond regel 3447: email-input + "Stuur reset-link" + success-melding "Check je inbox" (altijd zelfde melding ongeacht response)
+> - CSS regel 2486-2585: `.auth-forgot-link`, `.forgot-modal`, `.forgot-modal-card`, etc.
+> - JS rond regel 14033: `openForgotModal()`, `closeForgotModal()`, `handleForgotSubmit()`, `bindForgotModal()`. Pre-fill email uit login-form, autofocus, Escape sluit, overlay-click sluit, `dataset.bound` guards
+>
+> **Supabase config (door Sjuul in dashboard gedaan):**
+> - URL Configuration → Site URL: `https://djclips.nl`. Redirect URLs allowlist: `http://127.0.0.1:5555/static/reset-password.html` + `https://djclips.nl/reset-password`
+> - Sign In / Providers → Email → Email OTP expiration 3600s (1u), Min password length 8
+> - Emails → Reset Password template Nederlandstalig in Clip Live brand-kleur `#e8b766`, subject "Wachtwoord resetten - djclips.nl"
+>
+> **End-to-end test geslaagd** met test-account `sjuulsmitslolol@gmail.com`: signup → forgot via modal → mail kwam binnen (Supabase default SMTP, 0 min) → klik link → reset-form geopend → nieuw wachtwoord opgegeven → auto-login → redirect naar `/`.
+>
+> **Backups:** `auth.py.pre-sessie40.bak` (18K), `app.py.pre-sessie40-reset.bak` (238K), `static/index.html.pre-sessie40.bak` (636K).
+>
+> **TODO voor sessie 41:** `supabase_admin.auth.admin.sign_out(user_id, scope='others')` faalt in supabase-py 2.30 met "invalid JWT: token is malformed" — onze try/except vangt het op (password wijziging slaagt), maar hardening werkt niet. Volgende sessie de juiste signature vinden (mogelijk via REST call ipv Python SDK). Niet beta-blocker.
+>
+> **Curl-tests bewezen security:**
+> - Onbestaande email → `{ok:true}` ✅ (geen enumeration)
+> - Leeg email-veld → `{ok:true}` ✅ (geen 500)
+> - XSS in email → `{ok:true}` ✅ (geen reflectie)
+> - 4× snel achter elkaar → poging 4 → HTTP 429 ✅ (rate-limit)
+> - Zwak wachtwoord ("abc") → `{ok:false}` met duidelijke error ✅ (vóór Supabase aanroep)
+
+---
+
+## 🎯 Openstaand voor volgende sessie — in prioriteitsvolgorde
+
+> NB — Voor de **snelste briefing** zie het ⚡ START HIER blok bovenaan dit
+> document; de lijst hieronder is de uitgebreide planning-met-context.
+
+1. ✅ ~~**🔴 PyInstaller rebuild**~~ — **klaar in sessie 53** (2x gedaan: rebuild #1 sessies 50+51, rebuild #2 sessie 53 fixes). Bundle in `/Applications` is up-to-date.
+2. ✅ ~~**🟡 E2E real-export-test**~~ — **klaar in sessie 53.** "SESSIE 53 TEST"-tekst in `Drop_3.mp4` op disk geverifieerd via QuickTime → captions worden ge-baked in productie-.app.
+3. **🟡 Smoketests sessie 43+44 — deels gedaan in sessie 53.** Captions-flow + rename + sidecar + folder-whitelist + multi-clip-flow (UI) bewezen. Niet gedaan: 9 selectie-balk-smoketests (Bug 1 niet reproduceerbaar → laagste prio).
+4. **🔵 Code-rebrand "Clip Live" → "Omni DJ"** (~4-6u) — string-sweep door static/index.html, launcher.py, app.py, auth.py, build_macos.sh, alle .md files. Plus app-icon, bundle-identifier, `CFBundleName`, in-app teksten. Folder-renames (`dj-clip-cutter/` → ?) hoge-risico — apart plannen. **Doe dit vóór Fase 3 omdat omnidj.com landing onder Omni DJ-branding hoort.**
+5. **Sessie 43 follow-up — 1:1 + 4:5 als echte aspect-keys** (~2-3u). Nu mapped op vertical/landscape in startExport. Backend `_resolve_export_sources` + `cutter.cut_clip_*` moeten aparte `square` + `portrait` formats kennen met eigen crop-strategie.
+6. **Fase 3 — omnidj.com koppelen** via Cloudflare (nameservers van registrar → Cloudflare, DNS records, Pages custom domain). Vóór Stripe live mode. **Was djclips.nl, vervalt — sessie 53 rebrand.** Landing-repo + Pages-project moeten opnieuw onder Omni DJ-naam (oude repo `sjuulstudios/djclips.nl-by-MONO-LABS` blijft als archive bestaan).
+7. **Fase 4 — Stripe live mode** — pas na omnidj.com live. Runbook: `STRIPE-DNS-RUNBOOK.md` moet inhoudelijk worden geupdate van djclips.nl → omnidj.com.
+7. **🆕 Fase 5 — Content Calendar + Multi-artist (zie `PLAN-CONTENT-CALENDAR-2026-05-26.md`)** — pas na sessie 44 + djclips.nl + Stripe live:
+   - **5a Multi-tenant fundament** (3-4 wkn dev): migraties 004/005/006 voor workspaces + workspace_members + workspace_id op resource-tabellen
+   - **5b Calendar UI + datamodel** (2-3 wkn dev): migratie 007 (scheduled_posts) + maand/week-view + "Plan in Calendar" knop in export-modal
+   - **5c Postiz publishing** (3-4 wkn dev): migratie 008 (social_accounts) + Postiz Cloud OAuth + per-workspace social-connect
+   - **5d Polish + mobile** (4+ wkn): approval-flow, watch-folder, Ollama-captions, mobile push
+   - **5e Ads research** (2-3 wkn, geen dev): geld-flow Model A/B/C beslissen + NL-jurist/fiscalist
+   - **5f+ Ads-platform** (Fase 5/6/7 in plan): Meta + TikTok + later Google. Allerlaatst.
+8. **Sessie 40 hardening TODO** — `admin.sign_out(scope='others')` signature voor supabase-py 2.30 fixen, zodat password-change ook alle andere sessies invalideert.
+9. **Sessie 43 follow-up — Export-queue Optie B (parallel)** — pas overstappen als gebruikers in praktijk klagen over snelheid bij grote queues. N parallelle workers (cap 3), met semafoor voor disk I/O. Aparte sessie waardig.
+10. **SMTP-provider** (Postmark of Resend, ~$15-20/mo) — pas relevant bij betalende gebruikers. Voor beta is Supabase default OK.
+
+### Klaar — Fase 5 (sessie 41+42)
+
+- ✅ Color wheels voor text + background (sessie 41)
+- ✅ Built-in fonts library (sessie 42)
+- ✅ System-font auto-scan + .ttc support (sessie 42)
+- ✅ Font picker UI met 4 secties + search + refresh (sessie 42)
+- ✅ Live-preview rendering voor alle font-bronnen (sessie 42)
+- ✅ PREVIEW-badge verwijderd uit editor (sessie 42)
+
+---
+
+## Recente sessies — ingedikt (27–39)
+
+> Volledige beschrijvingen staan in `HANDOVER-ARCHIVE.md` voor sessies 1–26. Sessies 27 en later staan compacter hieronder. Per sessie: wat + waarom + relevante files/commits + eventuele gotchas. Sessie 40 staat als hoofdstatus boven.
+
+### Sessie 41 — Color wheels (Fase 5 / C+D, 2026-05-26)
+
+- **Wat:** Mini color picker `ClipLivePicker` ingebouwd (eigen build, geen externe library zoals Coloris — Sjuul wilde geen frontend-dependency). HSV-vlak + hue-strip + hex-input + opacity-slider. Herbruikt voor text-kleur én bg-kleur.
+- **Text-kleur:** `+`-knop met regenboog-icoon náást bestaande swatches in `#ed-tx-swatches`. Bij elke `renderEditorTextLayers` opnieuw geappend want `swWrap.innerHTML = ...` wist 'm anders.
+- **Background:** Off/On toggle + swatch + opacity-slider. Nieuw schema `L.bg = {color, opacity}` of `null`. Back-compat `L.bg === true` blijft werken (cutter resolved fallback).
+- **Cutter (`cutter.py` regel 335-355):** dispatch leest isinstance(bg, dict), else legacy bool defaults.
+- **Verificatie:** 5/5 smoketests groen via Chrome MCP. Geen visuele regressie.
+- **Backups:** `static/index.html.pre-sessie41.bak` (646K), `cutter.py.pre-sessie41.bak` (85K).
+
+### Sessie 39 — Native file picker + editor drawer fixes (2026-05-25, avond)
+
+- **Wat:** (1) Native file picker (commits `0ef2232` + `7ab31e5`): `/api/pick-file` endpoint met AppleScript voor macOS + tk fallback voor Win/Linux, `openFilePicker()` in `static/index.html` vervangen — geen 4GB browser-limiet meer. (2) Editor drawer fixes (commit `7ab31e5`): `.ed-body` `position:relative`, `.ed-text-drawer top:62px`, sluitende `</div>` van `.editor` naar ná `<aside>` drawers verplaatst, `--ink-0..4` overschreven in donkere drawer. (3) Timeline editor smoketest met Franky Rizardo 7.8GB set: trim handles, scrubbing, ratio switching werken zonder JS errors.
+- **🔴 Open bug bij afsluiten:** clips renderen niet in .app build (PermissionError op writes naar `Contents/Frameworks`). **→ Opgelost in sessie 40, zie hoofdstatus boven.**
+- **Commits:** `7ab31e5`, `0ef2232`, `b000a57` (baseline)
+
+### Sessie 38 + 37 — DMG Fase 4 klaar (2026-05-25)
+
+- **Wat:** Fase 4 afgerond: venv, flask-limiter, smoketest, migrations 002 (audit_logs) + 003 (RBAC role) deployed, admin role gezet voor business@sjuulstudios.com, edge function `update-usage` deployed, DMG gebouwd.
+- **Post-build bugfixes** (in `static/index.html` + `launcher.py` + `app.py`):
+  - Upload error "supabase_admin niet geconfigureerd" → fixed door `access_token` door te geven aan `_get_or_refresh_profile()`
+  - File picker 2 clicks nodig → fixed met 120ms `setTimeout` (pywebview race condition)
+  - Set stopt bij 14% / process pool crash → fixed door `multiprocessing.freeze_support()` ALLEREERST in `launcher.py` te zetten
+  - Meerdere browsertabs spawnen → zelfde fix
+  - Preview ratio black bars → `applyEditorStageSize()` set nu `object-fit` op video; `maxHeight:'none'` bij 16:9 en 1:1
+- **Testsets beschikbaar:** `dj-clip-cutter/CLIP DROP DJ-SETS/` bevat 5 MP4 sets voor debugging (Don Diablo, Ediine x Hör Berlin, Franky Rizardo, Housy Good vibes, Lisa Korver x Hör Berlin)
+- **DMG bouwen:** `bash build_macos.sh dmg` in `dj-clip-cutter/` met actieve venv. Output: `dist/Clip Live.app` + `dist/Clip Live.dmg`
+- **Belangrijke regel:** na elke code-change herbouwen — PyInstaller bakt `index.html` in de bundle, dev-server serveert altijd de oude versie
+
+### Sessie 36 — Infrastructuur (2026-05-24)
+
+- **Wat:** externe diensten gekoppeld, geen code-changes. Aparte landing-werkmap `~/Documents/Claude/Projects/clipdrop-landing-deploy/` (los van Clip Live git-repo), GitHub repo `sjuulstudios/djclips.nl-by-MONO-LABS` aangemaakt + initial push (commit `d98cf78`), Cloudflare Pages project `djclips-nl-by-mono-labs` live op https://djclips-nl-by-mono-labs.pages.dev, oud `clipdroplive` Pages-project verwijderd
+- **🟡 Open:** djclips.nl koppelen aan Cloudflare (nameservers TransIP → Cloudflare, DNS-records, custom domain in Pages)
+- **Gotcha:** `index.html` heeft `https://clipdroplive.com/` HARDCODED op meerdere plekken (canonical/og:image/og:url). Search-replace naar `https://djclips.nl/` pas doen samen met de DNS-cutover
+- **Beslissingen vastgelegd:** Google Workspace ($6/mo) voor email, Cloudflare Pages (i.p.v. Vercel — onbeperkte bandwidth + commercieel toegestaan)
+- **Drie werkmappen om te onthouden:** hoofd-app in `~/Documents/Claude/Projects/Clip Live/`, deploy-map in `~/Documents/Claude/Projects/clipdrop-landing-deploy/`, source-of-truth landing in `Clip Live/landing/`
+
+### Sessie 35 — Security Foundation (2026-05-24, autonoom)
+
+- **Wat:** drie security-onderdelen gebouwd: (1) audit-log met `supabase/migrations/002_audit_logs.sql` + `log_action()` in `auth.py` + `_audit()` in `app.py`, aanroepen op 7 endpoints (signup, login, login_failed, plan.checkout_started, plan.portal_opened, clip.export_started, file.upload, debug.logs_downloaded). (2) Data-isolatie review: alle Supabase-queries in `app.py` + `auth.py` gechekt → 6 admin-queries met expliciete `.eq('id', user_id)`, 3 anon-queries via RLS — isolatie correct. (3) RBAC: `supabase/migrations/003_rbac_role_column.sql` (role kolom user/beta/admin met check constraint), `get_user_role()` + `require_role()` decorator in `auth.py`. `/api/debug/logs` nu beveiligd met `@require_role('admin')`
+- **Sjuul handmatig vereist:** migraties 002+003 deployen in Supabase SQL Editor + zichzelf admin maken via UPDATE-query + dev-server herstarten
+
+### Sessie 34 — UI polish + plan-documenten (2026-05-23 + 24)
+
+- **Wat:** Tekstpaneel input-contrast (`color:var(--paper)` op `.ed-tx-field textarea/input/select`), platform-logo's (TikTok/Instagram/YouTube/Facebook) als gekleurde SVGs i.p.v. text-glyphs in export-popover + dashboard menu, compactere layout (`.meta` flex space-between)
+- **Plan-documenten opgesteld (niet geïmplementeerd):**
+  - `SESSIE34-CAPTION-FONTS-PLAN.md` — caption-fonts library + color-wheel, ~9.5u, 4 beslispunten
+  - `SESSIE34-PASSWORD-RESET-PLAN.md` — security-critical, ontbreekt volledig in `auth.py`, leunt op Supabase Auth reset-flow, dekt 16 OWASP-aanvallen, ~5.5u, 4 beslispunten. **Aanbeveling: bouwen vóór beta-launch**
+- **Backup:** `static/index.html.pre-sessie34.bak` (642 KB)
+
+### Sessie 33 — Autonoom (2026-05-23)
+
+- **Wat:** Beta-flyer definitief uit scope (verwijderd uit alle carry-overs), split-feature volledig opgeruimd uit frontend (UI + JS + CSS — backend `/api/split-clip` endpoint blijft), loop-mode toggle prominenter (tekst-label "Loop On/Off" + pulserende amber-dot + glow-lijn onder trim-band in timeline)
+- **Cleanup-script:** `python3 scripts/cleanup_legacy_jobs.py` dry-run → 0 kandidaten (al opgeruimd). 13GB output/ over 28 folders, allemaal owned
+- **Plan-document:** `SESSIE33-RECUT-QUEUE-PLAN.md` — background recut-queue (`_RECUT_QUEUE` dict + worker thread + `/api/recut-status/<recut_id>`, opt-in via `?async=1`), edge cases, 4 beslispunten
+- **Backup:** `static/index.html.pre-sessie33.bak`
+
+### Sessie 32 — Security ronde + timeline UX (2026-05-23)
+
+- **Security fixes:**
+  - **Fix 1 — Rate limiting (live):** `flask-limiter>=3.5` in `requirements.txt`, limiter-init in `app.py` (~84-149), 7 endpoints met `@limiter.limit`: signup 5/h-IP, login 10/5min-IP, refresh 30/h-IP, billing/checkout 10/h-user, billing/portal 10/h-user, upload 20/h-user, upload-local 20/h-user. Storage `memory://`, per-user key = eerste 32 chars JWT
+  - **Fix 2 — RLS policies in version control:** `supabase/migrations/001_rls_policies.sql` met SELECT (`auth.uid()=id`) + UPDATE met kolom-bescherming (`plan`, `usage_this_period`, `quota_reset_date`, `stripe_customer_id`, `stripe_subscription_id` zijn protected). INSERT/DELETE expliciet REVOKED van authenticated role. Live geverifieerd in Supabase
+- **Bewust geparkeerd:** concurrency limit, database indexing, webhook IP allowlist
+- **Timeline-editor UX (frontend-only, alleen hard-refresh):**
+  - **Killer bug (32e):** cache-buster `?v=<timestamp>` werd ná `withAuth()` (`?token=...`) toegevoegd → dubbele `?` in URL → backend `_require_job_access(..., allow_query_token=True)` faalt → 403 → "Clip file not yet rendered" overlay. **Fix:** check op bestaand `?` en gebruik `&` als joiner
+  - Stretch-bug definitief gefixt: `hasBand = (Math.abs(t.inSec) > 0.05) || (Math.abs(t.outSec - dur) > 0.05)` — vangt nu ook pure stretch (beide handles naar buiten)
+  - `editorTrimAtPlayhead` refactor: 5 branches → 1 pad, single source of truth = `clip.duration`. `if (hasBand) → /api/recut` else `→ /api/split-clip`
+  - Playhead: start op IN-handle, sleepbaar (z-index 6→50, hit-area 18/14px), stopt automatisch bij `cur >= outSec - 0.02s`
+  - Asterix + scissor weg uit toolbar — alleen Trim als primaire actie
+  - Audio stopt bij back-button via `switchView()` detect
+- **Backups:** `app.py.pre-ratelimit.bak`, `requirements.txt.pre-ratelimit.bak`, `static/index.html.pre-sessie32{,b,c,d}.bak`
+- **Memory:** `project_clip_live_security.md` aangemaakt
+
+### Sessie 31 — Bugs + watermark + Brand Stack collapsibles (2026-05-23)
+
+- **Wat:** (1) Bug #1 BPM/Key corner-stamp force-off in `cutter.py: _load_brand_assets_for_job` (zet `bpm_cfg['enabled']=False` bij laden). (2) Bug #2 "Follow horizontally" — vondst: Lisa Korver source is **1920×1080 LANDSCAPE 16:9**, niet vertical. Pan-mode op landscape source IS wiskundig altijd zoom. Fix: nieuwe derde mode `letterbox` (geen crop, scale-to-fit + pad met zwarte balken) — nu **default voor nieuwe clips**. (3) Watermark JS-bindings + render-pipeline LIVE: backend endpoints POST/GET/DELETE `/api/brand-kit/watermark`, `cutter.py` nieuwe `_build_watermark_overlay_segment` analoog aan logo maar met aparte labels zodat watermark NA logo komt. (4) Brand Stack collapsibles met chevron `▾` + localStorage persistence
+- **Verificatie:** `python3 -m py_compile app.py cutter.py` OK, `node --check` op 398KB JS-block OK
+- **Backups:** `app.py.pre-sessie31.bak`, `cutter.py.pre-sessie31.bak`, `static/index.html.pre-sessie31.bak`
+- **Runbook:** `SESSIE31-REBUILD-RUNBOOK.md`
+
+### Sessie 30 — Pan/letterbox tracking + JWT refresh (2026-05-22)
+
+- **Wat:** Pan-modus + 1:1/4:5 tracking + auto-refresh JWT live geverifieerd. 11 punten van Sjuul afgewerkt + beta-blocker code-side klaar
+- **Runbook:** `SESSIE30-REBUILD-RUNBOOK.md`
+- **Sjuul handmatig:** edge function `update-usage` deployen, rebuild, retest
+
+### Sessie 29 — Vier kleine bèta-verbeteringen (2026-05-22)
+
+- **Wat:** (1) Landing site Vercel-ready (`vercel.json`, `favicon.svg`, `og-image.svg` 1200×630, `robots.txt`, `sitemap.xml`, og/twitter/canonical meta tags in 4 HTML-pagina's). (2) In-app Send-logs knop: `/api/debug/logs` endpoint in `app.py`, ZIP of `?format=text`, bundelt summary + launcher.log tail 200KB + caller's job_history. Settings-view kreeg "Diagnostics" sectie. (3) NaN BPM display fix in `static/index.html` regel ~5471 (safe extraction met typeof check). (4) Cleanup-script `dj-clip-cutter/scripts/cleanup_legacy_jobs.py` (dry-run default, `--apply` verplaatst owner-less jobs naar `.quarantine-YYYYMMDD/`)
+- **Backups:** `app.py.pre-sessie29.bak`, `static/index.html.pre-sessie29.bak`
+
+### Sessie 28 — Library-scoping bug + 20/20 security tests (2026-05-22)
+
+- **Wat:** Kritieke library-scoping bug opgelost — tweede account zag andermans sets. (1) Backend Strategie B: nieuwe helper `_require_job_access(job_id, allow_query_token=False)` in `app.py` trekt JWT uit Bearer-header óf `?token=` query param, valideert, matched `job['user_id']` met caller. Returns 404 bij mismatch (geen probe-leak). Toegepast op ~30 job-routes. `_append_to_history` stamps user_id, `/api/history` filtert. (2) Frontend `withAuth(url)` helper in `static/index.html`: voegt `?token=<JWT>` aan media-URLs die geen Bearer-header kunnen meesturen. 10+ call-sites: thumbnail, filmstrip, clip src, source src, spectrogram, progress SSE. Download-knoppen kregen Bearer in fetch-init. (3) End-to-end smoketest op Lisa Korver x Hör Berlin (424MB, 55 min, 30 clips) — Account A + Account B in nieuwe tab → library leeg, badge FREE, quota 0/2. **20/20 cross-account security tests groen**
+- **Supabase-vondst:** `.test` en `.example` TLDs worden geweigerd. Free email rate limit 2/uur blokt 3e signup. Beide opgelost door **Email Confirmation UIT te zetten** in Supabase dashboard → Auth → Sign In/Up. **Voor v1.0 (paid launch) weer aanzetten** zodra eigen SMTP (SendGrid/Postmark/Resend) is gekoppeld
+- **Backups:** `app.py.pre-sessie28.bak`
+
+### Sessie 27 — Installer pipeline + Stripe via edge functions + legal (2026-05-17)
+
+- **Wat:** (1) Installer pipeline werkend: PyInstaller-spec + `launcher.py` + `entitlements.plist` + `build_macos.sh` in `dj-clip-cutter/`. ffmpeg/ffprobe in bundle gekopieerd, .bak files defensief gestript. **Browser-fix:** `subprocess.run(['open', url])` i.p.v. `webbrowser.open` (laatste werkt niet in gebundelde .app op macOS). Logging naar `~/Library/Application Support/Clip Live/launcher.log`. Apple Developer + Windows BEWUST UITGESTELD tot na macOS-beta. (2) Stripe via edge functions: `runtime_config.py` hardcodet alleen publieke keys, geen secrets in bundle. Twee nieuwe edge functions met JWT-verificatie: `create-checkout-session` + `create-portal-session`. `billing.py` heeft fallback (zonder lokale `STRIPE_SECRET_KEY` → edge function call met Bearer). Deploy zonder `--no-verify-jwt`; webhook blijft mét `--no-verify-jwt`. (3) Legal hardening: `landing/privacy.html` + `landing/terms.html` aangevuld met sub-processors, AVG-rechten (15/16/17/18/20/21), retention per type (7 jaar invoices), CCPA, force majeure, export controls, beta-disclaimer. Plus 64 .bak files opgeruimd naar `_bak-archive-2026-05-17.tar.gz`, git repo geïnitialiseerd (commit `b000a57`, branch `main`)
+
+---
+
+## App starten (dev-server)
+
 ```
 cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
 ./start.sh
 ```
-Browser: http://127.0.0.1:5555
 
----
+Browser opent op http://127.0.0.1:5555.
 
-## Wat er als laatste aan gewerkt is
-
-- **2026-05-10 (sessie 15):** Marathon UX-/recut-/storage-fix-sessie. Twaalf+ fixes live-getest via Claude in Chrome MCP. Stretch-recut werkt end-to-end (Ediine x Ho_r Berlin: clip 1 ge-stretcht van 16.72s → 21.72s, file daadwerkelijk herrendererd op disk). Source-video persistent in `BASE_DIR/uploads`, snapshot bewaart `video_path`, `_cleanup_source_video` uitgeschakeld. Read-only marker voor oude /tmp jobs (Trim disabled met heldere tooltip). Recent Sets/Library refresh + sort newest-first + View all expand toggle. ★ ZIP empty-protection (backend 400 + frontend fetch+blob). Library 16:9+9:16 beide via aspect-picker skip. Backbutton "← Clips". Trim loading-bar overlay + razor-blade icon + amber cursor op hover. Pauze-knop fix bij clip-switch. Trim-state persistence over logout. Vier features bewust geparkeerd voor volgende sessie (zie "VOLGENDE SESSIE" in SESSIE 15 entry). Zie SESSIE 15 hierboven.
-- **2026-05-10 (sessie 14):** Vijf landings in één sessie. Bug 1b (`/api/history` filter op snapshot+output_dir met clip-files) en Bug 1a (jobId persistence in localStorage + restore in `postLoginBoot`) opgelost. VIDEO_EDITOR_PLAN Phase 6 (loop playback toggle + ontimeupdate listener), Phase 3 (J/K/L scrubbing met rAF reverse-loop + K+J/K+L frame step), Phase 4 (snap modes Off/Beat/Bar met binary-search nearest-grid + 8px tolerance). Pure frontend behalve Bug 1b (één endpoint in `app.py`). Backups per stap. parse-checks OK, 144 unieke DOM-ids. Sjuul-handmatige test pending. Zie SESSIE 14 hierboven.
-- **2026-05-10 (sessie 13):** Phase 4 deelstap 2d — mini-map onder de timeline. Pure frontend: tl-minimap container met canvas + zoom-window rechthoek + stretch-zone markers. Drag = pan, click buiten rechthoek = jump, scroll-event sync. **VIDEO_EDITOR_PLAN Phase 1 is hiermee 100% klaar.** Zie SESSIE 13 hierboven.
-- **2026-05-10 (sessie 12):** Phase 4 S4.1 + S4.2 — live waveform-preview + bron-video-swap tijdens stretch-drag. Lost de "blinde sprong" voorbij clip-grens op. Backend: nieuwe `/api/source/<job>` Range-route. Frontend: `ensureWholeSetWaveformCache` prefetch, `buildStretchPreviewPeaks` slicer, `restoreClipWaveform` helper, drag-handler uitgebreid met rAF-throttled waveform-redraw + one-shot video-src swap. Twee bekende bugs gemeld: clips verdwijnen na hard-reload, Recent Sets toont oude jobs (zie Bekende bugs). Zie SESSIE 12 hierboven.
-- **2026-05-09 (sessie 11):** Phase 4 deelstap 2c — pan via click-drag op ruler + middle-mouse, zoom-aware seek-click via 2a's helpers, en framenummer in timecode-bar via ffprobe-detectie tijdens upload-validation. Backend: `_parse_fps_string`, `_inject_clip_fps`, `'fps'` op job-niveau. Frontend: `bindTimelinePan` + zoom-aware `bindTimelineScrub` + `updateEditorTime` frame-display. Geen regressies; oude jobs zonder fps tonen graceful geen frame-counter. Zie SESSIE 11 hierboven.
-- **2026-05-09 (sessie 10):** Phase 4 deelstap 2b — zoom-UI. Slider + Ctrl+wheel/pinch + `+/-` keys, allemaal via centrale `setEditorZoom()` met zoom-rond-cursor. Range 0.5×..12× (was 0.5×..6×). Visueel goedgekeurd. Zie SESSIE 10 hierboven.
-- **2026-05-09 (sessie 9):** Phase 4 deelstap 2a — coord-systeem refactor. Drie nieuwe helpers (`virtSecToPct`/`relSecToPct`/`pxToVirtSec`) als single source of truth voor timeline-positionering. `STATE.timelineScrollOffset = 0` toegevoegd (klaar voor 2c). `renderTrimRegion()` gemigreerd. Invariance-refactor — visueel/functioneel identiek aan SESSIE 8, geverifieerd. Zie SESSIE 9 hierboven.
-- **2026-05-09 (sessie 8):** Phase 4 deelstap 1 — stretch-zone UX (Open follow-up #1 S1). Amber wash + `±Xs` drag-label + active-zone hilight + hover-tooltips, allemaal in `static/index.html`. Geen backend. Visueel goedgekeurd door Sjuul. Live waveform/video preview tijdens drag is parked tot ná Phase 1 zoom/pan. Zie SESSIE 8 hierboven.
-- **2026-05-08 (sessies 5–7):** Phase 3 plan-gating end-to-end. Backend helpers + 402-gate + counter + `/api/quota`. Frontend quota-strip + upgrade-modal + watch-folder Pro-gate. Stripe-upgrade flow getest (FREE→PRO flip + counter reset). Zie SESSIE 5/6/7 hierboven.
-- **2026-05-08 (sessie 4):** Phase 2 paid-launch — Stripe Checkout + webhook (Supabase Edge Function) + Customer Portal. Zie SESSIE 4 hierboven.
-- **2026-05-07 (sessie 3):** Phase 1 auth — Supabase project + auth-overlay + account-chip. Zie SESSIE 3 hierboven.
-- **2026-05-06 (sessie 2):** Export-bug gefixed + complete UI-rebuild C1-C4 + folder picker (mac/win) + aspect-keuze popup + custom-label filenames + hard-cut renders + Library Exports met per-card acties + Editor preview groter (alle 4 aspects). Zie SESSIE 2 sectie hierboven.
-- **2026-04-26:** Bucket-D2 large file pipeline. Sets >2 uur krijgen 720p proxies, daarna lazy 1080p via `/api/render-clip`. Keyframe index bij upload voor snelle seek.
-- **UI redesign (eerder):** OpusClip-stijl. Niet terugdraaien.
-
----
-
-## Volgende prioriteit — Phase 4 of Phase 5
-
-Twee parallelle paden, zie de "VOLGENDE SESSIE" sectie bovenaan dit document voor de volle uitleg:
-
-**Pad A — Phase 4: Editor improvements** (volgorde uit `VIDEO_EDITOR_PLAN.md`)
-
-1. ✅ **Open follow-up #1 — Timeline stretch UX** (S1). Done in SESSIE 8.
-2. ✅ **VIDEO_EDITOR_PLAN Phase 1: zoom + pan + frame-accurate seek** — 100% klaar:
-   - ✅ **2a — coord-systeem refactor** (`virtSecToPct`/`relSecToPct`/`pxToVirtSec`-helpers + `STATE.timelineScrollOffset`). Done in SESSIE 9.
-   - ✅ **2b — zoom-UI** (slider in toolbar + Ctrl+wheel/pinch + `+/-` keys + zoom-rond-cursor + range 0.5..12). Done in SESSIE 10.
-   - ✅ **2c — pan + zoom-aware seek + framenummer** (ruler-drag, middle-mouse-drag, zoom-aware seek-click, framenummer via ffprobe). Done in SESSIE 11.
-   - ✅ **2d — mini-map** strip onder de timeline met huidige zoom-window. Done in SESSIE 13.
-3. **Phase 2: Draggable in/out handles** — handles renderen al, slepen werkt al sinds SESSIE 1 (verification step in deelstap 1 + 2a). Mogelijk grotendeels af na 2a; opnieuw evalueren ná 2d.
-4. **Phase 6: Loop playback** — kleine toevoeging, grote winst in bruikbaarheid.
-5. ✅ **S4.1 + S4.2: Live stretch-preview** — waveform/video uitrekken tijdens drag in stretch-zone. Done in SESSIE 12.
-
-Daarna pas: VIDEO_EDITOR_PLAN Phase 3 (J/K/L), Phase 7 (inline expand), Phase 4 (snap), Phase 5 (filmstrip).
-
-**Pad B — Phase 5: Watch-folder backend** (Pro feature, frontend al ontgrendeld in Phase 3)
-
-1. Lokale folder-poller (5s tick, vergelijk met `watch_folder.json` state).
-2. Auto-trigger `/api/upload-local` op nieuwe drops.
-3. UI-status dynamisch maken + "Recently picked up" lijst.
-4. Concurrency: hash-check op file-naam+grootte voorkomt dubbele jobs.
-
-Out of scope tot later: Dropbox/Drive OAuth.
+Voor `.app` build: `bash build_macos.sh dmg` in `dj-clip-cutter/` met actieve venv. Output: `dist/Clip Live.app` + `dist/Clip Live.dmg`.
 
 ---
 
@@ -2552,12 +2882,27 @@ Out of scope tot later: Dropbox/Drive OAuth.
 
 - OAuth voor TikTok/Instagram upload
 - Patent aanvragen (NL/EU/global) — besproken, nog niet uitgevoerd
-- Packagen als .dmg/.exe
+- Apple Developer signing + notarization
+- Windows .exe build
+
+**📄 Strategisch + technisch plan voor moat-features (2026-05-26):** zie `PLAN-MOAT-FEATURES-2026-05-26.md` in de project-root. Dat document beschrijft features 5 (multicam), 7 (branding profielen), 8 (auto-draft pipeline + content calendar + direct publish naar TikTok/Instagram/YouTube), 9 (lokaal/privacy als premium tier) plus de ad-spend-as-a-service laag (Intellijend-model). Inclusief volgorde, werk-schattingen, wat Sjuul moet aanleveren en pricing-voorstel. Raadplegen voor langetermijn-richting; eerst de open .app-build bug fixen voor we hieraan beginnen.
 
 ---
 
 ## Hoe je hier verder mee werkt
 
 1. Lees dit bestand → begrijp de huidige staat
-2. Diagnose → aanpak voorstellen → wachten op "ja" → pas dan uitvoeren
-3. Update dit bestand als er iets verandert (bug gefixed, feature toegevoegd, nieuwe bug ontdekt)
+2. Raadpleeg `LESSONS-LEARNED.md` voor terugkerende patronen vóór je iets aanraakt dat al eens gefixt is
+3. Diagnose → aanpak voorstellen → wachten op "ja" → pas dan uitvoeren
+4. Minimale impact: doe alleen wat gevraagd is, meld als scope groter is dan verwacht
+5. Update dit bestand als er iets verandert (bug gefixed, feature toegevoegd, nieuwe bug ontdekt)
+
+**Voor Sjuul:** terminal-commando's letterlijk zonder markdown fences, één commando per regel met pad-quotes. Hij kopieert direct vanuit chat.
+
+---
+
+## Veiligheid
+
+- Nooit API keys of wachtwoorden in bestanden opslaan
+- Altijd bevestiging vragen voor bestandsverwijdering
+- Backup vóór elke risky change (`bestand.pre-sessieNN.bak` patroon)
