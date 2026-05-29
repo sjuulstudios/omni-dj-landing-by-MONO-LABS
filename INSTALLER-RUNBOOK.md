@@ -147,6 +147,62 @@ zet als downloadlink.
 
 ---
 
+## Fase 4b — Supabase Edge Functions deployen (voor beta)
+
+De gebundelde .app heeft geen STRIPE_SECRET_KEY in zich (en moet die ook
+nooit krijgen). In plaats daarvan praat de app met twee Supabase Edge
+Functions die de Stripe secret wel kennen. Die moeten één keer worden
+gedeployed.
+
+**Stap 1 — Supabase CLI installeren als die er nog niet is**
+
+brew install supabase/tap/supabase
+
+**Stap 2 — Inloggen op je Supabase project**
+
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+supabase login
+supabase link --project-ref lbabsffxefkrxwzkbzar
+
+De project-ref komt uit het Supabase dashboard URL.
+
+**Stap 3 — Secrets zetten (alleen als nog niet gedaan)**
+
+supabase secrets set STRIPE_SECRET_KEY=sk_test_xxx
+supabase secrets set STRIPE_PRICE_ID_PRO=price_1TUoYNA5DKhJaSAF6xynooY9
+supabase secrets set STRIPE_PRICE_ID_STUDIO=price_1TUoZCA5DKhJaSAFI7AMgAbA
+
+Vervang sk_test_xxx door je echte Stripe TEST secret uit dj-clip-cutter/.env.
+Tip: typ NOOIT secrets in chat — copy/paste alleen vanuit je eigen .env.
+
+**Stap 4 — De drie functions deployen**
+
+supabase functions deploy create-checkout-session
+supabase functions deploy create-portal-session
+supabase functions deploy stripe-webhook --no-verify-jwt
+
+De webhook moet WEL met --no-verify-jwt (Stripe stuurt geen Supabase JWT,
+maar zijn eigen signature). De checkout/portal functions juist NIET, want
+die moeten alleen ingelogde users toelaten.
+
+**Stap 5 — Verifieer in dashboard**
+
+Open https://supabase.com/dashboard/project/lbabsffxefkrxwzkbzar/functions
+en check dat alle drie de functions "Active" staan met groen vinkje.
+
+**Stap 6 — Test vanuit de app**
+
+Rebuild en open de bundle (zie fase 1 stap 4). Maak een testaccount, klik
+"Upgrade to Pro". Je hoort doorgestuurd te worden naar checkout.stripe.com
+met de TEST-betalingsflow. Gebruik testkaart 4242 4242 4242 4242 met
+willekeurige CVC en toekomstige expiry. Na succesvolle "betaling" moet
+je profiel naar plan=pro springen (check in Supabase tabel `profiles`).
+
+Bij errors: kijk in launcher.log én in Supabase Logs van de function:
+https://supabase.com/dashboard/project/lbabsffxefkrxwzkbzar/functions/create-checkout-session/logs
+
+---
+
 ## Fase 5 — Windows .exe (later)
 
 Windows kan je niet vanaf je Mac bouwen. Drie opties:
@@ -205,9 +261,12 @@ Loop dit lijstje af voordat je de .dmg op de website zet:
   niet meer.
 - **Eerste opening duurt 10–30 sec** terwijl numba modules JIT-compileert.
   Dit is normaal en gebeurt alleen de eerste keer.
-- **.env is NIET in de bundle** — dat is opzettelijk. De gebundelde
-  Stripe/Supabase keys moeten via een config in je bundel komen of door
-  user-input. Volgende klus: hard-code de production publishable keys
-  (alleen pk_live_…) en verwijder secret keys uit de bundle.
+- **.env is NIET in de bundle — opgelost via runtime_config.py + edge functions**
+  De publieke keys (Supabase URL/anon, Stripe publishable, price IDs) staan
+  hardcoded in dj-clip-cutter/runtime_config.py. Secrets (STRIPE_SECRET_KEY,
+  SUPABASE_SERVICE_ROLE_KEY, STRIPE_WEBHOOK_SECRET) draaien alleen in
+  Supabase Edge Functions. Bij overgang naar Stripe LIVE: vervang pk_test_
+  door pk_live_ in runtime_config.py én zet de live sk_live_ in Supabase
+  secrets.
 - **AntiVirus op Windows** flagt ongetekende PyInstaller bundles vaak als
   malware. Reden waarom signing op Windows écht nodig is.

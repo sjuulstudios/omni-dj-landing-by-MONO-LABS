@@ -1,0 +1,34 @@
+# Secrets — NOOIT committen
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# App-output
+output/
+uploads/
+*.log
+job_history.json
+
+# Test media — te groot voor git (12GB+)
+OMNI DJ - TEST DJ-SETS/
+
+# ML-model + losse archieven — niet in repo
+yolov8n.pt
+zibQMEOQ
+*.pt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

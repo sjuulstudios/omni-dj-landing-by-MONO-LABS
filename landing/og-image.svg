@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="bg-glow-1" cx="80%" cy="0%" r="60%">
+      <stop offset="0%" stop-color="#e8b766" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#e8b766" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bg-glow-2" cx="-10%" cy="110%" r="55%">
+      <stop offset="0%" stop-color="#c2864a" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#c2864a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#0a0805"/>
+  <rect width="1200" height="630" fill="url(#bg-glow-1)"/>
+  <rect width="1200" height="630" fill="url(#bg-glow-2)"/>
+
+  <g transform="translate(80,80)">
+    <rect width="44" height="44" rx="10" fill="none" stroke="#e8b766" stroke-width="2"/>
+    <circle cx="22" cy="22" r="14" fill="none" stroke="#e8b766" stroke-width="2"/>
+    <circle cx="22" cy="22" r="3" fill="#f4cf8a"/>
+  </g>
+  <text x="142" y="115" fill="#f6efe2" font-family="Inter, -apple-system, sans-serif" font-size="24" font-weight="600">Clipdrop Live</text>
+
+  <text x="80" y="280" fill="#f6efe2" font-family="Fraunces, Georgia, serif" font-size="78" font-weight="500">Detect drops in DJ sets.</text>
+  <text x="80" y="370" fill="#e8b766" font-family="Fraunces, Georgia, serif" font-size="78" font-style="italic" font-weight="500">Create clips for social.</text>
+
+  <text x="80" y="450" fill="#cdc3b0" font-family="Inter, sans-serif" font-size="26" font-weight="400">Upload a set. Get the highlights. In seconds.</text>
+
+  <g transform="translate(80,510)" font-family="JetBrains Mono, monospace" font-size="16" fill="#7a7065">
+    <text>DETECTED:</text>
+    <text x="120" fill="#e8b766">1 INTRO</text>
+    <text x="220" fill="#7a7065">·</text>
+    <text x="240" fill="#e8b766">3 BUILDUPS</text>
+    <text x="380" fill="#7a7065">·</text>
+    <text x="400" fill="#e8b766">5 DROPS</text>
+    <text x="510" fill="#7a7065">·</text>
+    <text x="530" fill="#e8b766">2 BREAKS</text>
+    <text x="650" fill="#7a7065">·</text>
+    <text x="670" fill="#e8b766">1 OUTRO</text>
+  </g>
+
+  <g transform="translate(80,560)" stroke="#e8b766" stroke-width="2" fill="none" opacity="0.5">
+    <path d="M0 12 L40 12 L60 0 L80 24 L100 6 L120 18 L140 12 L180 12 L200 4 L220 20 L240 12 L300 12 L320 8 L340 16 L380 12 L420 12 L440 2 L460 22 L480 12 L1040 12"/>
+  </g>
+</svg>

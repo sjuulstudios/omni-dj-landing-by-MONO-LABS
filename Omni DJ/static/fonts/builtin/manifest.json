@@ -1,0 +1,13 @@
+[
+  {"id":"alfa-slab",        "family":"Alfa Slab One",     "file":"AlfaSlabOne-Regular.ttf",     "category":"display",   "license":"OFL"},
+  {"id":"anton",            "family":"Anton",             "file":"Anton-Regular.ttf",           "category":"display",   "license":"OFL"},
+  {"id":"archivo-black",    "family":"Archivo Black",     "file":"ArchivoBlack-Regular.ttf",    "category":"display",   "license":"OFL"},
+  {"id":"bebas-neue",       "family":"Bebas Neue",        "file":"BebasNeue-Regular.ttf",       "category":"display",   "license":"OFL"},
+  {"id":"inter",            "family":"Inter",             "file":"Inter-Regular.ttf",           "category":"sans",      "license":"OFL"},
+  {"id":"montserrat",       "family":"Montserrat",        "file":"Montserrat-Regular.ttf",      "category":"sans",      "license":"OFL"},
+  {"id":"open-sans",        "family":"Open Sans",         "file":"OpenSans-Regular.ttf",        "category":"sans",      "license":"OFL"},
+  {"id":"oswald",           "family":"Oswald",            "file":"Oswald-Regular.ttf",          "category":"condensed", "license":"OFL"},
+  {"id":"roboto",           "family":"Roboto",            "file":"Roboto-Regular.ttf",          "category":"sans",      "license":"OFL"},
+  {"id":"roboto-condensed", "family":"Roboto Condensed",  "file":"RobotoCondensed-Regular.ttf", "category":"condensed", "license":"OFL"},
+  {"id":"roboto-mono",      "family":"Roboto Mono",       "file":"RobotoMono-Regular.ttf",      "category":"mono",      "license":"OFL"}
+]

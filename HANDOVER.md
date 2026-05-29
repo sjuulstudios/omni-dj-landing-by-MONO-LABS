@@ -4,35 +4,349 @@
 
 ---
 
-## ⚡ START HIER — sessie 59 briefing
+## 🌐 START HIER — sessie 61 (2026-05-29) — WEBSITE PREMIUM PASS UITGEVOERD
+
+> **Status:** volledige premium pass over omnidj.com + 2 rondes feedback-fixes, live geverifieerd via Chrome op Sjuul's Mac. Git commit gedaan (niet gepusht). Beslissingen + details in `PLAN-website-premium-pass-DECISIONS-2026-05-29.md`.
+
+**Locatie:** `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/omnidj.com/`
+**Branch:** `feature/auto-mode-and-brand-redesign` · **Commit:** `dbe8240` (89 files, geen node_modules/tmp/build). **NIET gepusht.**
+**Dev-server:** `cd omnidj.com && npm run dev` → localhost:3000. **Remotion render:** `cd omnidj.com/remotion && npm run render:all`.
+
+### ⏭️ EERSTE TAKEN VOLGENDE SESSIE (Sjuul's prioriteit, in volgorde)
+
+1. **`git push`** van de landing-page-commit (`dbe8240` op `feature/auto-mode-and-brand-redesign`). Sjuul wil dit als eerste. Vraag of er een remote is en of dit naar die branch of een nieuwe push moet.
+2. **Tool-overview + auto-mode sectie-ruimte verkleinen.** De animatie staat hoog in de sectie met te veel verticale leegte eronder vóór de volgende sectie. Strakker maken (sectie-padding / animatie-positie). Bekend en akkoord; nog niet uitgevoerd.
+
+### Wat deze sessie is gedaan (premium pass, alles live geverifieerd)
+
+**Ronde 1 — 17 premium-pass taken** (zie DECISIONS-doc voor 37 keuzes):
+- Motion-fundament: The Drop easing (`--ease-drop` cubic-bezier(0.16,1,0.3,1), `--ease-smooth` is alias), Geist Mono (`geist@1.7.1`, self-hosted) voor cijfers/timestamps, creme-mute 0.6→0.72 (AAA).
+- Sectie-overgangen: hairline DarkSeam tussen dark-secties, `.section-bridge` gradient, hero op `bg-ink-900`.
+- Dep-cleanup: framer-motion + @studio-freight/lenis verwijderd, `lib/motion.ts` weg, GSAP lazy-loaded in roadmap → **154kB → 117kB First Load JS**.
+- Nav: chevron overshoot-spring + multi-layer mega-menu schaduw.
+- Pricing: Pro-card elevatie (translateY -8 + shadow) + ademende oranje ring (`.pricing-pro-ring`), mono unit-labels.
+- Contact: 2 velden + progressive disclosure (naam/rol verschijnen bij typen), "Send →".
+- Hero: set-timeline strip (`components/hero/SetTimeline.tsx`, signature motief), beta-form oranje chevron + slide-in success (geen teller).
+- Tool-overview, workflow, auto-mode, features, roadmap, carousel, audience-tabs, closing — zie DECISIONS-doc.
+- Sign-up knop: oranje → creme + zwarte tekst (`.btn-creme`).
+- Loading-state: RemotionMp4 fade pas op `onPlaying`.
+
+**Ronde 2 — feedback-fixes:**
+- Scroll-offset: `.section { scroll-margin-top: 96px }` + roadmap GSAP pin `start: 'top top+=80'` → "Roadmap." titel valt niet meer onder de nav.
+- Features-accordion single-open (`openIndex` i.p.v. Set) → lost Social/Insights-overlap met gepinde roadmap op.
+- Hero CTA's: Download solide creme (links) + Drop your DJ-set transparant dashed (rechts), subline 1 regel (`md:whitespace-nowrap`). DropField herontworpen naar transparante knop.
+- **Echte Remotion-MP4's** (Sjuul's keuze i.p.v. live CSS):
+  - `ToolOverviewFlow.tsx` herbouwd: step-rail (Analyse/Reframe/Publish), playhead + pulserende DROP-labels, spring-pop shorts, → arrows. ToolOverview-component terug naar RemotionMp4.
+  - `AutoModePipeline.tsx` herbouwd: AI-tekst weg, processing-tile met checkmarks (Cut/Brand/Caption), spring-pop posts, minHeight 380→240.
+  - colors.ts creme-mute → 0.72.
+- Witruimte auto-mode verkleind (mt-14→mt-10, mt-16→mt-8, 16/6→16/5).
+- 3 MP4's gerenderd op Sjuul's Mac (logo-reveal 1.4MB, auto-mode 410kB, tool-flow 581kB) → zitten in `public/remotion/` + commit.
+
+**Twee bugs gevonden + gefixt tijdens live review:**
+1. Set-timeline drop-markers vielen niet op hun cluster (transform-conflict) → vaste cx/cy op gesnapte bar-index, pulse animeert alleen opacity.
+2. Hydration-warning in SetTimeline (float-drift) → `r3()` rondt geometrie af op 3 decimalen.
+
+**Verificatie:** app tsc 0 errors, remotion tsc 0 errors, `next build` groen (18/18), console 0 errors. Volledige pagina live doorgelopen via Chrome MCP op localhost:3000.
+
+### Asset-hooks klaargezet (Sjuul levert binnen 7 dagen)
+- Workflow hover-video: `HOVER_VIDEOS` map in `WorkflowGrid.tsx`.
+- Artist clips: `video` veld per artist in `lib/content/artists.ts` (8 tiles, statische views).
+- Features screencasts: vervangen `FeatureWireframe` per rij later.
+- Hex-codes: nog placeholder `#FF6A1A` + `#F5EFE3`; 1× find-replace zodra Sjuul de echte uit de tool geeft.
+
+### Bekende dev-quirk
+Na veel snelle edits kan de draaiende `npm run dev` de Tailwind-CSS stoppen met serveren (kale pagina). Productie-build blijft groen. Fix = dev-server herstarten (Ctrl+C + `npm run dev`).
+
+### Toestemmingen gebruikt deze sessie
+✅ Bash, File-access op omnidj.com, Computer-use (Terminal click-tier + Chrome read-tier), Chrome MCP, git commit (lokaal).
+❌ git push, DNS, Stripe, Supabase, echte assets, hex-codes.
+
+---
+
+## 🌐 sessie 60 (2026-05-29 nacht-build) — WEBSITE UITGEVOERD
+
+> **Status:** complete autonome nacht-build van omnidj.com marketing-site afgerond. Alle 4 fases uit `PLAN-website.md` opgeleverd. Volledig logboek in `BUILD-LOG-website-2026-05-29.md`.
+
+**Locatie:** `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/omnidj.com/`
+
+**Stack:** Next.js 14.2.18 + TypeScript + Tailwind 3.4 + App Router + static export. Helvetica Neue system stack. Framer-motion + GSAP + Lenis dependencies geinstalleerd (huidige animaties zijn CSS-keyframe + IntersectionObserver, geen runtime dependency op die libs nodig tot een complexere section dat vraagt).
+
+**Wat live klaar staat:**
+- 1 home page met 9 secties (Hero met 8-circle logo reveal + 3 CTAs + pillars, Artist carousel, Enterprise tabs, Tool overview SVG flow, Workflow 3-col, Auto-mode looping animation, Features accordion, Roadmap 12-item carousel, Closing CTA)
+- 8 andere pages (`/pricing` met EUR+USD side-by-side + matrix, `/contact` met form + Flask stub, `/collective`, `/for-business`, `/features`, `/solutions`, `/resources`, `/legal/terms|privacy|trust`)
+- 404 not-found page
+- StickyNav (logo + by MONO LABS + 5 nav-items + login/signup + mobile burger)
+- Footer (4 link-columns + 5 social icons + copyright)
+- Backend Flask skeleton (`backend/` met routes/contact.py + routes/beta.py + .env.example + README) — **NIET draaiend**
+- SEO complete: metadata, sitemap.ts, robots.ts + .txt, dynamic favicon, dynamic OG-image
+- A11y: skip-link, ARIA labels, focus-visible, prefers-reduced-motion
+
+**Verificatie:** `npx tsc --noEmit` = 0 errors over alle 4 fases. Sandbox `next build` hangt door cross-mount SWC binary issue — werkt native op je Mac.
+
+### Status na 29 mei build + improvements pass
+
+**Site is volledig functioneel** in zowel dev (`localhost:3000`) als productie (`out/` static export, getest via `npx serve out`).
+
+**Wat draait:**
+- Dev server: `npm run dev` op port 3000
+- Production preview: `npx serve out` op port 62575 (poort 5000 in use)
+- Remotion: 3 MP4s gerendered in `public/remotion/` (logo-reveal, auto-mode, tool-flow)
+- Production build: 18/18 static pages, home = 56.8 kB / 154 kB First Load JS
+
+**Wat is afgerond in deze sessie (60 vervolg, ochtend):**
+
+1. Initial scaffold + 4 phases (zie BUILD-LOG)
+2. Remotion compositions toegevoegd voor 3 hero-animaties
+3. 5 improvement chunks doorgevoerd na live smoketest:
+   - Hero polish (kleiner logo, 1-col layout, copy fixes, "Join beta" pill button)
+   - Mega-menu pop-outs (Features 3-col, Solutions 2-col, soon-chips)
+   - DJs audience tab toegevoegd (1e tab), per-audience feature curatie
+   - Features accordion shrink (1 viewport, multi-open, headline op 1 regel)
+   - Roadmap scroll-driven horizontal reveal met alternating branches (GSAP ScrollTrigger)
+   - Artist carousel continuous slow auto-scroll (90s loop, hover-pause, reduced-motion-safe)
+
+**Bestanden voor referentie:**
+- [`PLAN-website.md`](PLAN-website.md) — originele build plan
+- [`PLAN-website-improvements-2026-05-29.md`](PLAN-website-improvements-2026-05-29.md) — improvement pass plan
+- [`PLAN-website-premium-pass-2026-05-29.md`](PLAN-website-premium-pass-2026-05-29.md) — NEW: deep premium upgrade proposal
+- [`BUILD-LOG-website-2026-05-29.md`](BUILD-LOG-website-2026-05-29.md) — per-fase decision log
+
+### Volgende stap (in volgorde)
+
+**Voor je verder gaat met premium-pass:**
+1. **Smoketest** alle nieuwe elementen via `http://localhost:62575` (productie versie):
+   - Hover Features + Solutions in nav → mega-menus
+   - Klik door alle 5 audience tabs (DJs default)
+   - Scroll naar Roadmap → pinned scroll-reveal animation
+   - Scroll naar artist carousel → continuous loop
+   - Open features accordion (multi-open)
+   - Mobile (DevTools 390px) → mega-menus collapsed naar accordion, roadmap vertical stack
+   - Reduced-motion (DevTools → Rendering → Emulate prefers-reduced-motion) → loops stoppen
+
+2. **Lees PLAN-website-premium-pass-2026-05-29.md** voor de volgende ronde upgrades — deep proposal met specifieke vragen per section.
+
+**Voor productie deploy** (later):
+- Render-stap voor Remotion (al gedaan)
+- Hex codes confirmeren (orange + creme) uit Omni DJ tool
+- Real artist videos in `public/videos/artists/`
+- Real UI screenshots in `public/images/`
+- Studio+ feature lijst invullen
+- Flask backend wire'n + deployen (Fly.io/Railway)
+- Cloudflare Pages deploy
+
+### Original setup commands
+
+```
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/omnidj.com"
+npm run dev
+```
+
+2. **Production build** verifieren:
+   ```
+   npm run build
+   ```
+   Output gaat naar `out/`. Test met `npx serve out -p 5000`.
+
+3. **10 open items voor jou** — alle in `BUILD-LOG-website-2026-05-29.md` sectie "Wat Sjuul morgen moet doen". Belangrijkste:
+   - Exacte hex codes voor orange + creme vervangen in `tailwind.config.ts` + `app/globals.css`
+   - Hero headline finaliseren uit 8 alternatieven (PLAN-website.md sectie 3.2)
+   - Studio+ feature-lijst invullen in `lib/content/pricing.ts`
+   - Real artist videos in `/public/videos/artists/`
+   - Real UI screenshots in `/public/images/`
+   - Flask backend wire'n + deployen (Fly.io/Railway)
+   - Cloudflare Pages deploy + DNS
+
+**Wat Claude bewust NIET deed:**
+- `git init` / commits / pushes
+- DNS / Cloudflare / Supabase / Stripe / Apple notary
+- Geen real assets gedrop't (placeholders met clear labels)
+- Geen `npm run build` success-bevestiging (sandbox-limitatie)
+
+**Volledige decision log + per-fase samenvatting:** [`BUILD-LOG-website-2026-05-29.md`](BUILD-LOG-website-2026-05-29.md)
+
+### Toestemmingen die deze sessie zijn gebruikt
+✅ Bash (npm install + tsc + sandbox dev-server poging)
+✅ File-access op `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/omnidj.com/`
+✅ Computer-use (Terminal/Chrome/Finder — granted, niet effectief gebruikt want sandbox-server niet bereikbaar van host-Chrome)
+
+### Toestemmingen NIET gebruikt
+❌ Stripe / Supabase / DNS / Email / Git push
+
+---
+
+## 🌐 WEBSITE-PLAN — sessie 28-05-2026 — NIET UITGEVOERD
+
+> **Status:** plan geschreven, ligt klaar voor een aparte build-sessie. Verwijst naar [`PLAN-website.md`](PLAN-website.md). Geen code geschreven deze sessie, alleen planning.
+
+**Aanleiding.** Sjuul wil de omnidj.com marketing-website bouwen, gebaseerd op visuele referenties van Weave.figma.com, Sana Labs, Cobrand, Opus.pro en Opus.pro/agent. Premium look met focus op zwart-dominante backgrounds, creme tekst en spaarzaam oranje (kleuren matchen de Omni DJ tool zelf). Geen "glow" effects.
+
+**Beslissingen vastgelegd in PLAN-website.md.**
+
+- **Stack:** Next.js 14 (static export via `output: 'export'`) + Tailwind + Framer Motion + GSAP + Lenis voor smooth scroll. Flask backend voor forms (provider-agnostisch via SMTP env vars).
+- **Hosting:** Cloudflare Pages voor frontend (geen Vercel), Fly.io of Railway voor Flask backend op subdomein `api.omnidj.com`. Domein omnidj.com is van Sjuul via TransIP, DNS via Cloudflare.
+- **Locatie:** `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/omnidj.com/` (apart subfolder naast de app code).
+- **Logo:** 8-circle ring (8 witte cirkels in een rondvorm). PNG referenties geleverd door Sjuul (wit-op-zwart + zwart-op-transparant). Hero animatie: wordmark glijdt vanaf rechts, ring fadet in vanaf links + roteert 360°, daarna loop slow 360° rotatie elke 10s.
+- **Typografie:** Helvetica Neue system stack (Bold, Medium, Light, fallback Arial). Geen Inter/Geist.
+- **Kleuren:** Background `#000000`, creme `#F5EFE3` (placeholder — exact hex moet Sjuul bevestigen vanuit de tool), oranje TBD (placeholder `#FF6A1A` — exact hex moet uit de Omni DJ tool komen).
+- **Hero copy (working final):** "Turn your hours long DJ-sets into 20-second viral clips." Met 8 alternatieven in plan-sectie 3.2 voor finale pick.
+- **Hero CTAs:** drie elementen — Drop your DJ-set field + Download Omni DJ button + Join the beta email field.
+- **Pricing:** 4 tiers — Free €0 (analyse 2 sets + library only) / Pro €75 (4 sets/maand + Editor + Brand + Captions + Social + Calendar) / Studio €200 (alles uit Pro + Multi-artist + Batch + Auto-mode + Watch-folder + Insights) / Studio+ Custom (TBD). 15% off yearly. EUR + USD beide ondersteund via toggle.
+- **Roadmap:** horizontale carousel, 12 items in Sjuul's eigen volgorde (geen datums).
+- **Andere secties:** sticky nav (Features / Solutions / Resources / Pricing / For business) met "by MONO LABS" tagline naast logo, artiest-carousel (9:16 verticale video frames met TikTok/Instagram badge), enterprise tabs (4 audiences), tool overview met Weave-style SVG connector flow, workflow 3-column, Auto-mode big looping animation, features accordion (Analyse/Library/Brand/Social/Calendar/Insights), closing CTA, footer (Get Started / Company / Connect / Resources + 5 social icons: Instagram/TikTok/YouTube/LinkedIn/Facebook).
+- **Forms:** Flask backend op port 5556 (5555 blijft voor app). Endpoints `/api/contact` (role-routed dropdown) en `/api/beta-signup` (SQLite). SMTP-agnostisch.
+
+**Wat het plan NIET dekt (out of scope).**
+
+- Login/signup flow (alleen placeholder nav-links)
+- User dashboard
+- Stripe payment integratie (komt later)
+- Knowledge Center content (footer-link is `#` placeholder)
+- Blog/changelog content
+
+**Nog open vóór code-sessie (sectie 9b van plan).**
+
+1. Exacte hex codes voor creme + oranje uit Omni DJ tool
+2. Finale hero headline kiezen uit 8 alternatieven
+3. Currency switcher: side-by-side vs toggle
+4. Studio+ feature-lijst definieren
+5. Screenshots van Analyse/Editor/Auto-mode schermen voor placeholders
+
+**Kickoff-prompt voor volgende sessie** (paste in nieuwe chat in Omni DJ folder):
+
+> Read PLAN-website.md and start Phase 1 of the build. Scaffold the Next.js project in /omnidj.com/, set up Tailwind + global styles + Helvetica stack, then build StickyNav and Footer components. Stop after Phase 1 for review.
+
+**Verband met REBRAND-PLAN.** De website is een afzonderlijk traject. Rebrand-sessie gaat over de app + Supabase + Stripe + Cloudflare DNS voor omni.com / monolabs. De website-build gebruikt het al bestaande omnidj.com domein op Cloudflare en raakt geen app-code. Beide trajecten kunnen onafhankelijk worden uitgevoerd.
+
+**Bestand:** [`PLAN-website.md`](PLAN-website.md) — staat in project-root: `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/PLAN-website.md`.
+
+---
+
+## 🏷️ REBRAND-PLAN — sessie post-52 (2026-05-27) — NIET UITGEVOERD
+
+> **Status:** plan geschreven, ligt klaar voor een aparte big-bang rebrand-sessie. Pas uitvoeren als de 8 OPEN VRAGEN in sectie 14 van het plan beantwoord zijn. Verwijst naar [`PLAN-REBRAND-OMNI-DJ-2026-05-27.md`](PLAN-REBRAND-OMNI-DJ-2026-05-27.md).
+
+**Aanleiding.** Sjuul wil de volledige rebrand Clip Live / Clipdrop / Clip Drop Live / DJClips → **Omni DJ (by MONO LABS)** in één big-bang sessie afronden: code, externe services (Stripe + Supabase + Cloudflare + Gmail/Workspace), .app-bundle, domein omni.com, alle docs. Geen users, dus Stripe customers + Supabase auth blijven behouden (alleen rename). Sjuul zelf geeft als input: `omnidj@monohq-labs.com` + `sjuul@monohq-labs.com` whitelisten als admin-accounts.
+
+**Scope-scan-resultaten (deze sessie, vóór folder-rename van sessie 59).** Ik heb een volledige grep gedraaid over de toenmalige `/Clip Live/`-folder en vond **±900 occurrences in 71 files**, verspreid over **5 verschillende oude merknamen** die door elkaar in de codebase staan:
+
+- `Clip Live` (app-titel, env-vars `CLIP_LIVE_*`, Bundle ID `com.sjuulstudios.cliplive`, localStorage `clipLive.*`, feature-flag `clipLiveRedesignV2`) — ±500 hits
+- `Clipdrop` / `Clip Drop` (Supabase migrations comments, oude `CLIP DROP DJ-SETS`-folder, **Supabase project display-name = "Clip Drop Live"**) — ±50 hits
+- `Clipdrop Live` / `clipdroplive.com` (landing-pagina title, og:url, canonical) — ±30 hits
+- `DJClips` / `djclips.nl` (beoogd productie-domein, GitHub-repo `sjuulstudios/djclips.nl-by-MONO-LABS`, reset-password footer, wachtwoord-blacklist in auth.py:418) — ±75 hits
+- `Sjuul Studios` / `sjuulstudios` (copyright PyInstaller spec, Apple Notary, KvK/VAT context in Stripe webhook) — ±40 hits
+
+**Wat het plan dekt.** File-by-file breakdown (sectie 3), definitieve naamgebruiks-tabel per context (sectie 2), exacte sed-commando's voor de code-rebrand (sectie 7), stap-voor-stap dashboard-instructies voor Supabase (project rename + email-templates + custom SMTP + URL-allowlist + admin-whitelisting via SQL), Stripe (account-branding + products renamen — IDs blijven gelijk), Cloudflare (nameservers + DNS-records + Pages-deploy), Gmail/Workspace (App Password voor SMTP, DKIM/SPF/DMARC, email-aliassen via Cloudflare Email Routing), .app-rebuild met nieuwe Bundle ID `com.monolabs.omnidj` + nieuwe paths in launcher.py, verificatie-checklist (sectie 10), risico's + rollback-procedure (sectie 12). Big-bang volgorde-overzicht in sectie 13. Verwachte sessie-tijd: 4-6u actief + 1-24u DNS-propagatie passief.
+
+**Email-whitelist mechanisme.** Code heeft géén email-allowlist. Whitelisting loopt via Supabase `profiles.role='admin'` + `plan='studio'`. SQL-snippet zit in plan sectie 5.1 stap 5. Sjuul moet eerst beide accounts via normale signup-flow registreren (anders bestaat de profiles-rij niet), dan SQL draaien.
+
+**Belangrijkste vondsten die in plan-uitvoering aandacht vereisen.**
+1. **Supabase project heet "Clip Drop Live"** in dashboard — vierde brand-variant die in geen enkele code-string voorkomt, alleen in `supabase/.temp/linked-project.json`. Moet handmatig in dashboard hernoemd worden naar "Omni DJ".
+2. **`.env` met live secrets staat in repo-folder** (`dj-clip-cutter/.env`) — bestaand security-issue uit audit 2026-05-12. OPEN VRAAG (5 in plan) of we secrets roteren tijdens rebrand-sessie.
+3. **Wachtwoord-blacklist in `auth.py:418`** bevat `'clipdrop1', 'clipdrop123', 'djclips01', 'djclips123'` — moet mee in sed-replace.
+4. **9 localStorage-keys** met `clipLive.*` prefix (session/activeJobId/trim/exportDir/exportSettings/lastExportDir/wizardState/brandstack-collapsed/RedesignV2) — bestaande user-sessies worden gewist bij rename. Geen users dus geen probleem.
+5. **`~/Library/Application Support/Clip Live/`** macOS user-data folder wordt door launcher.py hernoemd naar `Omni DJ` — bestaande job_history.json gaat verloren bij upgrade. Geen users.
+6. **Landing-pagina hardcoded canonical = `clipdroplive.com`** (niet djclips.nl) — multiple oude domeinen ooit gebruikt.
+
+**8 OPEN VRAGEN in sectie 14 van het plan** die Sjuul moet beantwoorden vóór uitvoering: registrar van omni.com, GitHub-org `monolabs` bestaat, Apple Developer-account migratie, Stripe-entity juridische naam, `.env` secret-rotatie scope, workspace-folder rename via Finder of git, status oude `clipdrop-landing-deploy/`-folder, visual-identity placeholder vs nieuwe assets.
+
+**Wat dit plan NIET doet** (sectie 15): Stripe LIVE-mode activeren (eerst stabiel onder Omni DJ in TEST), marketing-launch / beta-uitnodiging-mails (per [[feedback_beta_flyer_skip]]), nieuw logo/visual identity-refresh (Sjuul werkt hier nog aan), Apple Developer migratie, Stripe entity wijzigen, `.env`-secrets roteren, git-history rewriten, `.bak`-backups rebranden.
+
+**Update na sessie 59.** Sjuul heeft op 28 mei alvast de folder-renames in Finder uitgevoerd ([[project-folder-renames-2026-05-28]]). De live code-paden zijn in sessie 59 gepatcht voor de folder-rename, maar alle andere rebrand-werk (sed-replace code + UI strings + .app-bundle + externe services + DNS + email-templates) wacht nog op de big-bang sessie volgens dit plan.
+
+**Bestand:** [`PLAN-REBRAND-OMNI-DJ-2026-05-27.md`](PLAN-REBRAND-OMNI-DJ-2026-05-27.md) — staat in project-root (op nieuwe pad: `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/PLAN-REBRAND-OMNI-DJ-2026-05-27.md`).
+
+---
+
+## 📁 FOLDER-RENAMES — sessie 59 (2026-05-28)
+
+Sjuul heeft handmatig in Finder drie folders hernoemd. De nieuwe namen zijn:
+
+| Was | Is nu |
+|---|---|
+| `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/` | `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/` |
+| `Clip Live/dj-clip-cutter/` | `Omni DJ/Omni DJ/` |
+| `Omni DJ/Omni DJ/CLIP DROP DJ - SETS/` | `Omni DJ/Omni DJ/OMNI DJ - TEST DJ-SETS/` |
+
+**Claude heeft toegang** tot `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/` via cowork-mount. Alle Read/Write/Edit/Grep/Glob werkt direct op die nieuwe pad-structuur.
+
+### Code-impact-check (uitgevoerd sessie 59)
+
+Scan gedaan met `Clip Live/dj-clip-cutter` + `CLIP DROP DJ - SETS` + `CLIP DROP DJ-SETS` patterns. Resultaat:
+
+**A. Gepatcht (echt break-risico):**
+- `Omni DJ/build_sess53.sh` regel 3 — executable cd-commando
+- `Omni DJ/test_export_settings.py` regel 11 — docstring instructie
+- `Omni DJ/scripts/cleanup_legacy_jobs.py` regels 14 + 25 — docstring instructies
+- `Omni DJ/supabase/functions/update-usage/index.ts` regel 29 — deploy-header
+- `Omni DJ/supabase/functions/create-portal-session/index.ts` regel 19 — deploy-header
+- `Omni DJ/supabase/functions/stripe-webhook/index.ts` regel 25 — deploy-header
+- `Omni DJ/supabase/functions/create-checkout-session/index.ts` regel 24 — deploy-header
+- `Omni DJ/supabase/functions/stripe-webhook/README.md` regels 10 + 49 — deploy-instructies
+- `Omni DJ/static/index.html` regels 11566 + 11610 — UI placeholder voor large-file path picker (was "CLIP DROP DJ-SETS", nu "OMNI DJ - TEST DJ-SETS")
+
+**B. BEWUST NIET aangeraakt (geen scope deze sessie):**
+- `launcher.py` regel 58/60/65 — gebruikt `~/Library/Application Support/Clip Live/` als macOS user-data folder. Hernoemen zou alle bestaande user-data orphaned maken. Per memory `project_omni_dj_rebrand.md`: aparte rebrand-sessie.
+- `CLIP_LIVE_USER_DATA` env-var in `app.py`, `runtime_config.py` — zelfde reden.
+- `ClipLive.spec`, `build_macos.sh`, `entitlements.plist`, `CFBundleName=Clip Live` — bundle/app-naam. Aparte rebrand-sessie.
+- Alle `.md` history-files (PLAN-*, SESSIE-*, archives) — historisch correct dat ze "Clip Live" zeggen.
+- Alle `*.bak` backups.
+
+### Verificatie
+```
+grep -r "Clip Live/dj-clip-cutter\|CLIP DROP DJ - SETS\|CLIP DROP DJ-SETS" \
+  /Users/sjuulsmits/Documents/Claude/Projects/Omni\ DJ \
+  --include="*.py" --include="*.sh" --include="*.ts" \
+  --include="*.html" --include="*.plist" --include="*.spec" \
+  --include="*.json" --include="*.css"
+```
+→ 0 hits. Alle live code clean.
+
+### Update voor jezelf in toekomstige sessies
+Wanneer je `cd` doet, gebruik nu: `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ"` (twee keer Omni DJ, want subfolder).
+
+---
+
+## ⚡ START HIER — sessie 59 vervolg (28 mei middag/avond)
 
 **Project:** Omni DJ — DJ-set → vertical/landscape clip generator
 **Eigenaar:** MONO LABS
-**Branch actief:** `feature/auto-mode-and-brand-redesign` (sessies 57+58 NOG NIET committed)
-**Bundle:** `/Applications/Clip Live.app` (sessie 56 versie, sessies 57+58 alleen op disk)
-**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh` → http://127.0.0.1:5555
+**Branch actief:** `feature/auto-mode-and-brand-redesign` (sessies 57+58 wel committed, sessie 59-werk nog niet)
+**Bundle:** `/Applications/Clip Live.app` (sessie 56 versie, sessies 57+58+59 alleen op disk)
+**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ" && ./start.sh` → http://127.0.0.1:5555
 
-### Status na sessie 58
+### Status na vervolg-sessie 59
 
-Sessie 58 deed live smoketest + security audit + UI/a11y van sessies 56-57 features. **8 fixes direct doorgevoerd, 6 open items voor Sjuul's review**. Lees `SESSIE58-AUTONOMOUS-LOG.md` voor alle details.
+Sessie 58 was sluitend (zie hieronder). Sessie 59 vervolg deed:
 
-**Belangrijkste fixes deze sessie:**
-1. Login-scherm opgeschoond: logo+balk-achtergrond+DJ-set studio sublabel weg, vervangen door "Omni DJ" wordmark, active-tab pill werkt nu
-2. Bug A: `v2-modal-bg` lekte als pagina-element in legacy-mode → CSS-fix toegevoegd
-3. Bug B: Escape sloot v2-modals niet → globale keydown-handler toegevoegd
-4. 4 user-zichtbare "Clip Live" copy → "Omni DJ" (sidebar brand-row + browser title BEWUST uit scope voor aparte rebrand-sessie)
-5. 4 em-dashes verwijderd uit user-copy (Brand hero, Auto-mode hero, Calendar sub, YouTube title default)
-6. Security audit groen op XSS (escapeHtml werkt op alle brand-velden), geen service_role in frontend, geen eval()
-7. UI/a11y: 51 focusable in Brand, tekst-contrast AAA
+**1. Pre-fix login UI (op verzoek tijdens sessie-start):**
+- Login-scherm balk-achtergrond + logo + "DJ-set studio" sublabel weg, "Omni DJ" wordmark, active-tab pill werkt nu.
+- Live geverifieerd via Chrome MCP.
+
+**2. Selection-tray verhuisd naar top-overlay balk (`#export-sel-bar`):**
+- Nieuwe inline `.est-tile` met 9:16 vertical thumbnails, dun text-balkje (naam + tijdstamp), kruisje exact in rechterbovenhoek met fade-in op hover.
+- Hover-video: muted-loop start meteen, audio gaat aan zodra video playable is. Mouseleave pauseert + cleant src voor RAM.
+- Legacy bottom-tray `#selection-preview-bar` wordt in v2 verborgen via CSS-override.
+- **NIET live geverifieerd in browser** (mount viel weg, code-side wel klaar). Sjuul moet visueel testen.
+
+**3. Auth-incident diagnose — VEILIG (geen leak):**
+- Sjuul meldde "Library toont sets van ander account".
+- Diagnose: 7 sets in Library, ALLEMAAL onder user_id `d86a3a54...` = `business@sjuulstudios.com`.
+- Backend (`/api/history`, `/api/clip/`, `_require_job_access`) doet correcte ownership-check + 404-by-default — geen RLS-bypass.
+- Conclusie afgewacht (Sjuul moet bevestigen): zijn de 4× Lisa Korver + 2× Ediine + 1× Franky inderdaad allemaal van zijn business@ account, of zit er een set tussen van ander account?
+- Preventief: localStorage cache-residue fix klaar voor implementatie (oude trim/activeJobId keys uit vorige sessies).
+- Volledig rapport in `AUTH-INCIDENT-2026-05-28.md`.
+
+**4. Feature-lijst van 28 mei vastgelegd (14 items):**
+- Quick wins: Drops-filter weg, Edit/Style/Brand-buttons editor-header weg, Cue points header weg, layout-shift filters omhoog, Sorted-by-energy weg, "+ New set" weg, 4 aspect-ratio filters in Library (9:16, 1:1, 4:5, 16:9), Calendar zondag-fix + scrollbar styling.
+- Grote items met plannen vereist: Brand-page visueel/compact, Social-page persoonlijker (profielfoto's), Insights uitbreiding (account-growth + per-post detail).
+- Volledige plan in `PLAN-2026-05-28-FEATURE-CLEANUP.md`.
 
 ### Volgende stap voor Sjuul (in volgorde)
 
-1. **Visuele finale check** (5-10 min): open dev-server in Chrome, v2-flag aan, doorloop alle 9 views
-2. **Git commit** alle wijzigingen zitten in `static/index.html` + `SESSIE58-AUTONOMOUS-LOG.md`
-3. **PyInstaller rebuild** als alles groen is (`./build_macos.sh dmg`)
-4. **Rebrand-pass** sidebar brand-row + browser title + bundle metadata (aparte sessie 59+ van 4-6u samen met Claude)
-
-Volledige stap-voor-stap commando's staan in `SESSIE58-AUTONOMOUS-LOG.md` onder "Wat Sjuul nu moet doen".
+1. **Antwoord op auth-vraag** (zie `AUTH-INCIDENT-2026-05-28.md` einde): zijn de 7 zichtbare projects allemaal van business@sjuulstudios.com of zat er iets tussen van een ander account?
+2. **Selection-tray visueel testen** in dev-server v2 op http://127.0.0.1:5555: selecteer 2-3 clips in Library Clips-view, check de tray bovenaan met 9:16 thumbs + hover-audio + kruisje-op-hoek.
+3. **Plannen-batch goedkeuren of bijsturen** (`PLAN-2026-05-28-FEATURE-CLEANUP.md`): per quick win OK/skip, per groot plan A/B/C OK voor implementatie of redesign.
+4. **Daarna**: commit sessie 59 wijzigingen + rebuild.
 
 ### Open items uit sessie 58 (niet kritisch, voor latere sessies)
 
@@ -45,10 +359,16 @@ Volledige stap-voor-stap commando's staan in `SESSIE58-AUTONOMOUS-LOG.md` onder 
 - Responsive cross-check op 980px + <700px
 - Cross-browser Safari check
 
+### Open items uit sessie 59 vervolg (28 mei middag)
+
+- Cache-residue fix nog te implementeren: hook in `postLoginBoot` die stale `clipLive.trim.<jobid>.*` en `clipLive.activeJobId` weghaalt als jobid niet in `/api/history` zit
+- 14 feature-cleanup items wachten op Sjuul's go/no-go per item
+- 3 grote plannen (Brand-visueel, Social-persoonlijker, Insights-uitbreiding) wachten op Sjuul's OK
+
 ### Toestemmingen al doorgegeven (lopen door)
 ✅ Computer-use voor app management
 ✅ Bash terminal voor dev-server, builds, tests
-✅ File-access op heel `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/`
+✅ File-access op heel `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/`
 ✅ Supabase migration-files schrijven (geen `db push`)
 ✅ `pip install watchdog` in venv
 ✅ Git commits + branch werk
@@ -69,7 +389,7 @@ Volledige stap-voor-stap commando's staan in `SESSIE58-AUTONOMOUS-LOG.md` onder 
 **Eigenaar:** MONO LABS
 **Branch actief:** `feature/auto-mode-and-brand-redesign` (afgesplitst van main in sessie 57, nog niet gemerged)
 **Bundle:** `/Applications/Clip Live.app` (sessie 56 versie — sessie 57 wijzigingen NIET in bundle, alleen in `static/index.html` op disk)
-**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh` → http://127.0.0.1:5555
+**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ" && ./start.sh` → http://127.0.0.1:5555
 
 ### EERSTE TAAK SESSIE 58 — VOLLEDIGE AUTONOME SMOKETEST + SECURITY + UI
 
@@ -184,7 +504,7 @@ Diepere UX-pass op de 3 nieuwe fases:
 
 ✅ Computer-use voor app management
 ✅ Bash terminal voor dev-server, builds, tests
-✅ File-access op heel `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/`
+✅ File-access op heel `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/`
 ✅ Supabase migration-files schrijven (geen `db push`)
 ✅ `pip install watchdog` in venv
 ✅ Git commits + branch werk
@@ -264,7 +584,7 @@ Sjuul gaf akkoord op `PLAN-AUTO-MODE-2026-05-28.md` + akkoord op:
 **Domein:** `www.omnidj.com` (nog niet gekoppeld). `djclips.nl` vervalt volledig.
 **Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/`
 **Bundle:** `/Applications/Clip Live.app` (oude sessie 53 versie — sessies 54+55+56 NIET in bundle)
-**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh` → http://127.0.0.1:5555
+**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ" && ./start.sh` → http://127.0.0.1:5555
 
 ### Wat Claude vannacht autonoom heeft gedaan
 
@@ -460,7 +780,7 @@ mv "/Applications/Clip Live.PRE-SESSIE56.app" "/Applications/Clip Live.app"
 **Domein:** `www.omnidj.com` (nog niet gekoppeld). `djclips.nl` vervalt volledig.
 **Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/`
 **Bundle:** `/Applications/Clip Live.app` (oude versie, sessie 53 fixes erin — Fase 5 NIET in bundle)
-**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh` → http://127.0.0.1:5555
+**Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ" && ./start.sh` → http://127.0.0.1:5555
 
 ### Status na sessie 55 — Fase 5 live geverifieerd + alle bugs gefixt
 
