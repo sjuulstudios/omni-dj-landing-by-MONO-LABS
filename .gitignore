@@ -68,3 +68,4 @@ supabase/.temp/
 node_modules/
 npm-debug.log*
 yarn-debug.log*
+omni-dj-CODE-backup-*.tar.gz

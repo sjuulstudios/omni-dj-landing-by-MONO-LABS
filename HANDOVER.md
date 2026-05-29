@@ -4,18 +4,25 @@
 
 ---
 
-## 🌐 START HIER — sessie 61 (2026-05-29) — WEBSITE PREMIUM PASS UITGEVOERD
+## 🌐 START HIER — sessie 62 (2026-05-29) — LANDING GEPUSHT NAAR GITHUB ✅
 
-> **Status:** volledige premium pass over omnidj.com + 2 rondes feedback-fixes, live geverifieerd via Chrome op Sjuul's Mac. Git commit gedaan (niet gepusht). Beslissingen + details in `PLAN-website-premium-pass-DECISIONS-2026-05-29.md`.
+> **Status:** landing-page-werk staat nu op GitHub. Remote gekoppeld (HTTPS), 2 commits gepusht naar branch `feature/auto-mode-and-brand-redesign`. Premium-pass-details in `PLAN-website-premium-pass-DECISIONS-2026-05-29.md`.
 
 **Locatie:** `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/omnidj.com/`
-**Branch:** `feature/auto-mode-and-brand-redesign` · **Commit:** `dbe8240` (89 files, geen node_modules/tmp/build). **NIET gepusht.**
+**Remote:** `origin` = `https://github.com/sjuulstudios/omni-dj-landing-by-MONO-LABS.git` (HTTPS, repo public, hernoemd vanaf djclips.nl-by-MONO-LABS).
+**Branch:** `feature/auto-mode-and-brand-redesign` → gepusht, tracking `origin/feature/auto-mode-and-brand-redesign`.
+**Remote state:** `feature/auto-mode-and-brand-redesign` @ `ef89022` · `main` @ `d98cf78` (oude losse landing, ongemoeid). **Nog NIET gemerged naar main.**
+**Gepushte commits:** `dbe8240` (omnidj.com site + premium pass) + `ef89022` (folder-rename dj-clip-cutter → Omni DJ + docs/landing/MP4-sync).
 **Dev-server:** `cd omnidj.com && npm run dev` → localhost:3000. **Remotion render:** `cd omnidj.com/remotion && npm run render:all`.
+
+> **Auth-noot:** HTTPS-push vereist GitHub Personal Access Token (PAT) als wachtwoord. Sjuul pusht zelf vanuit Terminal; creds zitten in zijn macOS keychain. Geen token in repo/bestanden opgeslagen.
+
+> **.gitignore-uitbreiding (sessie 62, `Omni DJ/.gitignore`):** `OMNI DJ - TEST DJ-SETS/` (12GB), `yolov8n.pt` + `*.pt`, `zibQMEOQ` toegevoegd — anders zou de 39GB-app-map met testvideo's mee-committen. Al genegeerd: output/ uploads/ venv/ dist/ build/ __pycache__/.
 
 ### ⏭️ EERSTE TAKEN VOLGENDE SESSIE (Sjuul's prioriteit, in volgorde)
 
-1. **`git push`** van de landing-page-commit (`dbe8240` op `feature/auto-mode-and-brand-redesign`). Sjuul wil dit als eerste. Vraag of er een remote is en of dit naar die branch of een nieuwe push moet.
-2. **Tool-overview + auto-mode sectie-ruimte verkleinen.** De animatie staat hoog in de sectie met te veel verticale leegte eronder vóór de volgende sectie. Strakker maken (sectie-padding / animatie-positie). Bekend en akkoord; nog niet uitgevoerd.
+1. ✅ **`git push`** — GEDAAN sessie 62. Remote gekoppeld + 2 commits gepusht. Branch nog niet gemerged naar `main` (bewust; aparte beslissing).
+2. **Tool-overview + auto-mode sectie-ruimte verkleinen.** De animatie staat hoog in de sectie met te veel verticale leegte eronder vóór de volgende sectie. Strakker maken (sectie-padding / animatie-positie). Bekend en akkoord; nog niet uitgevoerd. **= nu de eerstvolgende code-taak.**
 
 ### Wat deze sessie is gedaan (premium pass, alles live geverifieerd)
 
