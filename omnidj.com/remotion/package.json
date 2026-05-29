@@ -1,0 +1,23 @@
+{
+  "name": "omnidj-remotion",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render:logo": "remotion render src/index.ts LogoReveal ../public/remotion/logo-reveal.mp4 --codec=h264 --crf=18",
+    "render:automode": "remotion render src/index.ts AutoModePipeline ../public/remotion/auto-mode.mp4 --codec=h264 --crf=18",
+    "render:flow": "remotion render src/index.ts ToolOverviewFlow ../public/remotion/tool-flow.mp4 --codec=h264 --crf=18",
+    "render:all": "npm run render:logo && npm run render:automode && npm run render:flow"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.367",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.367"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "typescript": "5.5.3"
+  }
+}

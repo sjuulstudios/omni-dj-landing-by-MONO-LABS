@@ -1,0 +1,406 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #000000;
+  --ink-900: #0A0A0A;
+  --ink-800: #141414;
+  --ink-700: #1F1F1F;
+  --creme: #F5EFE3;
+  --creme-dim: #E8DFC9;
+  --creme-mute: rgba(245, 239, 227, 0.72);
+  --creme-faint: rgba(245, 239, 227, 0.32);
+  --creme-line: rgba(245, 239, 227, 0.12);
+  --orange: #FF6A1A;
+  --orange-hover: #FF5500;
+  /* Signature easing — "The Drop": fast acceleration, hard decel. */
+  --ease-drop: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Overshoot easing — used for chevrons / playful micro-interactions only. */
+  --ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Legacy alias kept pointing at the signature easing for backward compat. */
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Monospace numeric stack (Geist Mono via next/font, system fallback). */
+  --font-mono: var(--font-geist-mono), "SF Mono", "JetBrains Mono", "Roboto Mono", ui-monospace, "Menlo", "Consolas", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ink);
+  color: var(--creme);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  font-size: 17px;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--orange);
+  color: var(--ink);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+img, svg, video {
+  display: block;
+  max-width: 100%;
+}
+
+/* ---- shared building blocks ---- */
+.page-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+@media (max-width: 768px) {
+  .page-shell {
+    padding: 0 20px;
+  }
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--creme-mute);
+}
+
+.headline-hero {
+  font-size: clamp(40px, 6vw, 88px);
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+.headline-section {
+  font-size: clamp(32px, 4.5vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+.headline-h3 {
+  font-size: clamp(22px, 2.5vw, 32px);
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.body-lg {
+  font-size: 20px;
+  line-height: 1.5;
+  font-weight: 300;
+}
+
+.body-default {
+  font-size: 17px;
+  line-height: 1.55;
+  font-weight: 300;
+}
+
+/* ---- monospace numerics ---- */
+.font-mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: -0.01em;
+}
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--creme-mute);
+  font-feature-settings: "tnum" 1;
+}
+
+/* ---- buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  border-radius: 999px;
+  transition: all 200ms var(--ease-smooth);
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.btn-orange {
+  background: var(--orange);
+  color: var(--ink);
+}
+.btn-orange:hover {
+  background: var(--orange-hover);
+  transform: translateY(-1px);
+}
+
+.btn-creme {
+  background: var(--creme);
+  color: var(--ink);
+}
+.btn-creme:hover {
+  background: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--creme);
+  border: 1px solid rgba(245, 239, 227, 0.32);
+}
+.btn-outline:hover {
+  border-color: var(--creme);
+  background: rgba(245, 239, 227, 0.04);
+}
+
+.btn-outline-dark {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid rgba(10, 10, 10, 0.3);
+}
+.btn-outline-dark:hover {
+  border-color: var(--ink);
+  background: rgba(10, 10, 10, 0.04);
+}
+
+/* ---- 8-circle logo mark ---- */
+.omni-mark {
+  display: inline-block;
+  position: relative;
+}
+
+.omni-mark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.omni-mark-spin {
+  animation: spinSlow 12s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes spinSlow {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ---- entry animations ---- */
+.fade-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 700ms var(--ease-smooth), transform 700ms var(--ease-smooth);
+}
+.fade-up.in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- shared premium keyframes ---- */
+@keyframes dropPulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50%      { transform: scale(1.35); opacity: 1; }
+}
+@keyframes breatheRing {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.6; }
+}
+@keyframes glowDrift {
+  0%   { transform: translate3d(-8%, 0, 0); }
+  100% { transform: translate3d(8%, 0, 0); }
+}
+@keyframes drawLine {
+  from { stroke-dashoffset: var(--dash, 1000); }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* ---- pricing: recommended-tier breathing ring ---- */
+.pricing-pro-ring {
+  animation: breatheRing 4s ease-in-out infinite;
+}
+
+/* ---- soft section bridge: creme fade-up over first 80px of a dark section ---- */
+.section-bridge {
+  position: relative;
+}
+.section-bridge::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 80px;
+  background: linear-gradient(180deg, rgba(245, 239, 227, 0.04) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ---- shared utilities ---- */
+.divider-creme {
+  border-top: 1px solid var(--creme-line);
+}
+
+.section {
+  padding: 120px 0;
+  /* keep section tops clear of the 72px sticky nav on anchor jumps */
+  scroll-margin-top: 96px;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 80px 0;
+  }
+}
+
+.section-creme {
+  background: var(--creme);
+  color: var(--ink);
+}
+
+.section-creme .body-default,
+.section-creme .body-lg {
+  color: rgba(10, 10, 10, 0.78);
+}
+
+.section-creme .eyebrow {
+  color: rgba(10, 10, 10, 0.55);
+}
+
+/* ---- placeholder boxes (for videos / screenshots) ---- */
+.placeholder-box {
+  background: var(--ink-800);
+  border: 1px dashed var(--creme-line);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--creme-mute);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+  position: relative;
+  overflow: hidden;
+}
+
+.placeholder-box.is-creme {
+  background: var(--creme-dim);
+  border-color: rgba(10, 10, 10, 0.18);
+  color: rgba(10, 10, 10, 0.55);
+}
+
+/* ---- scroll-snap helpers for carousels ---- */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ---- focus-visible ---- */
+:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ---- screen reader only ---- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .omni-mark-spin {
+    animation: none !important;
+  }
+  .fade-up {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ---- skip-link ---- */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  background: var(--creme);
+  color: var(--ink);
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-weight: 500;
+  z-index: 100;
+  transition: top 200ms var(--ease-smooth);
+}
+.skip-link:focus {
+  top: 16px;
+}
+
+/* ---- mobile size adjustments ---- */
+@media (max-width: 768px) {
+  .headline-hero {
+    font-size: clamp(36px, 9vw, 56px);
+  }
+  .headline-section {
+    font-size: clamp(28px, 7vw, 40px);
+  }
+  .btn {
+    height: 44px;
+    padding: 0 18px;
+    font-size: 14px;
+  }
+}
+
+/* ---- viewport balance on small screens ---- */
+@media (max-width: 480px) {
+  .page-shell {
+    padding: 0 16px;
+  }
+  .section {
+    padding: 60px 0;
+  }
+}

@@ -1,0 +1,9 @@
+# dependencies
+/node_modules
+
+# remotion output
+/out
+*.tsbuildinfo
+
+# misc
+.DS_Store
