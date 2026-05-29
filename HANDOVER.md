@@ -4,12 +4,51 @@
 
 ---
 
-## 🌐 START HIER — sessie 62 (2026-05-29) — LANDING GEPUSHT NAAR GITHUB ✅
+## 🏷️ START HIER — sessie 63 (2026-05-30) — CODE-SIDE REBRAND UITGEVOERD ✅
+
+> **Status:** de volledige code-side rebrand Clip Live → Omni DJ is uitgevoerd en geverifieerd. Externe services (Supabase/Stripe/Cloudflare/Workspace) en de .app-rebuild staan nog open — die moet Sjuul zelf doen (dashboards + lokale build). Domein gekozen = **omnidj.com** (niet omni.com uit het oude plan).
+
+**Wat is gedaan (code + docs):**
+- Merknaam-sweep over 75 bestanden: `Clip Live` / `Clipdrop` / `Clip Drop` / `Clipdrop Live` → **Omni DJ**.
+- Domein: `clipdroplive.com` / `djclips.nl` / `clipdrop.com` → **omnidj.com**. STRIPE-DNS-RUNBOOK `cliplive.app` → omnidj.com.
+- Bundle-ID `com.sjuulstudios.cliplive` → **`com.monolabs.omnidj`**.
+- Env-vars `CLIP_LIVE_USER_DATA/PORT/BIND` → **`OMNI_DJ_*`** (launcher.py zet, app.py + cutter.py lezen — geverifieerd consistent).
+- localStorage/sessionStorage keys `clipLive.*` + `clipLivePlanOverride/clipLiveActiveArtist/clipLiveArtists/clipLiveRedesignV2` → **`omniDj.*`** (14 keys, incl. template-literals).
+- Wachtwoord-blacklist + email-adressen (`business@sjuulstudios.com` → `omnidj@monohq-labs.com`, plan-conform).
+- `Sjuul Studios` → **MONO LABS** in copyright-context.
+- File-renames: `ClipLive.spec` → `OmniDJ.spec`, 3 mockup-HTMLs in root, 2 business-model docs (binary — interne inhoud nog handmatig).
+- launcher.py Linux-pad `~/.clip-live` → `~/.omni-dj`.
+
+**Verificatie (geen git nodig):** alle .py compileren schoon, alle JSON valide, 0 achtergebleven `CLIP_LIVE_` in code, HTML `<title>Omni DJ</title>`, spec CFBundleName = Omni DJ. **Niet** getest: live dev-server run (kan ik niet vanuit sandbox), .app-build.
+
+**Backups vóór rebrand:** git-branch `backup/pre-rebrand-20260529-1545` + `.backups/omni-dj-CODE-backup-20260529-1547.tar.gz`. Pre-rebrand git-commit `71d1aed`.
+
+### ⚠️ Git is NIET gecommit door Claude (sandbox-mount blokkeert git lock-cleanup)
+De rebrand-wijzigingen staan **uncommitted** in de working tree. Claude kon niet betrouwbaar committen omdat de sandbox git's lock-files niet kan opruimen. **Sjuul moet zelf committen + mergen + pushen** (Fix 1):
+```
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ"
+git add -A
+git commit -m "Rebrand: Clip Live -> Omni DJ (code, env-vars, localStorage, bundle-ID, docs)"
+git checkout main && git merge --ff-only feature/auto-mode-and-brand-redesign
+git push origin main
+```
+(Of eerst reviewen met `git diff HEAD` / `git status` voor je commit.)
+
+### ⏭️ Wat nog open is (Sjuul's kant)
+1. **Git commit + merge naar main + push** (zie hierboven) — Fix 1.
+2. **Dev-server smoketest:** `cd "Omni DJ" && ./start.sh` → check titel "Omni DJ", login zet `omniDj.session`, upload/export werkt.
+3. **Externe services** (PLAN-REBRAND sectie 5): Supabase rename + email-templates + SMTP + admin-whitelist SQL, Stripe products/branding, Cloudflare omnidj.com + DNS + Pages.
+4. **.app rebuild** met OmniDJ.spec (PLAN-REBRAND sectie 6) + oude `/Applications/Clip Live.app` weggooien.
+5. **Niet-kritieke resten** (bewust gelaten): `@sjuulstudios` mock social-handles in demo-data + plannen; sommige historische log-regels in HANDOVER-ARCHIVE.md; binary docx/xlsx interne inhoud; `dist/Clip Live/` oude build (regenereert bij rebuild).
+
+---
+
+## 🌐 sessie 62 (2026-05-29) — LANDING GEPUSHT NAAR GITHUB ✅
 
 > **Status:** landing-page-werk staat nu op GitHub. Remote gekoppeld (HTTPS), 2 commits gepusht naar branch `feature/auto-mode-and-brand-redesign`. Premium-pass-details in `PLAN-website-premium-pass-DECISIONS-2026-05-29.md`.
 
 **Locatie:** `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/omnidj.com/`
-**Remote:** `origin` = `https://github.com/sjuulstudios/omni-dj-landing-by-MONO-LABS.git` (HTTPS, repo public, hernoemd vanaf djclips.nl-by-MONO-LABS).
+**Remote:** `origin` = `https://github.com/sjuulstudios/omni-dj-landing-by-MONO-LABS.git` (HTTPS, repo public, hernoemd vanaf omnidj.com-by-MONO-LABS).
 **Branch:** `feature/auto-mode-and-brand-redesign` → gepusht, tracking `origin/feature/auto-mode-and-brand-redesign`.
 **Remote state:** `feature/auto-mode-and-brand-redesign` @ `ef89022` · `main` @ `d98cf78` (oude losse landing, ongemoeid). **Nog NIET gemerged naar main.**
 **Gepushte commits:** `dbe8240` (omnidj.com site + premium pass) + `ef89022` (folder-rename dj-clip-cutter → Omni DJ + docs/landing/MP4-sync).
@@ -232,12 +271,13 @@ npm run dev
 
 > **Status:** plan geschreven, ligt klaar voor een aparte big-bang rebrand-sessie. Pas uitvoeren als de 8 OPEN VRAGEN in sectie 14 van het plan beantwoord zijn. Verwijst naar [`PLAN-REBRAND-OMNI-DJ-2026-05-27.md`](PLAN-REBRAND-OMNI-DJ-2026-05-27.md).
 
-**Aanleiding.** Sjuul wil de volledige rebrand Clip Live / Clipdrop / Clip Drop Live / DJClips → **Omni DJ (by MONO LABS)** in één big-bang sessie afronden: code, externe services (Stripe + Supabase + Cloudflare + Gmail/Workspace), .app-bundle, domein omni.com, alle docs. Geen users, dus Stripe customers + Supabase auth blijven behouden (alleen rename). Sjuul zelf geeft als input: `omnidj@monohq-labs.com` + `sjuul@monohq-labs.com` whitelisten als admin-accounts.
+**Aanleiding.** Sjuul wil de volledige rebrand Omni DJ / Omni DJ / Omni DJ / DJClips → **Omni DJ (by MONO LABS)** in één big-bang sessie afronden: code, externe services (Stripe + Supabase + Cloudflare + Gmail/Workspace), .app-bundle, domein omni.com, alle docs. Geen users, dus Stripe customers + Supabase auth blijven behouden (alleen rename). Sjuul zelf geeft als input: `omnidj@monohq-labs.com` + `sjuul@monohq-labs.com` whitelisten als admin-accounts.
 
-**Scope-scan-resultaten (deze sessie, vóór folder-rename van sessie 59).** Ik heb een volledige grep gedraaid over de toenmalige `/Clip Live/`-folder en vond **±900 occurrences in 71 files**, verspreid over **5 verschillende oude merknamen** die door elkaar in de codebase staan:
+**Scope-scan-resultaten (deze sessie, vóór folder-rename van sessie 59).** Ik heb een volledige grep gedraaid over de toenmalige `/Omni DJ/`-folder en vond **±900 occurrences in 71 files**, verspreid over **5 verschillende oude merknamen** die door elkaar in de codebase staan:
 
+> **Historische naam-archeologie (oude merknamen vóór rebrand sessie 63) — bewust niet mee-gerebrand, documenteert wat er WAS:**
 - `Clip Live` (app-titel, env-vars `CLIP_LIVE_*`, Bundle ID `com.sjuulstudios.cliplive`, localStorage `clipLive.*`, feature-flag `clipLiveRedesignV2`) — ±500 hits
-- `Clipdrop` / `Clip Drop` (Supabase migrations comments, oude `CLIP DROP DJ-SETS`-folder, **Supabase project display-name = "Clip Drop Live"**) — ±50 hits
+- `Clipdrop` / `Clip Drop` (Supabase migrations comments, oude `CLIP DROP DJ-SETS`-folder, Supabase project display-name = "Clip Drop Live") — ±50 hits
 - `Clipdrop Live` / `clipdroplive.com` (landing-pagina title, og:url, canonical) — ±30 hits
 - `DJClips` / `djclips.nl` (beoogd productie-domein, GitHub-repo `sjuulstudios/djclips.nl-by-MONO-LABS`, reset-password footer, wachtwoord-blacklist in auth.py:418) — ±75 hits
 - `Sjuul Studios` / `sjuulstudios` (copyright PyInstaller spec, Apple Notary, KvK/VAT context in Stripe webhook) — ±40 hits
@@ -247,12 +287,12 @@ npm run dev
 **Email-whitelist mechanisme.** Code heeft géén email-allowlist. Whitelisting loopt via Supabase `profiles.role='admin'` + `plan='studio'`. SQL-snippet zit in plan sectie 5.1 stap 5. Sjuul moet eerst beide accounts via normale signup-flow registreren (anders bestaat de profiles-rij niet), dan SQL draaien.
 
 **Belangrijkste vondsten die in plan-uitvoering aandacht vereisen.**
-1. **Supabase project heet "Clip Drop Live"** in dashboard — vierde brand-variant die in geen enkele code-string voorkomt, alleen in `supabase/.temp/linked-project.json`. Moet handmatig in dashboard hernoemd worden naar "Omni DJ".
+1. **Supabase project heet "Omni DJ"** in dashboard — vierde brand-variant die in geen enkele code-string voorkomt, alleen in `supabase/.temp/linked-project.json`. Moet handmatig in dashboard hernoemd worden naar "Omni DJ".
 2. **`.env` met live secrets staat in repo-folder** (`dj-clip-cutter/.env`) — bestaand security-issue uit audit 2026-05-12. OPEN VRAAG (5 in plan) of we secrets roteren tijdens rebrand-sessie.
-3. **Wachtwoord-blacklist in `auth.py:418`** bevat `'clipdrop1', 'clipdrop123', 'djclips01', 'djclips123'` — moet mee in sed-replace.
+3. **Wachtwoord-blacklist in `auth.py:418`** bevat `'omnidj1', 'omnidj123', 'omni1', 'omni123'` — moet mee in sed-replace.
 4. **9 localStorage-keys** met `clipLive.*` prefix (session/activeJobId/trim/exportDir/exportSettings/lastExportDir/wizardState/brandstack-collapsed/RedesignV2) — bestaande user-sessies worden gewist bij rename. Geen users dus geen probleem.
-5. **`~/Library/Application Support/Clip Live/`** macOS user-data folder wordt door launcher.py hernoemd naar `Omni DJ` — bestaande job_history.json gaat verloren bij upgrade. Geen users.
-6. **Landing-pagina hardcoded canonical = `clipdroplive.com`** (niet djclips.nl) — multiple oude domeinen ooit gebruikt.
+5. **`~/Library/Application Support/Omni DJ/`** macOS user-data folder wordt door launcher.py hernoemd naar `Omni DJ` — bestaande job_history.json gaat verloren bij upgrade. Geen users.
+6. **Landing-pagina hardcoded canonical = `omnidj.com`** (niet omnidj.com) — multiple oude domeinen ooit gebruikt.
 
 **8 OPEN VRAGEN in sectie 14 van het plan** die Sjuul moet beantwoorden vóór uitvoering: registrar van omni.com, GitHub-org `monolabs` bestaat, Apple Developer-account migratie, Stripe-entity juridische naam, `.env` secret-rotatie scope, workspace-folder rename via Finder of git, status oude `clipdrop-landing-deploy/`-folder, visual-identity placeholder vs nieuwe assets.
 
@@ -270,15 +310,15 @@ Sjuul heeft handmatig in Finder drie folders hernoemd. De nieuwe namen zijn:
 
 | Was | Is nu |
 |---|---|
-| `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/` | `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/` |
-| `Clip Live/dj-clip-cutter/` | `Omni DJ/Omni DJ/` |
+| `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/` | `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/` |
+| `Omni DJ/dj-clip-cutter/` | `Omni DJ/Omni DJ/` |
 | `Omni DJ/Omni DJ/CLIP DROP DJ - SETS/` | `Omni DJ/Omni DJ/OMNI DJ - TEST DJ-SETS/` |
 
 **Claude heeft toegang** tot `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/` via cowork-mount. Alle Read/Write/Edit/Grep/Glob werkt direct op die nieuwe pad-structuur.
 
 ### Code-impact-check (uitgevoerd sessie 59)
 
-Scan gedaan met `Clip Live/dj-clip-cutter` + `CLIP DROP DJ - SETS` + `CLIP DROP DJ-SETS` patterns. Resultaat:
+Scan gedaan met `Omni DJ/dj-clip-cutter` + `CLIP DROP DJ - SETS` + `CLIP DROP DJ-SETS` patterns. Resultaat:
 
 **A. Gepatcht (echt break-risico):**
 - `Omni DJ/build_sess53.sh` regel 3 — executable cd-commando
@@ -292,15 +332,15 @@ Scan gedaan met `Clip Live/dj-clip-cutter` + `CLIP DROP DJ - SETS` + `CLIP DROP 
 - `Omni DJ/static/index.html` regels 11566 + 11610 — UI placeholder voor large-file path picker (was "CLIP DROP DJ-SETS", nu "OMNI DJ - TEST DJ-SETS")
 
 **B. BEWUST NIET aangeraakt (geen scope deze sessie):**
-- `launcher.py` regel 58/60/65 — gebruikt `~/Library/Application Support/Clip Live/` als macOS user-data folder. Hernoemen zou alle bestaande user-data orphaned maken. Per memory `project_omni_dj_rebrand.md`: aparte rebrand-sessie.
-- `CLIP_LIVE_USER_DATA` env-var in `app.py`, `runtime_config.py` — zelfde reden.
-- `ClipLive.spec`, `build_macos.sh`, `entitlements.plist`, `CFBundleName=Clip Live` — bundle/app-naam. Aparte rebrand-sessie.
-- Alle `.md` history-files (PLAN-*, SESSIE-*, archives) — historisch correct dat ze "Clip Live" zeggen.
+- `launcher.py` regel 58/60/65 — gebruikt `~/Library/Application Support/Omni DJ/` als macOS user-data folder. Hernoemen zou alle bestaande user-data orphaned maken. Per memory `project_omni_dj_rebrand.md`: aparte rebrand-sessie.
+- `OMNI_DJ_USER_DATA` env-var in `app.py`, `runtime_config.py` — zelfde reden.
+- `OmniDJ.spec`, `build_macos.sh`, `entitlements.plist`, `CFBundleName=Omni DJ` — bundle/app-naam. Aparte rebrand-sessie.
+- Alle `.md` history-files (PLAN-*, SESSIE-*, archives) — historisch correct dat ze "Omni DJ" zeggen.
 - Alle `*.bak` backups.
 
 ### Verificatie
 ```
-grep -r "Clip Live/dj-clip-cutter\|CLIP DROP DJ - SETS\|CLIP DROP DJ-SETS" \
+grep -r "Omni DJ/dj-clip-cutter\|CLIP DROP DJ - SETS\|CLIP DROP DJ-SETS" \
   /Users/sjuulsmits/Documents/Claude/Projects/Omni\ DJ \
   --include="*.py" --include="*.sh" --include="*.ts" \
   --include="*.html" --include="*.plist" --include="*.spec" \
@@ -318,7 +358,7 @@ Wanneer je `cd` doet, gebruik nu: `cd "/Users/sjuulsmits/Documents/Claude/Projec
 **Project:** Omni DJ — DJ-set → vertical/landscape clip generator
 **Eigenaar:** MONO LABS
 **Branch actief:** `feature/auto-mode-and-brand-redesign` (sessies 57+58 wel committed, sessie 59-werk nog niet)
-**Bundle:** `/Applications/Clip Live.app` (sessie 56 versie, sessies 57+58+59 alleen op disk)
+**Bundle:** `/Applications/Omni DJ.app` (sessie 56 versie, sessies 57+58+59 alleen op disk)
 **Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ" && ./start.sh` → http://127.0.0.1:5555
 
 ### Status na vervolg-sessie 59
@@ -337,7 +377,7 @@ Sessie 58 was sluitend (zie hieronder). Sessie 59 vervolg deed:
 
 **3. Auth-incident diagnose — VEILIG (geen leak):**
 - Sjuul meldde "Library toont sets van ander account".
-- Diagnose: 7 sets in Library, ALLEMAAL onder user_id `d86a3a54...` = `business@sjuulstudios.com`.
+- Diagnose: 7 sets in Library, ALLEMAAL onder user_id `d86a3a54...` = `omnidj@monohq-labs.com`.
 - Backend (`/api/history`, `/api/clip/`, `_require_job_access`) doet correcte ownership-check + 404-by-default — geen RLS-bypass.
 - Conclusie afgewacht (Sjuul moet bevestigen): zijn de 4× Lisa Korver + 2× Ediine + 1× Franky inderdaad allemaal van zijn business@ account, of zit er een set tussen van ander account?
 - Preventief: localStorage cache-residue fix klaar voor implementatie (oude trim/activeJobId keys uit vorige sessies).
@@ -350,7 +390,7 @@ Sessie 58 was sluitend (zie hieronder). Sessie 59 vervolg deed:
 
 ### Volgende stap voor Sjuul (in volgorde)
 
-1. **Antwoord op auth-vraag** (zie `AUTH-INCIDENT-2026-05-28.md` einde): zijn de 7 zichtbare projects allemaal van business@sjuulstudios.com of zat er iets tussen van een ander account?
+1. **Antwoord op auth-vraag** (zie `AUTH-INCIDENT-2026-05-28.md` einde): zijn de 7 zichtbare projects allemaal van omnidj@monohq-labs.com of zat er iets tussen van een ander account?
 2. **Selection-tray visueel testen** in dev-server v2 op http://127.0.0.1:5555: selecteer 2-3 clips in Library Clips-view, check de tray bovenaan met 9:16 thumbs + hover-audio + kruisje-op-hoek.
 3. **Plannen-batch goedkeuren of bijsturen** (`PLAN-2026-05-28-FEATURE-CLEANUP.md`): per quick win OK/skip, per groot plan A/B/C OK voor implementatie of redesign.
 4. **Daarna**: commit sessie 59 wijzigingen + rebuild.
@@ -395,7 +435,7 @@ Sessie 58 was sluitend (zie hieronder). Sessie 59 vervolg deed:
 **Project:** Omni DJ — DJ-set → vertical/landscape clip generator
 **Eigenaar:** MONO LABS
 **Branch actief:** `feature/auto-mode-and-brand-redesign` (afgesplitst van main in sessie 57, nog niet gemerged)
-**Bundle:** `/Applications/Clip Live.app` (sessie 56 versie — sessie 57 wijzigingen NIET in bundle, alleen in `static/index.html` op disk)
+**Bundle:** `/Applications/Omni DJ.app` (sessie 56 versie — sessie 57 wijzigingen NIET in bundle, alleen in `static/index.html` op disk)
 **Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ" && ./start.sh` → http://127.0.0.1:5555
 
 ### EERSTE TAAK SESSIE 58 — VOLLEDIGE AUTONOME SMOKETEST + SECURITY + UI
@@ -415,12 +455,12 @@ Laad via ToolSearch wat nodig is:
 
 ##### BLOK 1 — Dev-server starten + live UI-check (Chrome MCP) [60-90 min]
 
-1. Check of `/Applications/Clip Live.app` draait → quit 'm met `mcp__computer-use__open_application` + `osascript -e 'tell application "Clip Live" to quit'` of via bash
-2. Start dev-server via bash: `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && nohup ./start.sh > /tmp/devserver.log 2>&1 &` — wacht ~5s tot Flask listening op 5555
+1. Check of `/Applications/Omni DJ.app` draait → quit 'm met `mcp__computer-use__open_application` + `osascript -e 'tell application "Omni DJ" to quit'` of via bash
+2. Start dev-server via bash: `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter" && nohup ./start.sh > /tmp/devserver.log 2>&1 &` — wacht ~5s tot Flask listening op 5555
 3. Verifieer met `curl -s http://127.0.0.1:5555/ | head -50` dat de page laadt
 4. Navigeer via Chrome MCP naar `http://127.0.0.1:5555`
-5. **Login indien nodig** — Sjuul's account is `business@sjuulstudios.com` (testen via Profile-card). Als auth-overlay verschijnt, log Sjuul in (vraag wachtwoord als nodig). Of test als anonymous user — voor UI-check is auth niet vereist.
-6. Console: `localStorage.setItem('clipLiveRedesignV2','1'); location.reload();` via Chrome MCP `javascript_tool`
+5. **Login indien nodig** — Sjuul's account is `omnidj@monohq-labs.com` (testen via Profile-card). Als auth-overlay verschijnt, log Sjuul in (vraag wachtwoord als nodig). Of test als anonymous user — voor UI-check is auth niet vereist.
+6. Console: `localStorage.setItem('omniDjRedesignV2','1'); location.reload();` via Chrome MCP `javascript_tool`
 7. **Loop alle views door en maak screenshot/text-dump van elke view:**
 
 | View | Check |
@@ -435,7 +475,7 @@ Laad via ToolSearch wat nodig is:
 | **Auto-mode** (NIEUW) | Free user → paywall-overlay met grote Upgrade-knop. Set tier via console: `STATE.tier='studio'` + reload. Dan: pipeline 6-staps grid (Publish heeft lock-ico voor Studio+), watch-folders card, brand-defaults card, publish-schedule grid, queue+recent, safety. Klik "Quick-enable: Review mode" → 5 stappen worden ON. Klik "+ Add folder" → modal opent. Set tier `studio_plus` + reload → schedule-grid wordt klikbaar. Klik conservative-preset → 3 tiktok-slots active. |
 | Settings | Local-first hero, Watch folder card, Profile card (Sjuul wilde Profile hier laten), Workspace card, Diagnostics. **Profile MOET hier nog staan** — niet verhuisd. |
 
-8. **Regressie-check:** zet v2-flag UIT (`localStorage.setItem('clipLiveRedesignV2','0')` + reload) — oude UI moet 100% intact zijn, geen layout-breuk.
+8. **Regressie-check:** zet v2-flag UIT (`localStorage.setItem('omniDjRedesignV2','0')` + reload) — oude UI moet 100% intact zijn, geen layout-breuk.
 9. **Console-errors monitoren tijdens hele check** via Chrome MCP `read_console_messages`. Alle echte errors loggen in `SESSIE58-AUTONOMOUS-LOG.md`.
 
 **Output van Blok 1:** lijst van bevindingen per view (✅ werkt / ⚠️ werkt maar issue / ❌ kapot). Screenshots optioneel maar handig voor lange-termijn referentie.
@@ -588,9 +628,9 @@ Sjuul gaf akkoord op `PLAN-AUTO-MODE-2026-05-28.md` + akkoord op:
 
 **Project:** Omni DJ — DJ-set → vertical/landscape clip generator
 **Eigenaar:** MONO LABS
-**Domein:** `www.omnidj.com` (nog niet gekoppeld). `djclips.nl` vervalt volledig.
-**Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/`
-**Bundle:** `/Applications/Clip Live.app` (oude sessie 53 versie — sessies 54+55+56 NIET in bundle)
+**Domein:** `www.omnidj.com` (nog niet gekoppeld). `omnidj.com` vervalt volledig.
+**Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/`
+**Bundle:** `/Applications/Omni DJ.app` (oude sessie 53 versie — sessies 54+55+56 NIET in bundle)
 **Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ" && ./start.sh` → http://127.0.0.1:5555
 
 ### Wat Claude vannacht autonoom heeft gedaan
@@ -646,16 +686,16 @@ Sjuul gaf 4 groene lichten: rebuild OK, volledige Omni DJ rebrand OK, Social/Cal
 
 Open Terminal en plak (één voor één):
 
-osascript -e 'tell application "Clip Live" to quit' 2>/dev/null
+osascript -e 'tell application "Omni DJ" to quit' 2>/dev/null
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 
 ./start.sh
 
 Open dan in Chrome: http://127.0.0.1:5555
 
 In browser:
-- v2-flag aan (klik linksonder of console: `localStorage.setItem('clipLiveRedesignV2','1')` + reload)
+- v2-flag aan (klik linksonder of console: `localStorage.setItem('omniDjRedesignV2','1')` + reload)
 - Klik **Social** in sidebar → 4 account-cards + Recent-posts feed
 - Klik **Calendar** → month-view, klik op een dag → schedule-modal opent → vul iets in → opslaan → event verschijnt in calendar-grid
 - Refresh pagina → draft is er nog (localStorage)
@@ -668,23 +708,23 @@ In browser:
 
 Stop dev-server (Ctrl+C in dezelfde terminal), dan:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 
 source venv/bin/activate
 
-mv "/Applications/Clip Live.app" "/Applications/Clip Live.PRE-SESSIE56.app"
+mv "/Applications/Omni DJ.app" "/Applications/Omni DJ.PRE-SESSIE56.app"
 
 ./build_macos.sh dmg
 
-mv "dist/Clip Live.app" "/Applications/"
+mv "dist/Omni DJ.app" "/Applications/"
 
-open "/Applications/Clip Live.app"
+open "/Applications/Omni DJ.app"
 
 Rollback bij issue:
 
-rm -rf "/Applications/Clip Live.app"
+rm -rf "/Applications/Omni DJ.app"
 
-mv "/Applications/Clip Live.PRE-SESSIE56.app" "/Applications/Clip Live.app"
+mv "/Applications/Omni DJ.PRE-SESSIE56.app" "/Applications/Omni DJ.app"
 
 **Stap 3 — Code-rebrand Omni DJ (aparte sessie 57+ samen met Claude)**
 - Plan staat klaar (PLAN-REBRAND-OMNI-DJ-2026-05-27.md)
@@ -709,7 +749,7 @@ mv "/Applications/Clip Live.PRE-SESSIE56.app" "/Applications/Clip Live.app"
 | Renderers exposed op window | OK renderSocial/renderCalendar/renderInsights |
 | NAV_MAP routes | OK social/calendar/insights → echte views |
 | Backward-compat `redesign-v2` class | OK 775 occurrences, ongewijzigd |
-| Backward-compat `clipLiveRedesignV2` key | OK 3 occurrences, ongewijzigd |
+| Backward-compat `omniDjRedesignV2` key | OK 3 occurrences, ongewijzigd |
 | Runtime smoketest (jsdom) | OK 3 renderers slagen, modal open/close/save OK, localStorage write OK |
 | Live verificatie via Chrome MCP | SKIPPED — vereist dev-server op host, zie limitatie hieronder |
 
@@ -784,9 +824,9 @@ mv "/Applications/Clip Live.PRE-SESSIE56.app" "/Applications/Clip Live.app"
 
 **Project:** Omni DJ — DJ-set → vertical/landscape clip generator
 **Eigenaar:** MONO LABS
-**Domein:** `www.omnidj.com` (nog niet gekoppeld). `djclips.nl` vervalt volledig.
-**Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/`
-**Bundle:** `/Applications/Clip Live.app` (oude versie, sessie 53 fixes erin — Fase 5 NIET in bundle)
+**Domein:** `www.omnidj.com` (nog niet gekoppeld). `omnidj.com` vervalt volledig.
+**Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/`
+**Bundle:** `/Applications/Omni DJ.app` (oude versie, sessie 53 fixes erin — Fase 5 NIET in bundle)
 **Dev-server:** `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ" && ./start.sh` → http://127.0.0.1:5555
 
 ### Status na sessie 55 — Fase 5 live geverifieerd + alle bugs gefixt
@@ -843,7 +883,7 @@ Volledige smoketest doorlopen via Chrome MCP + dev-server. **8 bugs gevonden en 
 1. **🔵 Visuele finale check** (5 min, Sjuul): hard refresh in Chrome (cmd+shift+R), doorklikken: Analyse → Library → klik project → Clips → terug Library → Settings → drop een file om upload-state te zien. Als alles soepel = klaar voor rebuild.
 2. **🟢 PyInstaller rebuild** → `./build_macos.sh dmg` om Fase 5 in productie-`.app` te krijgen. Volg INSTALLER-RUNBOOK.md.
 3. **🟢 Analyse-view progress hookup** — `analyseSetState()` helper staat klaar maar bestaande upload/processing-code roept 'm niet aan. Voor échte progress-doorvoer moet de bestaande progress-handler in app.py/socketio worden hergebruikt om `analyseSetState('processing', {pct, step})` aan te roepen. Werkt nu basaal maar progress-bar blijft op 0%.
-4. **🟢 Code-rebrand "Clip Live" → "Omni DJ"** (~4-6u aparte sessie). Sweep door static/index.html, launcher.py, app.py, auth.py, build_macos.sh, alle README's. App-icon, bundle-identifier (`com.sjuulstudios.cliplive` → `com.monolabs.omnidj`?), info_plist `CFBundleName`. Folder rename (`dj-clip-cutter/` → ?) is hoge-risico — apart plannen.
+4. **🟢 Code-rebrand "Omni DJ" → "Omni DJ"** (~4-6u aparte sessie). Sweep door static/index.html, launcher.py, app.py, auth.py, build_macos.sh, alle README's. App-icon, bundle-identifier (`com.monolabs.omnidj` → `com.monolabs.omnidj`?), info_plist `CFBundleName`. Folder rename (`dj-clip-cutter/` → ?) is hoge-risico — apart plannen.
 5. **🟢 omnidj.com koppelen** via Cloudflare. Nieuwe Cloudflare Pages-project + DNS-records.
 6. **🟢 Stripe live mode** — pas na omnidj.com live. Runbook STRIPE-DNS-RUNBOOK.md updaten.
 7. **🟢 Fase 5b multi-tenant data** — workspace_id + artist_id in Supabase RLS (UI staat al klaar, alleen data-laag mist)
@@ -882,7 +922,7 @@ Volledige smoketest doorlopen via Chrome MCP + dev-server. **8 bugs gevonden en 
 >
 > Sjuul vroeg om volledige smoketest om errors eruit te halen vóór hij zelf opnieuw doorliep. Strategie: dev-server starten, alle views in v2-modus + legacy doorlopen, console errors monitoren, bevindingen direct fixen, daarna re-test.
 >
-> Dev-server start vereiste eerst `osascript -e 'tell application "Clip Live" to quit'` + `kill -9 <PID>` voor het oude .app-Python-proces dat poort 5555 vasthield (bekend PyInstaller-issue, ook sessie 50).
+> Dev-server start vereiste eerst `osascript -e 'tell application "Omni DJ" to quit'` + `kill -9 <PID>` voor het oude .app-Python-proces dat poort 5555 vasthield (bekend PyInstaller-issue, ook sessie 50).
 >
 > ### Bug 1 — Library + Analyse stack-bug (CSS-conflict)
 >
@@ -906,7 +946,7 @@ Volledige smoketest doorlopen via Chrome MCP + dev-server. **8 bugs gevonden en 
 >
 > **Fix:**
 > ```js
-> const v2On = (function(){ try { return localStorage.getItem('clipLiveRedesignV2') === '1'; } catch(_){ return false; }})();
+> const v2On = (function(){ try { return localStorage.getItem('omniDjRedesignV2') === '1'; } catch(_){ return false; }})();
 > if (v2On) { switchView('analyse'); return; }
 > // ...legacy auto-resume flow blijft hieronder
 > ```
@@ -995,7 +1035,7 @@ Volledige smoketest doorlopen via Chrome MCP + dev-server. **8 bugs gevonden en 
 > 1. Sjuul's visuele finale check
 > 2. PyInstaller rebuild
 > 3. `analyseSetState()` progress-hookup vanuit upload/processing code
-> 4. Code-rebrand Clip Live → Omni DJ
+> 4. Code-rebrand Omni DJ → Omni DJ
 > 5. omnidj.com koppelen
 > 6. Stripe live mode
 > 7. Fase 5b multi-tenant data (Supabase RLS)
@@ -1011,7 +1051,7 @@ Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-
 - ✅ **5.2 CSS-restyles + content-strip** — Settings 2-koloms voorbereid, Workspace+Artists-card toegevoegd aan Settings (max 3 artists Studio, paywall FREE/PRO). Capabilities-sectie en Storage & large files-sectie **verborgen in v2** (wrap in `.v2-hide-in-v2`, DOM blijft voor backend-detection). "Pick the keepers" hero + eyebrow CSS-verborgen in v2-dashboard. Brand Stack + Publish display-titels v2.
 - ✅ **5.3 Analyse view rebuild** — Nieuwe `#view-analyse` met copy "Analyse a DJ set" / "Drag & drop or select your DJ-set." 3 sub-states (idle / uploading / processing) via class-toggle. Dropzone strak (geen [Choose file]-knop, geen "up to 4 hours"). 3 intake-tiles (Watch / Dropbox / Drive — laatste 2 disabled). `switchView('home'|'upload'|'processing')` redirect in v2 naar `analyse` met juiste sub-state.
 - ✅ **5.4 Library view NIEUW** — `#view-library` met Projects/Exports tabs (segmented control), 4-koloms grid. Projects-tab gebruikt `STATE.history`. Exports-tab fetcht `/api/exports`. Tile-klik op project → `openJob()` → switchView('dashboard') = Clips-view van dat project.
-- ✅ **5.5 Statische verificatie groen** — `html.parser` 0 errors, `node --check` groen, tag-balance check 0 mismatches (alleen `<input>`-delta verwacht want self-closing), alle nieuwe selectors aanwezig, "Clip Drop Live" = 0 matches.
+- ✅ **5.5 Statische verificatie groen** — `html.parser` 0 errors, `node --check` groen, tag-balance check 0 mismatches (alleen `<input>`-delta verwacht want self-closing), alle nieuwe selectors aanwezig, "Omni DJ" = 0 matches.
 
 **Code-statistieken:**
 - `static/index.html`: 817.654 → 875.442 bytes (+57.788)
@@ -1021,21 +1061,21 @@ Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-
 
 ### Bekende open punten
 
-⚠️ **Live verificatie NIET gedaan.** Chrome MCP verbond met `http://127.0.0.1:5555` maar die port draaide de oude `/Applications/Clip Live.app`-bundle (815.821 bytes, vóór sessie 54). De nieuwe code zit alleen in de dev-server-folder, niet in de bundle.
+⚠️ **Live verificatie NIET gedaan.** Chrome MCP verbond met `http://127.0.0.1:5555` maar die port draaide de oude `/Applications/Omni DJ.app`-bundle (815.821 bytes, vóór sessie 54). De nieuwe code zit alleen in de dev-server-folder, niet in de bundle.
 
-⚠️ **"Clip Drop Live"-strings vervangen door "Omni DJ"** in 2 onboarding-wizard secties (regels ~6451 + ~6476). Bewuste sweep: jouw verzoek "geen Clip Drop Live meer ivm rebrand". Beperkt tot UI-strings die de user ziet; codebase-rebrand `Clip Live` → `Omni DJ` blijft voor aparte sessie.
+⚠️ **"Omni DJ"-strings vervangen door "Omni DJ"** in 2 onboarding-wizard secties (regels ~6451 + ~6476). Bewuste sweep: jouw verzoek "geen Omni DJ meer ivm rebrand". Beperkt tot UI-strings die de user ziet; codebase-rebrand `Omni DJ` → `Omni DJ` blijft voor aparte sessie.
 
 ⚠️ **Sub-state polling Analyse-view** — `window.analyseSetState()` helper-functie staat klaar, maar de bestaande upload/processing-code roept 'm nog niet aan. Voor nu: in v2 redirect `switchView('upload')` direct naar `analyse`, en `switchView('processing')` zet `is-processing` class. Voor échte progress-doorvoer moet de bestaande progress-handler in `app.py`/socketio worden hergebruikt om `analyseSetState('processing', {pct, step})` aan te roepen. Werkt nu basaal maar progress-bar blijft op 0%.
 
 ### Volgende sessie — prio's
 
-1. **🔴 LIVE-TEST CRUCIAAL** (Sjuul, 10 min): stop `/Applications/Clip Live.app`, start dev-server via `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh`. Open `http://127.0.0.1:5555` in Chrome. Zet v2 aan (klik v2-toggle linksonder of `localStorage.setItem('clipLiveRedesignV2','1')`). Verifieer:
-   - Sidebar: 2-chip workspace+artist stack bovenaan (Sjuul Studios FREE + Artist name)
+1. **🔴 LIVE-TEST CRUCIAAL** (Sjuul, 10 min): stop `/Applications/Omni DJ.app`, start dev-server via `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter" && ./start.sh`. Open `http://127.0.0.1:5555` in Chrome. Zet v2 aan (klik v2-toggle linksonder of `localStorage.setItem('omniDjRedesignV2','1')`). Verifieer:
+   - Sidebar: 2-chip workspace+artist stack bovenaan (MONO LABS FREE + Artist name)
    - Sidebar nav: **Analyse → Library → Brand → Social → Calendar → Insights → Settings** (geen "Clips"-entry!)
    - Klik Analyse → drop-card + 3 tiles (Watch/Dropbox/Drive) + Continue editing (als history aanwezig)
    - Klik Library → Projects-tab tiles in 4-koloms grid. Klik project → Clips-view van die set
    - Klik Library → Exports-tab → exports tiles
-   - Klik workspace-chip → dropdown opent met Sjuul Studios + Manage workspace + Upgrade plan
+   - Klik workspace-chip → dropdown opent met MONO LABS + Manage workspace + Upgrade plan
    - Klik artist-chip → dropdown met Artist (default actief) + locked "+ Second artist" + "Add more with Studio"
    - Klik locked artist → upgrade-modal opent
    - Klik Settings → 2-koloms layout, **Capabilities + Storage & large files NIET zichtbaar**, Workspace+Artists-card wel zichtbaar met "+ Add artist" lock-button
@@ -1044,7 +1084,7 @@ Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-
 2. **🟢 PyInstaller rebuild** als alles groen is → `./build_macos.sh dmg` om Fase 5 in productie-`.app` te krijgen
 3. **🟢 Analyse-view progress hookup** — `analyseSetState()` aanroepen vanuit bestaande upload/processing-handlers zodat de progress-bar binnen Analyse echt updatet (nu nog op 0%)
 4. **🟢 Bug 1 (selectie-balk)** — als Sjuul reproduce-stappen heeft
-5. **🟢 Code-rebrand Clip Live → Omni DJ** (~4-6u, aparte sessie)
+5. **🟢 Code-rebrand Omni DJ → Omni DJ** (~4-6u, aparte sessie)
 6. **🟢 omnidj.com koppelen + Stripe live mode** (Fase 3-4 launch)
 
 ---
@@ -1083,22 +1123,22 @@ Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-
 > - ✅ `node --check` op JS-blok (490 KB): groen
 > - ✅ Tag-balance delta vs backup: 0 mismatches (alleen `<input>` self-closing delta)
 > - ✅ Alle nieuwe selectors aanwezig (1× #view-analyse, 1× #view-library, 1× .v2-ws-stack, 1× #v2WsChip, 1× #v2ArtistChip, 1× data-v2nav="analyse", 1× data-v2nav="library", 1× #settings-workspace)
-> - ✅ 0 matches voor "Clip Drop Live" (2 onboarding-strings vervangen door "Omni DJ")
+> - ✅ 0 matches voor "Omni DJ" (2 onboarding-strings vervangen door "Omni DJ")
 > - ✅ "Pick the keepers" hero blijft in legacy-DOM maar CSS-verborgen in v2-dashboard
 >
 > ### Verificatie live — NIET DOORGELOPEN
 >
-> Chrome MCP connectie met `http://127.0.0.1:5555` haalde 815.821 bytes binnen — dat is de oude `/Applications/Clip Live.app`-bundle, niet onze dev-server. Live-test vereist dat Sjuul de bundle stopt en `./start.sh` in de project-folder draait.
+> Chrome MCP connectie met `http://127.0.0.1:5555` haalde 815.821 bytes binnen — dat is de oude `/Applications/Omni DJ.app`-bundle, niet onze dev-server. Live-test vereist dat Sjuul de bundle stopt en `./start.sh` in de project-folder draait.
 >
 > ### Wat Sjuul nu moet doen
 >
 > ```
 > # 1. Stop de oude bundle
-> osascript -e 'tell application "Clip Live" to quit'
-> # of: pkill -f "Clip Live.app"
+> osascript -e 'tell application "Omni DJ" to quit'
+> # of: pkill -f "Omni DJ.app"
 >
 > # 2. Start dev-server
-> cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+> cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 > ./start.sh
 >
 > # 3. Open in Chrome
@@ -1106,7 +1146,7 @@ Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-
 > ```
 >
 > Daarna in browser:
-> - Console: `localStorage.setItem('clipLiveRedesignV2','1')` + reload
+> - Console: `localStorage.setItem('omniDjRedesignV2','1')` + reload
 > - Verifieer de checklist hierboven onder "🔴 LIVE-TEST CRUCIAAL"
 >
 > ### Bewust uit scope sessie 54
@@ -1115,7 +1155,7 @@ Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-
 > - PyInstaller rebuild (Sjuul doet handmatig na groene live-test)
 > - Multi-tenant Supabase-werk (Fase 5b — workspace_id + artist_id RLS)
 > - Per-artist Brand Stack data
-> - Code-rebrand `Clip Live` → `Omni DJ` strings overal (apart sessie)
+> - Code-rebrand `Omni DJ` → `Omni DJ` strings overal (apart sessie)
 > - reset-password.html standalone polish
 >
 > ### Volgende sessie
@@ -1130,12 +1170,12 @@ Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-
 
 ## ⚡ START HIER — sessie 54 briefing (2026-05-28+, NU AFGEROND)
 
-**Project:** Omni DJ (rebrand sessie 53, was Clip Live) — DJ-set → vertical/landscape clip generator
+**Project:** Omni DJ (rebrand sessie 53, was Omni DJ) — DJ-set → vertical/landscape clip generator
 **Eigenaar:** MONO LABS (de tools-divisie van Sjuul's bedrijf MONO)
-**Domein:** `www.omnidj.com` (nog niet gekoppeld). `djclips.nl` vervalt volledig.
-**Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/`
-**Bundle:** `/Applications/Clip Live.app` (intern nog "Clip Live" genaamd — code-rebrand staat los gepland)
-**App starten:** `open "/Applications/Clip Live.app"` (poort 5555). Of dev-server via `./start.sh`.
+**Domein:** `www.omnidj.com` (nog niet gekoppeld). `omnidj.com` vervalt volledig.
+**Werkmap (code):** `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/`
+**Bundle:** `/Applications/Omni DJ.app` (intern nog "Omni DJ" genaamd — code-rebrand staat los gepland)
+**App starten:** `open "/Applications/Omni DJ.app"` (poort 5555). Of dev-server via `./start.sh`.
 
 ### Status na sessie 53 — alles GROEN voor productie-bundle
 
@@ -1153,7 +1193,7 @@ Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-
 ### Bekende open punten (geen blockers)
 
 ⚠️ **Bug 1** — Selectie-balk leek bij 2 clips niet zichtbaar in Sjuul's screenshot, maar NIET reproduceerbaar in Chrome MCP-lab. Mogelijk transition-race (`.22s ease-out` slide-in). Pas oppakken als Sjuul exact kan reproduceren met stappen.
-⚠️ **Rebrand code-side** — `static/index.html` + `launcher.py` + `app.py` + `auth.py` + `build_macos.sh` + README's bevatten nog "Clip Live"-strings. App-icon ongewijzigd. Map-namen ongewijzigd. ~4-6u dev voor volledige sweep (zie sessie 54 prio's).
+⚠️ **Rebrand code-side** — `static/index.html` + `launcher.py` + `app.py` + `auth.py` + `build_macos.sh` + README's bevatten nog "Omni DJ"-strings. App-icon ongewijzigd. Map-namen ongewijzigd. ~4-6u dev voor volledige sweep (zie sessie 54 prio's).
 ⚠️ **`exportSelected` zeldzame zijroute** — STATE.clips lookup match nu correct (sessie 53 fix 4), maar comment op regel 10351 zegt nog "1-based" — moet "0-based" worden (sessie 52 mini-bevinding 1).
 ⚠️ **Multi-clip + multi-ratio E2E in productie** niet getest. Single-clip-route is bewezen, andere routes verwacht groen maar niet sluitend.
 
@@ -1165,8 +1205,8 @@ Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-
    - Export selected (1 clip) → rename-veld prefilled met `Drop_N`
    - Editor → Text-drawer → "+ Add text" → Animation dropdown = "None"
    - Selecteer clip zonder caption → Export → info-tekst "Geen captions aanwezig op deze clips" onder toggle
-2. **🟢 Code-rebrand Clip Live → Omni DJ** (~4-6u) — string-sweep door static/index.html, launcher.py, app.py, auth.py, build_macos.sh, alle .md files. Plus: app-icon, bundle-identifier (`com.sjuulstudios.cliplive` → `com.monolabs.omnidj`?), info_plist `CFBundleName`, README's. Folder rename (`dj-clip-cutter/` → ?) is hoge-risico — apart plannen.
-3. **🟢 omnidj.com koppelen** via Cloudflare (was Fase 3 voor djclips.nl). Nieuwe Cloudflare Pages-project + DNS-records. Oude `djclips-nl-by-mono-labs` Pages-project mag verwijderd; GitHub-repo `sjuulstudios/djclips.nl-by-MONO-LABS` kan archive.
+2. ✅ **Code-rebrand Clip Live → Omni DJ** — UITGEVOERD sessie 63 (2026-05-30): string-sweep door static/index.html, launcher.py, app.py, auth.py, build_macos.sh, docs. Bundle-identifier `com.sjuulstudios.cliplive` → `com.monolabs.omnidj`, env-vars `CLIP_LIVE_*` → `OMNI_DJ_*`, localStorage `clipLive.*` → `omniDj.*`, spec hernoemd. App-icon nog ongewijzigd. Folder-rename al gedaan sessie 59.
+3. **🟢 omnidj.com koppelen** via Cloudflare (was Fase 3 voor omnidj.com). Nieuwe Cloudflare Pages-project + DNS-records. Oude `djclips-nl-by-mono-labs` Pages-project mag verwijderd; GitHub-repo `sjuulstudios/djclips.nl-by-MONO-LABS` kan archive.
 4. **🟢 Stripe live mode** — pas na omnidj.com live. Runbook STRIPE-DNS-RUNBOOK.md moet inhoudelijk worden geupdate.
 5. **🟢 Multi-clip E2E in productie verifiëren** — 2+ clips selecteren waar beide caption-overlays op zitten, exporteren met multi-ratio (9:16 + 16:9), check of alle MP4's captions bevatten.
 6. **🟢 Fase 5 Content Calendar + Multi-artist** (zie `PLAN-CONTENT-CALENDAR-2026-05-26.md` v1.1) — 5a multi-tenant fundament, 5b calendar UI, 5c Postiz publishing, etc. 13-15 weken dev verspreid over fases.
@@ -1174,7 +1214,7 @@ Sjuul heeft akkoord gegeven op PLAN-REDESIGN-FASE5-2026-05-27.md v3. Alle 5 sub-
 
 ### Rebrand-noot
 
-**Product heet voortaan Omni DJ.** Eigenaar = **MONO LABS** (tools-divisie). Naar buiten toe alleen Omni DJ + MONO LABS. Intern (codebase + map-namen) nog "Clip Live" totdat sessie 54+ de code-rebrand doet.
+**Product heet voortaan Omni DJ.** Eigenaar = **MONO LABS** (tools-divisie). Naar buiten toe alleen Omni DJ + MONO LABS. Intern (codebase + map-namen) nog "Omni DJ" totdat sessie 54+ de code-rebrand doet.
 
 **Active email-aliases:**
 - `omnidj@monohq-labs.com` — support, algemene vragen
@@ -1211,7 +1251,7 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 > 1. **Memory + HANDOVER** — Omni DJ rebrand-info vastgelegd
 >    (`project_omni_dj_rebrand.md`), HANDOVER hoofd-blok aangepast
 > 2. **Rebuild #1** — `./build_macos.sh dmg` op Sjuul's Mac. Bundle in
->    `/Applications` geüpdatet (`Clip Live.PRE-SESSIE53.app` rollback bewaard).
+>    `/Applications` geüpdatet (`Omni DJ.PRE-SESSIE53.app` rollback bewaard).
 >    Sessies 50 + 51 fixes nu in productie.
 > 3. **Captions E2E test productie** — Housy Good vibes set 30min (487MB)
 >    geüpload via .app, geanalyseerd → 23 clips. Caption "SESSIE 53 TEST"
@@ -1303,12 +1343,12 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 >
 > ### Bundle-status
 >
-> - `/Applications/Clip Live.app` — Rebuild #2 (sessie 53 fixes) ✅
-> - `/Applications/Clip Live.PRE-SESSIE53.app` — verwijderd (was rebuild
+> - `/Applications/Omni DJ.app` — Rebuild #2 (sessie 53 fixes) ✅
+> - `/Applications/Omni DJ.PRE-SESSIE53.app` — verwijderd (was rebuild
 >   #1, vervangen door de oudere)
-> - `/Applications/Clip Live.PRE-SESSIE53b.app` — rebuild #1 als
+> - `/Applications/Omni DJ.PRE-SESSIE53b.app` — rebuild #1 als
 >   rollback bewaard
-> - `dist/Clip Live.app` + `dist/Clip Live.dmg` — verse bouw
+> - `dist/Omni DJ.app` + `dist/Omni DJ.dmg` — verse bouw
 >
 > ### Wat Sjuul nog moet (visuele verificatie)
 >
@@ -1327,14 +1367,14 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 >
 > ### Bewust niet gedaan deze sessie
 >
-> - Code-side rebrand "Clip Live" → "Omni DJ" in
+> - Code-side rebrand "Omni DJ" → "Omni DJ" in
 >   index.html/launcher.py/app.py/build_macos.sh/auth.py + alle README's.
 >   Aparte rebrand-sessie waard (~4-6u dev).
-> - Folder renames `dj-clip-cutter/` + `Clip Live/`. Hoge risico,
+> - Folder renames `dj-clip-cutter/` + `Omni DJ/`. Hoge risico,
 >   raakt alle build-paden.
 > - App-icon vervangen.
 > - omnidj.com koppelen (Fase 3 van launch-plan; runbook moet eerst
->   omschreven van djclips.nl → omnidj.com).
+>   omschreven van omnidj.com → omnidj.com).
 > - Stripe live mode (Fase 4).
 > - Bug 1 (selectie-balk) — pas oppakken als Sjuul kan reproduceren met
 >   stappen.
@@ -1342,7 +1382,7 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 > ### Volgende sessie
 >
 > 1. Visuele verificatie (5 checks hierboven) en eventuele restbugs
-> 2. Code-side rebrand "Clip Live" → "Omni DJ" (aparte sessie ~4-6u)
+> 2. Code-side rebrand "Omni DJ" → "Omni DJ" (aparte sessie ~4-6u)
 > 3. omnidj.com koppelen via Cloudflare (was djclips.nl)
 > 4. Daarna Stripe live mode
 
@@ -1558,7 +1598,7 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 >
 > ### Diagnose-aanpak
 >
-> 1. Hangende Clip Live `.app` proces (PID 93126) op poort 5555 gekild via
+> 1. Hangende Omni DJ `.app` proces (PID 93126) op poort 5555 gekild via
 >    `osascript do shell script "kill 93126"` (Cmd+Q sloot UI maar liet
 >    Python-backend draaien — bekend PyInstaller-patroon op Mac).
 > 2. Dev-server gestart in achtergrond:
@@ -1566,7 +1606,7 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 >    cat > /tmp/clip-live-launch.sh << 'EOF'
 >    #!/bin/bash
 >    export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
->    cd '/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter'
+>    cd '/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter'
 >    source venv/bin/activate
 >    exec python app.py 5555
 >    EOF
@@ -1870,7 +1910,7 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 >
 > Live geverifieerd via Chrome MCP op Sjuul's dev-server (localhost:5555):
 >
-> Met flag AAN (`localStorage.clipLiveRedesignV2='1'`):
+> Met flag AAN (`localStorage.omniDjRedesignV2='1'`):
 > - ✅ Alle 5 modals krijgen scrim `rgba(8, 8, 10, 0.78)`
 > - ✅ Auth-card: bg `rgb(22,22,24)` = `#161618`, border subtle 1px, radius 16px, drawer-shadow
 > - ✅ Forgot-card: bg `#161618`, border subtle, radius 14px, drawer-shadow
@@ -1879,7 +1919,7 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 > - ✅ Upgrade-card, aspect-card, expset-card allemaal in nieuwe stijl
 > - ✅ CSS-vars actief: `--v2-accent=#D97742`, `--v2-bg-elevated=#161618`, `--v2-text-primary=#F5F2EC`
 >
-> Met flag UIT (`localStorage.clipLiveRedesignV2='0'`):
+> Met flag UIT (`localStorage.omniDjRedesignV2='0'`):
 > - ✅ `body.className = ""` (geen `redesign-v2`)
 > - ✅ auth-card radius 28px (oude waarde, niet 16)
 > - ✅ forgot-card radius 20px (oude waarde, niet 14)
@@ -2073,12 +2113,12 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 > Live geverifieerd via Chrome MCP (Sjuul's dev-server, set "Ediine x Ho_r Berlin", 33 clips):
 >
 > Met flag UIT:
-> - ✅ Oude Clip Live shell volledig terug (Clip Live logo + Drop a set / Library / Clips 33 / Brand Stack / Settings / Cloud sync / PRO 6/10)
+> - ✅ Oude Omni DJ shell volledig terug (Omni DJ logo + Drop a set / Library / Clips 33 / Brand Stack / Settings / Cloud sync / PRO 6/10)
 > - ✅ Dashboard in oude styling, geen residu
 > - ✅ v2 OFF rechtsonder
 >
 > Met flag AAN:
-> - ✅ V2-sidebar (Sjuul Studios · Pro plan / Clips / Brand / Social / Calendar / Insights + Settings + account-footer)
+> - ✅ V2-sidebar (MONO LABS · Pro plan / Clips / Brand / Social / Calendar / Insights + Settings + account-footer)
 > - ✅ Dashboard in Fase 2 v2-stijl
 > - ✅ Editor opent in v2-stijl:
 >   - Crumbs "Clips › Ediine x Ho_r Berlin › Clip 01 · drop @ 00:04:13" + v2 back-button
@@ -2229,7 +2269,7 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 >
 > **Bug 1 — Mount-selector mist klasse `.app`** (sessie 45 carry-over)
 > - `v2Mount()` (regel ~16814) gebruikte
->   `body > .view, body > #app, body > main` als selector. De oude Clip Live
+>   `body > .view, body > #app, body > main` als selector. De oude Omni DJ
 >   shell heeft echter klasse `.app` (geen ID). Resultaat: `v2-content-wrap`
 >   bleef leeg, oude `.app` (5452px hoog) bleef body-level onder de v2-shell
 >   prikken — de v2-sidebar overlapte met de oude sidebar.
@@ -2250,13 +2290,13 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 > ### Smoketest-resultaten (alle groen)
 >
 > Met flag UIT:
-> - ✅ Oude UI 100% intact (sidebar links: Clip Live / Drop a set / Library /
+> - ✅ Oude UI 100% intact (sidebar links: Omni DJ / Drop a set / Library /
 >   Clips 33 / Brand Stack / Settings / Cloud sync / PRO 6/10 sets)
 > - ✅ Pick-head, header, filter-chips, ratio-toggle in oude oranje-pill-stijl
 > - ✅ Clip-cards in oude stijl, hover-preview werkt
 >
 > Met flag AAN:
-> - ✅ V2-sidebar (Sjuul Studios · Pro plan / Clips actief / Brand / Social /
+> - ✅ V2-sidebar (MONO LABS · Pro plan / Clips actief / Brand / Social /
 >   Calendar / Insights / Settings + account-footer)
 > - ✅ Topbar met breadcrumb "Clips"
 > - ✅ Pick-head + 33-clips-titel + meta (129 BPM · 55 min set)
@@ -2300,7 +2340,7 @@ Memory: `project_omni_dj_rebrand.md` heeft de volledige rebrand-info.
 >      Rename — alles werkt zoals voor sessie 46
 > 3. **Smoketest Fase 2 — flag AAN:**
 >    - Klik linksonder `v2 shell`-knopje (of in DevTools:
->      `localStorage.setItem('clipLiveRedesignV2','1')` + reload)
+>      `localStorage.setItem('omniDjRedesignV2','1')` + reload)
 >    - Sidebar verschijnt + clip-grid wordt automatisch v2-stijl
 >    - Filter-chips (All/Drops/Favourites/Renamed) zijn nu radius-16 pills
 >    - Ratio-toggle (9:16/16:9) is nu segmented control
@@ -2385,8 +2425,8 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 >
 > **Feature-flag aan/uit:**
 > - Toggle linksonder in de UI: knop `v2 shell` (klein, met label "ON"/"OFF")
-> - Of via DevTools: `localStorage.setItem('clipLiveRedesignV2','1')` + reload
-> - Of uitzetten: `localStorage.setItem('clipLiveRedesignV2','0')` + reload
+> - Of via DevTools: `localStorage.setItem('omniDjRedesignV2','1')` + reload
+> - Of uitzetten: `localStorage.setItem('omniDjRedesignV2','0')` + reload
 >
 > **CSS toegevoegd (`static/index.html` ~regel 3624, vóór `</style>`):**
 > - 16 v2-tokens (`--v2-bg-base`, `--v2-text-primary`, `--v2-accent` etc.),
@@ -2403,7 +2443,7 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 >
 > **HTML toegevoegd (direct na `<body>`, vóór auth-overlay):**
 > - `<div class="v2-app" id="v2App" style="display:none">` — root shell
-> - Sidebar met workspace-button ("Sjuul Studios · Pro plan"), 5 nav-items
+> - Sidebar met workspace-button ("MONO LABS · Pro plan"), 5 nav-items
 >   (Clips/Brand/Social/Calendar/Insights), settings-footer (Settings-knop
 >   + account-tegel met initialen/naam/email)
 > - Topbar met breadcrumb (`#v2Breadcrumb`)
@@ -2680,7 +2720,7 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 >   `vertical` (square als post-crop op vertical — backend kent in v1 alleen
 >   landscape/vertical formats; 1:1 en 4:5 worden in een follow-up sessie
 >   echt aparte aspect_filter keys).
-> - Default = 9:16, last-used persist in `localStorage['clipLive.exportSettings'].ratios`.
+> - Default = 9:16, last-used persist in `localStorage['omniDj.exportSettings'].ratios`.
 > - 0 tiles aangevinkt → OK-knop disabled + tooltip "Selecteer minstens één formaat".
 >
 > ### ✅ Onderdeel 5 — Caption + watermark toggles met inline upload
@@ -2780,7 +2820,7 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 ## STATUS NA CONTENT CALENDAR PLAN (2026-05-26)
 
 > **Planning-only sessie, geen code aangeraakt.** Sjuul vroeg om uitwerking
-> van Content Calendar + Multi-artist workspaces + Ads-management in Clip Live.
+> van Content Calendar + Multi-artist workspaces + Ads-management in Omni DJ.
 > Plan-document `PLAN-CONTENT-CALENDAR-2026-05-26.md` opgesteld na onderzoek
 > naar Postiz (publishing-laag), DJ-tool businessmodellen en Meta/TikTok/Google
 > Ads API-vereisten.
@@ -2829,7 +2869,7 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 >      Postiz niet om 19:00 publishen als laptop dicht is)
 >    - Studio-tier krijgt opt-out: manual export only, geen Postiz-koppeling
 > 2. **Ads-systeem allerlaatst bouwen** — vereist meer research
->    - Sjuul wil geld via Clip Live (mix-en-matchen budget tussen klant-accounts)
+>    - Sjuul wil geld via Omni DJ (mix-en-matchen budget tussen klant-accounts)
 >    - Dat raakt PSP-vergunning of agency-of-record-constructie — apart traject
 >    - Meta/TikTok verificaties NIET nu starten (kan wachten tot Fase 4a)
 > 3. **Pricing geparkeerd** — Sjuul wil nog niet vastleggen
@@ -2847,7 +2887,7 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 > ### Niets gebouwd, geen migraties uitgevoerd
 >
 > Deze sessie was puur planning. Beslissing-uitvoering pas na sessie 43 +
-> djclips.nl + Stripe live. **Volgorde blijft:** 43a → 43b → 44 → Cloudflare
+> omnidj.com + Stripe live. **Volgorde blijft:** 43a → 43b → 44 → Cloudflare
 > DNS → Stripe live → DAN Fase 1 (multi-tenant).
 >
 > ### Memory-entries toegevoegd
@@ -2927,7 +2967,7 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 >
 > ### ✅ Color wheels voor text + background (Fase 5 / C+D)
 >
-> Eigen mini-picker `ClipLivePicker` ingebouwd, **geen externe library** (Sjuul wilde geen Coloris dependency in frontend). HSV-canvas + hue-strip + hex-input + optionele opacity-slider. ~280 regels JS/CSS inline in `static/index.html`.
+> Eigen mini-picker `OmniDJPicker` ingebouwd, **geen externe library** (Sjuul wilde geen Coloris dependency in frontend). HSV-canvas + hue-strip + hex-input + optionele opacity-slider. ~280 regels JS/CSS inline in `static/index.html`.
 >
 > - **Text-kleur:** `+`-knop met regenboog-icoon naast bestaande quick-swatches (`#ed-tx-color-picker`). Bestaande swatches blijven werken.
 > - **Background:** `Off`/`On` toggle + swatch-tile (opent picker) + opacity-slider 0-100%. Schema: `L.bg = null` OR `L.bg = true` (legacy) OR `L.bg = {color, opacity}`.
@@ -2999,10 +3039,10 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 >
 > ### ✅ Fase 1 — Clip-render bug in .app gefixt
 >
-> **Root cause:** `BASE_DIR = os.path.dirname(__file__)` in `app.py` regel 176 wijst in een PyInstaller bundle naar `Contents/Frameworks/` — dat is **read-only** voor unsigned .apps op macOS. `os.makedirs(UPLOAD_DIR, exist_ok=True)` op regel 201 gooide `PermissionError(1, 'Operation not permitted')` op startup. Dev-server had geen probleem omdat `BASE_DIR` daar `dj-clip-cutter/` was (schrijfbaar). `launcher.py` had de oplossing al voorbereid (`USER_DATA_DIR` op regel 58, `os.environ.setdefault("CLIP_LIVE_USER_DATA", ...)` op regel 65), maar `app.py` las die env-var nooit.
+> **Root cause:** `BASE_DIR = os.path.dirname(__file__)` in `app.py` regel 176 wijst in een PyInstaller bundle naar `Contents/Frameworks/` — dat is **read-only** voor unsigned .apps op macOS. `os.makedirs(UPLOAD_DIR, exist_ok=True)` op regel 201 gooide `PermissionError(1, 'Operation not permitted')` op startup. Dev-server had geen probleem omdat `BASE_DIR` daar `dj-clip-cutter/` was (schrijfbaar). `launcher.py` had de oplossing al voorbereid (`USER_DATA_DIR` op regel 58, `os.environ.setdefault("OMNI_DJ_USER_DATA", ...)` op regel 65), maar `app.py` las die env-var nooit.
 >
 > **Fix in `app.py` regel 176-205:**
-> - Nieuwe regel 183: `DATA_DIR = os.environ.get("CLIP_LIVE_USER_DATA", BASE_DIR)` — leest env-var, valt anders terug op `BASE_DIR` (dev-server gedrag onveranderd).
+> - Nieuwe regel 183: `DATA_DIR = os.environ.get("OMNI_DJ_USER_DATA", BASE_DIR)` — leest env-var, valt anders terug op `BASE_DIR` (dev-server gedrag onveranderd).
 > - 7 paden gewijzigd: `UPLOAD_DIR`, `OUTPUT_DIR`, `SETTINGS_PATH`, `HISTORY_PATH`, `WATCH_FOLDER_PATH`, `BRAND_KIT_PATH`, `BRAND_KIT_DIR` (`BRAND_FONTS_DIR`/`BRAND_LOGO_DIR`/`BRAND_WATERMARK_DIR` zijn child-paths van `BRAND_KIT_DIR`).
 >
 > **Verificatie:** rebuild via `build_macos.sh dmg`, smoketest met Housy Good vibes set (30min) — 200/206 responses op `/api/clip/...mp4`, geen PermissionError meer in `launcher.log`, clips renderen + spelen af in editor.
@@ -3024,7 +3064,7 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 > - `POST /api/auth/reset-password` met 5 per 10 min per IP. Audit-log `auth.password_reset` of `auth.password_reset_failed`.
 >
 > **Frontend nieuw bestand `static/reset-password.html`:**
-> - Standalone pagina, brand-tokens inline (Inter + Fraunces), invalid-state als hash leeg is, hash-clearing binnen 100ms na load (security), tokens uit `#access_token=...&refresh_token=...&type=recovery`, password+confirm check, fetch `/api/auth/reset-password`, schrijft success naar `localStorage['clipLive.session']` (zelfde shape als `saveSessionToStorage()` in index.html → auto-login na redirect naar `/`).
+> - Standalone pagina, brand-tokens inline (Inter + Fraunces), invalid-state als hash leeg is, hash-clearing binnen 100ms na load (security), tokens uit `#access_token=...&refresh_token=...&type=recovery`, password+confirm check, fetch `/api/auth/reset-password`, schrijft success naar `localStorage['omniDj.session']` (zelfde shape als `saveSessionToStorage()` in index.html → auto-login na redirect naar `/`).
 >
 > **Frontend `static/index.html`:**
 > - "Wachtwoord vergeten?" link onder Log in-knop, alleen zichtbaar in login-mode (CSS `data-auth-mode="signup"` verbergt 'm)
@@ -3033,9 +3073,9 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 > - JS rond regel 14033: `openForgotModal()`, `closeForgotModal()`, `handleForgotSubmit()`, `bindForgotModal()`. Pre-fill email uit login-form, autofocus, Escape sluit, overlay-click sluit, `dataset.bound` guards
 >
 > **Supabase config (door Sjuul in dashboard gedaan):**
-> - URL Configuration → Site URL: `https://djclips.nl`. Redirect URLs allowlist: `http://127.0.0.1:5555/static/reset-password.html` + `https://djclips.nl/reset-password`
+> - URL Configuration → Site URL: `https://omnidj.com`. Redirect URLs allowlist: `http://127.0.0.1:5555/static/reset-password.html` + `https://omnidj.com/reset-password`
 > - Sign In / Providers → Email → Email OTP expiration 3600s (1u), Min password length 8
-> - Emails → Reset Password template Nederlandstalig in Clip Live brand-kleur `#e8b766`, subject "Wachtwoord resetten - djclips.nl"
+> - Emails → Reset Password template Nederlandstalig in Omni DJ brand-kleur `#e8b766`, subject "Wachtwoord resetten - omnidj.com"
 >
 > **End-to-end test geslaagd** met test-account `sjuulsmitslolol@gmail.com`: signup → forgot via modal → mail kwam binnen (Supabase default SMTP, 0 min) → klik link → reset-form geopend → nieuw wachtwoord opgegeven → auto-login → redirect naar `/`.
 >
@@ -3060,11 +3100,11 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 1. ✅ ~~**🔴 PyInstaller rebuild**~~ — **klaar in sessie 53** (2x gedaan: rebuild #1 sessies 50+51, rebuild #2 sessie 53 fixes). Bundle in `/Applications` is up-to-date.
 2. ✅ ~~**🟡 E2E real-export-test**~~ — **klaar in sessie 53.** "SESSIE 53 TEST"-tekst in `Drop_3.mp4` op disk geverifieerd via QuickTime → captions worden ge-baked in productie-.app.
 3. **🟡 Smoketests sessie 43+44 — deels gedaan in sessie 53.** Captions-flow + rename + sidecar + folder-whitelist + multi-clip-flow (UI) bewezen. Niet gedaan: 9 selectie-balk-smoketests (Bug 1 niet reproduceerbaar → laagste prio).
-4. **🔵 Code-rebrand "Clip Live" → "Omni DJ"** (~4-6u) — string-sweep door static/index.html, launcher.py, app.py, auth.py, build_macos.sh, alle .md files. Plus app-icon, bundle-identifier, `CFBundleName`, in-app teksten. Folder-renames (`dj-clip-cutter/` → ?) hoge-risico — apart plannen. **Doe dit vóór Fase 3 omdat omnidj.com landing onder Omni DJ-branding hoort.**
+4. **🔵 Code-rebrand "Omni DJ" → "Omni DJ"** (~4-6u) — string-sweep door static/index.html, launcher.py, app.py, auth.py, build_macos.sh, alle .md files. Plus app-icon, bundle-identifier, `CFBundleName`, in-app teksten. Folder-renames (`dj-clip-cutter/` → ?) hoge-risico — apart plannen. **Doe dit vóór Fase 3 omdat omnidj.com landing onder Omni DJ-branding hoort.**
 5. **Sessie 43 follow-up — 1:1 + 4:5 als echte aspect-keys** (~2-3u). Nu mapped op vertical/landscape in startExport. Backend `_resolve_export_sources` + `cutter.cut_clip_*` moeten aparte `square` + `portrait` formats kennen met eigen crop-strategie.
-6. **Fase 3 — omnidj.com koppelen** via Cloudflare (nameservers van registrar → Cloudflare, DNS records, Pages custom domain). Vóór Stripe live mode. **Was djclips.nl, vervalt — sessie 53 rebrand.** Landing-repo + Pages-project moeten opnieuw onder Omni DJ-naam (oude repo `sjuulstudios/djclips.nl-by-MONO-LABS` blijft als archive bestaan).
-7. **Fase 4 — Stripe live mode** — pas na omnidj.com live. Runbook: `STRIPE-DNS-RUNBOOK.md` moet inhoudelijk worden geupdate van djclips.nl → omnidj.com.
-7. **🆕 Fase 5 — Content Calendar + Multi-artist (zie `PLAN-CONTENT-CALENDAR-2026-05-26.md`)** — pas na sessie 44 + djclips.nl + Stripe live:
+6. **Fase 3 — omnidj.com koppelen** via Cloudflare (nameservers van registrar → Cloudflare, DNS records, Pages custom domain). Vóór Stripe live mode. **Was omnidj.com, vervalt — sessie 53 rebrand.** Landing-repo + Pages-project moeten opnieuw onder Omni DJ-naam (oude repo `sjuulstudios/djclips.nl-by-MONO-LABS` blijft als archive bestaan).
+7. **Fase 4 — Stripe live mode** — pas na omnidj.com live. Runbook: `STRIPE-DNS-RUNBOOK.md` moet inhoudelijk worden geupdate van omnidj.com → omnidj.com.
+7. **🆕 Fase 5 — Content Calendar + Multi-artist (zie `PLAN-CONTENT-CALENDAR-2026-05-26.md`)** — pas na sessie 44 + omnidj.com + Stripe live:
    - **5a Multi-tenant fundament** (3-4 wkn dev): migraties 004/005/006 voor workspaces + workspace_members + workspace_id op resource-tabellen
    - **5b Calendar UI + datamodel** (2-3 wkn dev): migratie 007 (scheduled_posts) + maand/week-view + "Plan in Calendar" knop in export-modal
    - **5c Postiz publishing** (3-4 wkn dev): migratie 008 (social_accounts) + Postiz Cloud OAuth + per-workspace social-connect
@@ -3092,7 +3132,7 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 
 ### Sessie 41 — Color wheels (Fase 5 / C+D, 2026-05-26)
 
-- **Wat:** Mini color picker `ClipLivePicker` ingebouwd (eigen build, geen externe library zoals Coloris — Sjuul wilde geen frontend-dependency). HSV-vlak + hue-strip + hex-input + opacity-slider. Herbruikt voor text-kleur én bg-kleur.
+- **Wat:** Mini color picker `OmniDJPicker` ingebouwd (eigen build, geen externe library zoals Coloris — Sjuul wilde geen frontend-dependency). HSV-vlak + hue-strip + hex-input + opacity-slider. Herbruikt voor text-kleur én bg-kleur.
 - **Text-kleur:** `+`-knop met regenboog-icoon náást bestaande swatches in `#ed-tx-swatches`. Bij elke `renderEditorTextLayers` opnieuw geappend want `swWrap.innerHTML = ...` wist 'm anders.
 - **Background:** Off/On toggle + swatch + opacity-slider. Nieuw schema `L.bg = {color, opacity}` of `null`. Back-compat `L.bg === true` blijft werken (cutter resolved fallback).
 - **Cutter (`cutter.py` regel 335-355):** dispatch leest isinstance(bg, dict), else legacy bool defaults.
@@ -3107,7 +3147,7 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 
 ### Sessie 38 + 37 — DMG Fase 4 klaar (2026-05-25)
 
-- **Wat:** Fase 4 afgerond: venv, flask-limiter, smoketest, migrations 002 (audit_logs) + 003 (RBAC role) deployed, admin role gezet voor business@sjuulstudios.com, edge function `update-usage` deployed, DMG gebouwd.
+- **Wat:** Fase 4 afgerond: venv, flask-limiter, smoketest, migrations 002 (audit_logs) + 003 (RBAC role) deployed, admin role gezet voor omnidj@monohq-labs.com, edge function `update-usage` deployed, DMG gebouwd.
 - **Post-build bugfixes** (in `static/index.html` + `launcher.py` + `app.py`):
   - Upload error "supabase_admin niet geconfigureerd" → fixed door `access_token` door te geven aan `_get_or_refresh_profile()`
   - File picker 2 clicks nodig → fixed met 120ms `setTimeout` (pywebview race condition)
@@ -3115,16 +3155,16 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
   - Meerdere browsertabs spawnen → zelfde fix
   - Preview ratio black bars → `applyEditorStageSize()` set nu `object-fit` op video; `maxHeight:'none'` bij 16:9 en 1:1
 - **Testsets beschikbaar:** `dj-clip-cutter/CLIP DROP DJ-SETS/` bevat 5 MP4 sets voor debugging (Don Diablo, Ediine x Hör Berlin, Franky Rizardo, Housy Good vibes, Lisa Korver x Hör Berlin)
-- **DMG bouwen:** `bash build_macos.sh dmg` in `dj-clip-cutter/` met actieve venv. Output: `dist/Clip Live.app` + `dist/Clip Live.dmg`
+- **DMG bouwen:** `bash build_macos.sh dmg` in `dj-clip-cutter/` met actieve venv. Output: `dist/Omni DJ.app` + `dist/Omni DJ.dmg`
 - **Belangrijke regel:** na elke code-change herbouwen — PyInstaller bakt `index.html` in de bundle, dev-server serveert altijd de oude versie
 
 ### Sessie 36 — Infrastructuur (2026-05-24)
 
-- **Wat:** externe diensten gekoppeld, geen code-changes. Aparte landing-werkmap `~/Documents/Claude/Projects/clipdrop-landing-deploy/` (los van Clip Live git-repo), GitHub repo `sjuulstudios/djclips.nl-by-MONO-LABS` aangemaakt + initial push (commit `d98cf78`), Cloudflare Pages project `djclips-nl-by-mono-labs` live op https://djclips-nl-by-mono-labs.pages.dev, oud `clipdroplive` Pages-project verwijderd
-- **🟡 Open:** djclips.nl koppelen aan Cloudflare (nameservers TransIP → Cloudflare, DNS-records, custom domain in Pages)
-- **Gotcha:** `index.html` heeft `https://clipdroplive.com/` HARDCODED op meerdere plekken (canonical/og:image/og:url). Search-replace naar `https://djclips.nl/` pas doen samen met de DNS-cutover
+- **Wat:** externe diensten gekoppeld, geen code-changes. Aparte landing-werkmap `~/Documents/Claude/Projects/clipdrop-landing-deploy/` (los van Omni DJ git-repo), GitHub repo `sjuulstudios/djclips.nl-by-MONO-LABS` aangemaakt + initial push (commit `d98cf78`), Cloudflare Pages project `djclips-nl-by-mono-labs` live op https://djclips-nl-by-mono-labs.pages.dev, oud `clipdroplive` Pages-project verwijderd
+- **🟡 Open:** omnidj.com koppelen aan Cloudflare (nameservers TransIP → Cloudflare, DNS-records, custom domain in Pages)
+- **Gotcha:** `index.html` heeft `https://omnidj.com/` HARDCODED op meerdere plekken (canonical/og:image/og:url). Search-replace naar `https://omnidj.com/` pas doen samen met de DNS-cutover
 - **Beslissingen vastgelegd:** Google Workspace ($6/mo) voor email, Cloudflare Pages (i.p.v. Vercel — onbeperkte bandwidth + commercieel toegestaan)
-- **Drie werkmappen om te onthouden:** hoofd-app in `~/Documents/Claude/Projects/Clip Live/`, deploy-map in `~/Documents/Claude/Projects/clipdrop-landing-deploy/`, source-of-truth landing in `Clip Live/landing/`
+- **Drie werkmappen om te onthouden:** hoofd-app in `~/Documents/Claude/Projects/Omni DJ/`, deploy-map in `~/Documents/Claude/Projects/clipdrop-landing-deploy/`, source-of-truth landing in `Omni DJ/landing/`
 
 ### Sessie 35 — Security Foundation (2026-05-24, autonoom)
 
@@ -3188,20 +3228,20 @@ Deze handover is op 2026-05-26 opgesplitst in drie bestanden om snel laadbaar te
 
 ### Sessie 27 — Installer pipeline + Stripe via edge functions + legal (2026-05-17)
 
-- **Wat:** (1) Installer pipeline werkend: PyInstaller-spec + `launcher.py` + `entitlements.plist` + `build_macos.sh` in `dj-clip-cutter/`. ffmpeg/ffprobe in bundle gekopieerd, .bak files defensief gestript. **Browser-fix:** `subprocess.run(['open', url])` i.p.v. `webbrowser.open` (laatste werkt niet in gebundelde .app op macOS). Logging naar `~/Library/Application Support/Clip Live/launcher.log`. Apple Developer + Windows BEWUST UITGESTELD tot na macOS-beta. (2) Stripe via edge functions: `runtime_config.py` hardcodet alleen publieke keys, geen secrets in bundle. Twee nieuwe edge functions met JWT-verificatie: `create-checkout-session` + `create-portal-session`. `billing.py` heeft fallback (zonder lokale `STRIPE_SECRET_KEY` → edge function call met Bearer). Deploy zonder `--no-verify-jwt`; webhook blijft mét `--no-verify-jwt`. (3) Legal hardening: `landing/privacy.html` + `landing/terms.html` aangevuld met sub-processors, AVG-rechten (15/16/17/18/20/21), retention per type (7 jaar invoices), CCPA, force majeure, export controls, beta-disclaimer. Plus 64 .bak files opgeruimd naar `_bak-archive-2026-05-17.tar.gz`, git repo geïnitialiseerd (commit `b000a57`, branch `main`)
+- **Wat:** (1) Installer pipeline werkend: PyInstaller-spec + `launcher.py` + `entitlements.plist` + `build_macos.sh` in `dj-clip-cutter/`. ffmpeg/ffprobe in bundle gekopieerd, .bak files defensief gestript. **Browser-fix:** `subprocess.run(['open', url])` i.p.v. `webbrowser.open` (laatste werkt niet in gebundelde .app op macOS). Logging naar `~/Library/Application Support/Omni DJ/launcher.log`. Apple Developer + Windows BEWUST UITGESTELD tot na macOS-beta. (2) Stripe via edge functions: `runtime_config.py` hardcodet alleen publieke keys, geen secrets in bundle. Twee nieuwe edge functions met JWT-verificatie: `create-checkout-session` + `create-portal-session`. `billing.py` heeft fallback (zonder lokale `STRIPE_SECRET_KEY` → edge function call met Bearer). Deploy zonder `--no-verify-jwt`; webhook blijft mét `--no-verify-jwt`. (3) Legal hardening: `landing/privacy.html` + `landing/terms.html` aangevuld met sub-processors, AVG-rechten (15/16/17/18/20/21), retention per type (7 jaar invoices), CCPA, force majeure, export controls, beta-disclaimer. Plus 64 .bak files opgeruimd naar `_bak-archive-2026-05-17.tar.gz`, git repo geïnitialiseerd (commit `b000a57`, branch `main`)
 
 ---
 
 ## App starten (dev-server)
 
 ```
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./start.sh
 ```
 
 Browser opent op http://127.0.0.1:5555.
 
-Voor `.app` build: `bash build_macos.sh dmg` in `dj-clip-cutter/` met actieve venv. Output: `dist/Clip Live.app` + `dist/Clip Live.dmg`.
+Voor `.app` build: `bash build_macos.sh dmg` in `dj-clip-cutter/` met actieve venv. Output: `dist/Omni DJ.app` + `dist/Omni DJ.dmg`.
 
 ---
 

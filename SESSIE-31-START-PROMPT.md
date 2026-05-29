@@ -4,7 +4,7 @@ Kopieer onderstaand blok als eerste bericht in de nieuwe sessie:
 
 ---
 
-Lees /Users/sjuulsmits/Documents/Claude/Projects/Clip Live/HANDOVER.md, in het bijzonder het blok "TWEE OPENSTAANDE BUGS - HOOGSTE PRIORITEIT VOOR SESSIE 31" bovenaan. Server draait op http://127.0.0.1:5555 via ./start.sh in /Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter. Test-DJ-sets staan in /Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/CLIP DROP DJ-SETS/ - werk met Lisa Korver x Hör Berlin.mp4. Je hebt mijn akkoord om de Chrome connector te gebruiken om de tool live te testen.
+Lees /Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/HANDOVER.md, in het bijzonder het blok "TWEE OPENSTAANDE BUGS - HOOGSTE PRIORITEIT VOOR SESSIE 31" bovenaan. Server draait op http://127.0.0.1:5555 via ./start.sh in /Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter. Test-DJ-sets staan in /Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/CLIP DROP DJ-SETS/ - werk met Lisa Korver x Hör Berlin.mp4. Je hebt mijn akkoord om de Chrome connector te gebruiken om de tool live te testen.
 
 Ik wil dat je deze twee bugs oplost, in volgorde:
 

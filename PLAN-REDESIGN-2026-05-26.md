@@ -1,4 +1,4 @@
-# Clip Live — Redesign Plan v1.0
+# Omni DJ — Redesign Plan v1.0
 **Datum:** 2026-05-26
 **Doel:** Premium dark-first redesign van de tool, schaalbaar voor toekomstige features. Resultaat van deze sessie: 1 HTML MVP met de volledige flow (upload → processing → clips → export), klaar om later 1-op-1 door te vertalen naar de landing page.
 
@@ -109,7 +109,7 @@ Sidebar-breedte: **240px** (collapsed: 60px). Topbar-hoogte: **52px**.
 Drie zones, van boven naar beneden:
 
 ### Zone A — Workspace-switcher (top, ~64px)
-- Logo + workspace-naam ("Sjuul Studios") + chevron-dropdown
+- Logo + workspace-naam ("MONO LABS") + chevron-dropdown
 - Klik opent dropdown met: andere workspaces, "+ New workspace", "Workspace settings"
 - Toekomstklaar voor multi-artist
 
@@ -247,7 +247,7 @@ De HTML is geslaagd als:
 
 ## 12. Vervolg na akkoord
 
-1. Ik bouw `clip-live-redesign-v2.html` in 1 keer in `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/`
+1. Ik bouw `clip-live-redesign-v2.html` in 1 keer in `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/`
 2. Jij opent 'm in je browser, klikt door de 5 schermen
 3. Feedback → ik pas aan (iteratief)
 4. Daarna pas: doorvertaling naar Python/Flask templates + landing page

@@ -738,7 +738,7 @@ Komt in een latere ronde. Zonder deze fase blijft Step 6 PUBLISH een placeholder
 - Stripe Studio+ product (alleen feature-flag reserveren)
 - Multi-tenant Supabase-laag (zit in bestaande PLAN-CONTENT-CALENDAR Fase 5b)
 - Reset-password.html standalone polish (open punt sessie 48)
-- Code-rebrand Clip Live → Omni DJ (aparte sessie volgens HANDOVER)
+- Code-rebrand Omni DJ → Omni DJ (aparte sessie volgens HANDOVER)
 - App-icon / bundle-identifier rebrand (idem)
 - omnidj.com DNS koppelen (idem)
 - App Store / DMG distributie

@@ -26,11 +26,11 @@ Vier samenhangende wijzigingen in de Editor view:
 
 Voordat je 1 regel aanpast, kopieer:
 ```
-/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/static/index.html
+/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/static/index.html
 ```
 naar:
 ```
-/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/static/index.html.pre-sessie1.bak
+/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/static/index.html.pre-sessie1.bak
 ```
 
 Er staan al twee oudere `.bak` bestanden in dezelfde folder — consistent met hoe Sjuul het eerder deed.
@@ -224,7 +224,7 @@ Stop na elke stap die visueel te checken is, geef Sjuul een **letterlijk** termi
 
 App starten:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./start.sh
 
 Browser: http://127.0.0.1:5555

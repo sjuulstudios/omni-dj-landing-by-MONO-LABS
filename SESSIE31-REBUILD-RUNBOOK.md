@@ -15,7 +15,7 @@ Sessie 31 voegt vier dingen toe bovenop sessie 30:
 
 Server starten (als hij nog niet draait):
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./start.sh
 
 Open in browser: http://127.0.0.1:5555
@@ -37,7 +37,7 @@ Als één van deze 8 punten faalt, stop en meld het.
 
 Als je deze stap in sessie 30 al gedaan hebt: skip. Anders:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 supabase functions deploy update-usage
 
 Verwacht: "Deployed Function update-usage". Geen --no-verify-jwt flag.
@@ -50,7 +50,7 @@ SUPABASE_SERVICE_ROLE_KEY moet aanwezig zijn.
 
 ## Stap 2 — Build de .dmg
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./build_macos.sh dmg
 
 Verwacht: ~5 minuten. Output staat in dist/. Het script faalt als er
@@ -59,17 +59,17 @@ dat is de defensieve scan uit sessie 30.
 
 Als de build slaagt, ligt er:
 
-dist/Clip Live.app
-dist/Clip Live.dmg
+dist/Omni DJ.app
+dist/Omni DJ.dmg
 
 ## Stap 3 — Smoketest op de gebundelde .dmg
 
 Sluit alle dev-servers af (Ctrl+C in de terminal die ./start.sh draait).
 
-Open de .dmg en sleep "Clip Live.app" naar /Applications. Voor het
+Open de .dmg en sleep "Omni DJ.app" naar /Applications. Voor het
 eerste startup-grant van Gatekeeper:
 
-xattr -dr com.apple.quarantine "/Applications/Clip Live.app"
+xattr -dr com.apple.quarantine "/Applications/Omni DJ.app"
 
 Daarna: rechts-klik → Open. Bevestig de Gatekeeper-prompt.
 

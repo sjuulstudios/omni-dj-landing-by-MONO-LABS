@@ -2,7 +2,7 @@
 # test_auth.sh - tests signup -> login -> me endpoints end-to-end
 # Run via: ./test_auth.sh
 
-EMAIL="business+cliptest@sjuulstudios.com"
+EMAIL="omnidj+test@monohq-labs.com"
 PASSWORD="TestPassword2026"
 BASE="http://127.0.0.1:5555"
 

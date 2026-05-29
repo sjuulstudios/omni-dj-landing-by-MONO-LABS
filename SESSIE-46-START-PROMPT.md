@@ -15,7 +15,7 @@ Als je het overslaat: ook prima, dan combineren we het in sessie 46.
 ## Plak dit in de nieuwe chat
 
 ```
-Sessie 46 voor Clip Live. Lees als eerste:
+Sessie 46 voor Omni DJ. Lees als eerste:
 
 1. HANDOVER.md (top — "STATUS NA SESSIE 45 — REDESIGN FASE 1")
 2. PLAN-REDESIGN-MIGRATION-2026-05-26.md (sectie 2, vooral Fase 2)
@@ -23,7 +23,7 @@ Sessie 46 voor Clip Live. Lees als eerste:
 4. LESSONS-LEARNED.md (vooral .app vs dev-server gedrag)
 
 Status: redesign Fase 1 (sidebar + topbar shell) is code-side
-klaar achter feature-flag `localStorage.clipLiveRedesignV2='1'`.
+klaar achter feature-flag `localStorage.omniDjRedesignV2='1'`.
 Sessie 43+44 ook code-side klaar.
 
 Wat ik wil deze sessie:
@@ -69,6 +69,6 @@ Start met:
 
 Plak letterlijk in Terminal:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && cp static/index.html.pre-redesign-v2.bak static/index.html && ./start.sh
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter" && cp static/index.html.pre-redesign-v2.bak static/index.html && ./start.sh
 
 Dat zet de stand terug op vóór sessie 45 en herstart de dev-server.

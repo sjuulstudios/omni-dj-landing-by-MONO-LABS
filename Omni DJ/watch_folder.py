@@ -254,7 +254,7 @@ def _scan_folder(folder: str):
     """Yield (abs_path, basename, size, mtime) for every allowed media file
     directly inside `folder`. Recursion is intentionally avoided — Dropbox /
     Drive folders nest deeply and the user expects "drop into this folder
-    and Clip Live picks it up", not "find files anywhere underneath"."""
+    and Omni DJ picks it up", not "find files anywhere underneath"."""
     if not folder or not os.path.isdir(folder):
         return
     allowed = _deps['VIDEO_EXTS_ALLOWED']

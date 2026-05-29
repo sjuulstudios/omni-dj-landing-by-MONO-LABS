@@ -1,7 +1,7 @@
 # SESSIE 58 — Autonome audit-log
 
 > Live smoketest + security + UI-quality van sessies 56-57 voor commit naar feature/auto-mode-and-brand-redesign.
-> Datum: 2026-05-28. Werkmap: /Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/
+> Datum: 2026-05-28. Werkmap: /Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/
 > Sjuul gaf akkoord op alle tools en alle 4 blokken vooraf.
 
 ## SAMENVATTING
@@ -30,13 +30,13 @@
 
 ## PRE-BLOK FIX — Login-scherm opschoning
 
-Sjuul stuurde 2 screenshots tijdens sessie-start met 3 verzoeken: logo+Clip Live+DJ-set studio sublabel weg, donkere balk-achtergrond weg, Log in/Sign up tabs duidelijker.
+Sjuul stuurde 2 screenshots tijdens sessie-start met 3 verzoeken: logo+Omni DJ+DJ-set studio sublabel weg, donkere balk-achtergrond weg, Log in/Sign up tabs duidelijker.
 
 ### Wat ik aanpaste in `static/index.html`
 - **DOM 8660**: aria-label naar "Sign in to Omni DJ"
 - **DOM 8662-8668**: `.auth-brand` block: weg met brand-mark + DJ-set studio sub, vervangen door enkel `<h1>Omni DJ</h1>`
 - **DOM 8670-8673**: tabs kregen `role="tablist"`, `role="tab"`, `aria-selected` (a11y)
-- **DOM 8841**: forgot-modal-brand "Clip Live" naar "Omni DJ"
+- **DOM 8841**: forgot-modal-brand "Omni DJ" naar "Omni DJ"
 - **CSS 4943**: gradient + border-right op `.auth-brand` weg (was de visuele "balk"). Wordmark krijgt nu enkel een border-bottom voor scheiding
 - **CSS 4989**: `.auth-tab.active` toegevoegd aan v2 active-selector (mismatch met JS-toggle was de echte reden dat active-tab niet uitsprong)
 - **CSS**: tablist full-width met `flex:1` per tab
@@ -81,12 +81,12 @@ body:not(.redesign-v2) .v2-modal-bg { display: none !important; }
 Live geverifieerd: v2 OFF + reload → modal display=none → legacy home-view rendert clean.
 
 ### Copy fixes — DONE
-Alle 5 user-zichtbare "Clip Live" references in static/index.html naar "Omni DJ":
+Alle 5 user-zichtbare "Omni DJ" references in static/index.html naar "Omni DJ":
 - 8988 Cloud sync card sidebar (Dropbox copy)
 - 9324 v2-home tile "Drop sets into a Dropbox..."
 - 10393 Settings Watch folder card "Drop a track in here..."
 - 10503 Storage notice about 2h+ sets
-- (Sidebar `.brand-row` "Clip Live / DJ-set studio" op regel 8903 BEWUST UIT SCOPE — aparte rebrand-pass van shell)
+- (Sidebar `.brand-row` "Omni DJ / DJ-set studio" op regel 8903 BEWUST UIT SCOPE — aparte rebrand-pass van shell)
 
 ### Em-dash fixes — DONE (user preference: no em-dashes)
 4 user-zichtbare em-dashes verwijderd:
@@ -98,8 +98,8 @@ Alle 5 user-zichtbare "Clip Live" references in static/index.html naar "Omni DJ"
 Live geverifieerd: alle 3 page-renders bevatten geen em-dash meer (textContent check via JS).
 
 ### Open items uit Blok 1
-- ⚠️ Sidebar brand-row toont nog "Clip Live / DJ-set studio" in legacy mode + Cloud sync sidebar-card titel (regel 8903) — aparte rebrand-pass
-- ⚠️ Browser tab-title is nog "Clip Live" (uit `<title>` tag)
+- ⚠️ Sidebar brand-row toont nog "Omni DJ / DJ-set studio" in legacy mode + Cloud sync sidebar-card titel (regel 8903) — aparte rebrand-pass
+- ⚠️ Browser tab-title is nog "Omni DJ" (uit `<title>` tag)
 - ⚠️ Insights Best clip "810 views" terwijl Clips Published = 0 (mock-data inconsistentie)
 - ⚠️ Settings Profile-inputs zijn leeg ondanks Sjuul ingelogd in sidebar (geen STATE-refresh van /api/auth/me na overlay-bypass — test-artefact)
 
@@ -197,13 +197,13 @@ Live geverifieerd via native `dispatchEvent`: modal sluit (open=false, display=n
 | File | Type | Wat |
 |---|---|---|
 | `static/index.html` | DOM | Auth-overlay: brand-block vervangen door wordmark "Omni DJ" (regel 8660-8673) |
-| `static/index.html` | DOM | forgot-modal "Clip Live" naar "Omni DJ" (regel 8841) |
+| `static/index.html` | DOM | forgot-modal "Omni DJ" naar "Omni DJ" (regel 8841) |
 | `static/index.html` | CSS | `.auth-brand` v2: balk-gradient weg, wordmark-styling (regel 4943) |
 | `static/index.html` | CSS | `.auth-tab.active` koppelen aan v2 active-pill (regel 4989) |
 | `static/index.html` | CSS | tablist full-width flex:1 |
 | `static/index.html` | JS | `setAuthTab` ook `aria-selected` syncen (regel 23917) |
 | `static/index.html` | CSS | `.v2-modal-bg` default `display:none` voor legacy-mode (na regel 6827) |
-| `static/index.html` | Copy | 4 "Clip Live" -> "Omni DJ" in 4 v2/legacy zinnen |
+| `static/index.html` | Copy | 4 "Omni DJ" -> "Omni DJ" in 4 v2/legacy zinnen |
 | `static/index.html` | Copy | 4 em-dashes verwijderd uit user-visible copy + 1 default-value |
 | `static/index.html` | JS | Globale Escape-handler voor `.v2-modal-bg.on` (na `calCloseSchedule`) |
 
@@ -214,7 +214,7 @@ Live geverifieerd via native `dispatchEvent`: modal sluit (open=false, display=n
 ## OPEN ITEMS VOOR SJUUL'S REVIEW
 
 ### Aanbevolen vóór commit naar feature-branch
-1. **Sidebar brand-row + browser title rebrand** (regel 8903 + `<title>` tag) — aparte rebrand-pass, samen met de andere "Clip Live" references in `launcher.py`, `app.py` titels, package metadata
+1. **Sidebar brand-row + browser title rebrand** (regel 8903 + `<title>` tag) — aparte rebrand-pass, samen met de andere "Omni DJ" references in `launcher.py`, `app.py` titels, package metadata
 2. **Logo-upload size cap** — voeg 2MB enforce toe in FileReader-flow voor `bs-logo-input`
 3. **Brand-pack export data-URL strip** — handmatig 1 pack met logo exporteren, JSON inspecteren, beslissen of strip nodig is
 
@@ -234,7 +234,7 @@ Live geverifieerd via native `dispatchEvent`: modal sluit (open=false, display=n
 
 ### Stap 1 — Visuele finale check (5-10 min)
 Open `http://127.0.0.1:5555` in Chrome (dev-server draait). v2-flag aan via console:
-`localStorage.setItem('clipLiveRedesignV2','1'); location.reload();`
+`localStorage.setItem('omniDjRedesignV2','1'); location.reload();`
 
 Doorloop: Analyse → Library → Brand → Social → Calendar → Insights → Auto-mode → Settings. Schakel ook v2 uit en check legacy-home (geen Schedule-post bug meer).
 
@@ -248,12 +248,12 @@ Branch: `feature/auto-mode-and-brand-redesign` (al actief).
 
 ### Stap 3 — PyInstaller rebuild (15 min, als alles groen)
 ```
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 source venv/bin/activate
-mv "/Applications/Clip Live.app" "/Applications/Clip Live.PRE-SESSIE58.app"
+mv "/Applications/Omni DJ.app" "/Applications/Omni DJ.PRE-SESSIE58.app"
 ./build_macos.sh dmg
-mv "dist/Clip Live.app" "/Applications/"
-open "/Applications/Clip Live.app"
+mv "dist/Omni DJ.app" "/Applications/"
+open "/Applications/Omni DJ.app"
 ```
 
 ### Stap 4 — Rebrand-pass sidebar + bundle (aparte sessie 59)

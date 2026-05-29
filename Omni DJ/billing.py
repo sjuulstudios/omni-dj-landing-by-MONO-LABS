@@ -1,5 +1,5 @@
 """
-Clip Live - Stripe billing integration (Phase 2).
+Omni DJ - Stripe billing integration (Phase 2).
 
 Wraps the Stripe SDK for the two flows the Flask app needs:
 
@@ -299,7 +299,7 @@ def open_portal(stripe_customer_id, return_url, access_token=None):
         by the webhook on first checkout. If empty, return an error
         telling the caller the user has never paid yet.
       return_url: where Stripe sends the user when they click "Return to
-        Clip Live".
+        Omni DJ".
       access_token: Supabase JWT — vereist in edge-function-modus.
 
     Returns:

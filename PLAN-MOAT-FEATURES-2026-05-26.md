@@ -1,4 +1,4 @@
-# Clip Live — Moat-features & Ad-spend platform plan
+# Omni DJ — Moat-features & Ad-spend platform plan
 
 > **Versie:** 1.0 — 2026-05-26
 > **Auteur:** Claude + Sjuul (sessie na compactie)
@@ -9,7 +9,7 @@
 
 ## 0. Waarom dit plan bestaat
 
-Er komen steeds krachtigere generieke AI video-agents (OpusClip, HeyGen Agent, Premiere AI, en straks Google/OpenAI video-agents) die op basis van een simpele prompt video's kunnen editen. De vraag is: **waarom zou een DJ over 6–24 maanden nog Clip Live kiezen?**
+Er komen steeds krachtigere generieke AI video-agents (OpusClip, HeyGen Agent, Premiere AI, en straks Google/OpenAI video-agents) die op basis van een simpele prompt video's kunnen editen. De vraag is: **waarom zou een DJ over 6–24 maanden nog Omni DJ kiezen?**
 
 Het antwoord is niet "we knippen op drops" — dat doet iedereen straks. Het antwoord moet zijn:
 
@@ -58,7 +58,7 @@ Een losse OpusClip-knipper of een Premiere-template heeft geen van deze koppelin
 
 ### Waarom dit eerst
 
-Dit is geen feature die je bouwt, dit is **een positionering die je expliciet maakt**. Clip Live draait al lokaal. Wat ontbreekt is dat we het *verkopen* als zodanig en er een paar concrete privacy-waarborgen omheen bouwen die je kunt aantonen en uitleggen.
+Dit is geen feature die je bouwt, dit is **een positionering die je expliciet maakt**. Omni DJ draait al lokaal. Wat ontbreekt is dat we het *verkopen* als zodanig en er een paar concrete privacy-waarborgen omheen bouwen die je kunt aantonen en uitleggen.
 
 ### Wat er concreet aan bestaat
 
@@ -111,13 +111,13 @@ Eén pagina op de site met een dataflow-diagram: audio-bestand → librosa lokaa
 
 ## 3. Feature 7 — Branding profielen per DJ
 
-### Waarom dit in Clip Live thuishoort en niet in Premiere
+### Waarom dit in Omni DJ thuishoort en niet in Premiere
 
 Je vraag was terecht: een vast template met fonts, logo en kleuren kan ook in Premiere als preset. Dat klopt — voor één DJ die zijn eigen workflow opbouwt.
 
-Het verschil: in Clip Live is het **een first-class profiel dat overal automatisch wordt toegepast**, niet een handmatige preset die je per project moet laden. En het profiel werkt mee in de ad-spend module, in de auto-draft pipeline, in de content calendar. Premiere weet niet wat een "DJ-persona" is, kent geen Spotify-link variabele, weet niet dat hashtags per platform anders zijn.
+Het verschil: in Omni DJ is het **een first-class profiel dat overal automatisch wordt toegepast**, niet een handmatige preset die je per project moet laden. En het profiel werkt mee in de ad-spend module, in de auto-draft pipeline, in de content calendar. Premiere weet niet wat een "DJ-persona" is, kent geen Spotify-link variabele, weet niet dat hashtags per platform anders zijn.
 
-Dus: Premiere heeft templates. Clip Live heeft een **DJ-identity profile** dat door alle features heen wordt geweven.
+Dus: Premiere heeft templates. Omni DJ heeft een **DJ-identity profile** dat door alle features heen wordt geweven.
 
 ### Wat een profiel bevat
 
@@ -203,7 +203,7 @@ Geschatte werk: 2 weken voor profiel-CRUD + renderer + één template (festival-
 **Laag 1: Watch folder + ingest**
 
 - DJ wijst in settings één of meerdere folders aan: lokale Dropbox-sync, Google Drive desktop-sync, of gewoon een lokale folder.
-- Een fswatch/watchdog proces draait als achtergrond-service van Clip Live.
+- Een fswatch/watchdog proces draait als achtergrond-service van Omni DJ.
 - Nieuwe video- of audio-bestanden boven X minuten lang (instelbaar, default 20 min) worden automatisch in de queue gezet.
 - Er is ook een "manual override" — DJ kan een bestand handmatig naar de queue slepen.
 
@@ -222,7 +222,7 @@ Voor elke set in de queue:
 3. Maak N clips (configureerbaar, default 8–12 per set).
 4. Render elke clip in 3 formats: 9:16 (TikTok/Reels), 1:1 (feed), 16:9 (YouTube).
 5. Genereer captions per platform (zie hieronder).
-6. Sla op in `~/Library/Application Support/Clip Live/drafts/{set-id}/`.
+6. Sla op in `~/Library/Application Support/Omni DJ/drafts/{set-id}/`.
 7. Upload preview-thumbnails naar Supabase storage (niet de volledige video — die blijft lokaal).
 8. Maak entries in `pending_clips` tabel: `{user_id, clip_id, set_id, suggested_post_time, platform_targets, status: 'pending_review'}`.
 
@@ -313,14 +313,14 @@ Onderzoek bevestigt: Intellijend koppelt het Meta Ad account van een artiest aan
 
 Intellijend is gericht op Spotify-streams. Wij zijn gericht op **DJ-content engagement én Spotify-streams** (want elke DJ wil uiteindelijk dat zijn tracks gestreamd worden). Onze unfair advantage: wij hébben de creatives al, want de auto-draft pipeline maakt ze.
 
-Een Intellijend-gebruiker moet zelf 5–10 ad-creatives aanleveren. Een Clip Live-gebruiker heeft er per set 10. **Dat is een fundamenteel andere positie.**
+Een Intellijend-gebruiker moet zelf 5–10 ad-creatives aanleveren. Een Omni DJ-gebruiker heeft er per set 10. **Dat is een fundamenteel andere positie.**
 
 ### Hoe het technisch werkt — eindgebruiker perspectief
 
 1. DJ koppelt zijn Meta Business Manager + ad account via OAuth (vereist business verification, zie sectie 4).
 2. DJ koppelt zijn Spotify-artist-profiel (Spotify for Artists OAuth).
 3. DJ stelt in: maandelijks ad-budget (bv. €300), doel ("groei volgers", "stream-conversie", "event-tickets verkopen", "mailinglijst opbouwen"), regio (NL, EU, wereldwijd).
-4. Clip Live's ad-engine pakt automatisch:
+4. Omni DJ's ad-engine pakt automatisch:
    - De 10 clips van zijn laatste set.
    - Maakt per clip een ad-creative variant (verschillende thumbnails, captions, korte vs. lange versie).
    - Lanceert een test-campagne in Meta Ads Manager met klein budget per variant (€2–5/dag).
@@ -336,12 +336,12 @@ Vereisten (uit research):
 - Eigen Meta App in Developer portal met "Marketing API" product enabled.
 - Advanced Access op alle relevante permissions (`ads_management`, `ads_read`, `business_management`, `pages_read_engagement`).
 - App Review met use-case "managing ads on behalf of music artists for their own ad accounts".
-- OAuth-flow waarin DJ Clip Live explicit toestaat zijn ad account te beheren.
+- OAuth-flow waarin DJ Omni DJ explicit toestaat zijn ad account te beheren.
 
 **Engine-architectuur (server-side, op Supabase Edge Functions + een aparte Node service voor de orchestrator)**
 
 ```
-[Clip Live local app]
+[Omni DJ local app]
     ↓ (clips + branding + targets)
 [Supabase API]
     ↓ (jobs)
@@ -352,7 +352,7 @@ Vereisten (uit research):
     ↓ (resultaten)
 [Supabase analytics tables]
     ↓
-[Clip Live dashboard]
+[Omni DJ dashboard]
 ```
 
 Belangrijke beslissing: de orchestrator is een aparte service, niet onderdeel van de lokale Mac-app. Want hij moet 24/7 draaien om ad-sets aan te passen. De **clips zelf** blijven lokaal — alleen de gerenderde MP4 wordt naar Meta gepusht via hun standaard upload-endpoint, exact zoals een gewone Ads Manager dat ook doet. Geen extra data-deling.
@@ -395,7 +395,7 @@ Spotify for Artists API geeft access tot stream-counts, save-rate, follower-grow
 
 **Optie A: SaaS-fee bovenop ad-spend (Intellijend-model)**
 
-- DJ betaalt €X/maand voor Clip Live Plus (met ad-engine).
+- DJ betaalt €X/maand voor Omni DJ Plus (met ad-engine).
 - DJ's ad-budget gaat rechtstreeks naar Meta (wij raken het niet aan).
 - Wij verdienen alleen aan de SaaS-fee.
 - Voordelen: simpel, transparant, geen financieel risico voor ons.
@@ -404,7 +404,7 @@ Spotify for Artists API geeft access tot stream-counts, save-rate, follower-grow
 **Optie B: SaaS-fee + percentage van ad-spend (agency-model)**
 
 - DJ betaalt €X/maand basis-tarief.
-- + 10% van zijn maandelijkse ad-spend, gefactureerd via Clip Live.
+- + 10% van zijn maandelijkse ad-spend, gefactureerd via Omni DJ.
 - Het ad-budget loopt **via ons** — wij ontvangen €Y, geven daarvan €Y × 0.91 aan Meta, houden 9% over.
 - Voordelen: schaalbare inkomsten, lijkt op hoe ad-agencies werken.
 - Nadelen: complexiteit (we hanteren geld dat niet van ons is — boekhoudkundig en juridisch zwaarder), DJ kan switchen naar zelf-managen om de 10% te besparen.
@@ -505,7 +505,7 @@ Dit is **agressief** maar haalbaar als jij niets anders gaat doen. Realistisch: 
 | Tier 4 | Stage + Ads | €69 | Pro DJ met budget | Stage + ad-spend module (eigen budget naar Meta) |
 | Tier 5 | Managed | 10% + €99 basis | DJ met €1000+ ad-budget | Studio + we beheren ad-budget |
 
-Deze prijsstructuur stemt overeen met wat in de memory staat over Clip Drop/Live (~paid architecture, Stripe-integratie). De ad-spend tier zit bewust **lager** dan Studio: ad-spend is voor pro maar geen privacy-paranoide, Studio is voor de bovenste 5% die unreleased ID's draaien.
+Deze prijsstructuur stemt overeen met wat in de memory staat over Omni DJ/Live (~paid architecture, Stripe-integratie). De ad-spend tier zit bewust **lager** dan Studio: ad-spend is voor pro maar geen privacy-paranoide, Studio is voor de bovenste 5% die unreleased ID's draaien.
 
 ---
 

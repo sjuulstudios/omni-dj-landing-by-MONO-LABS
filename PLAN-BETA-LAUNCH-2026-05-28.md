@@ -5,7 +5,7 @@
 > **Drie parallelle sub-plannen** die hieronder ge-referenced worden:
 > 1. `PLAN-DNS-TRANSIP-CLOUDFLARE-2026-05-28.md` — DNS + landingspagina hosting
 > 2. `PLAN-APPLE-DEVELOPER-2026-05-28.md` — Developer account, codesign, notarize, signed DMG
-> 3. `PLAN-REBRAND-OMNI-DJ-2026-05-27.md` — bestaand rebrand-plan (Clip Live → Omni DJ)
+> 3. `PLAN-REBRAND-OMNI-DJ-2026-05-27.md` — bestaand rebrand-plan (Omni DJ → Omni DJ)
 
 ---
 
@@ -32,7 +32,7 @@ Voordat je begint moet onderstaande sluitend zijn. Werk dit eerst af:
 
 | Item | Status | Actie |
 |---|---|---|
-| Auth-incident sessie 59 antwoord | OPEN | Sjuul moet bevestigen of de 7 Library-projecten allemaal van `business@sjuulstudios.com` zijn. Zie `AUTH-INCIDENT-2026-05-28.md`. |
+| Auth-incident sessie 59 antwoord | OPEN | Sjuul moet bevestigen of de 7 Library-projecten allemaal van `omnidj@monohq-labs.com` zijn. Zie `AUTH-INCIDENT-2026-05-28.md`. |
 | Selection-tray sessie 59 visueel getest | OPEN | Dev-server starten, v2-flag aan, 2-3 clips selecteren in Library, top-balk checken. |
 | Sessie 57+58+59 gecommit | OPEN | `git status` in `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ` checken. |
 | 14 feature-cleanup items go/no-go | OPEN | Per item in `PLAN-2026-05-28-FEATURE-CLEANUP.md` OK of skip. Quick-wins voor beta in scope, grote items uit. |
@@ -84,26 +84,26 @@ Stappen hieronder zijn genummerd in volgorde van uitvoering. Tussen haakjes welk
    git add -A
    git commit -m "sessie 57-58-59 + quick-wins voor beta"
    ```
-6. **Test-bundle bouwen** (nog onder naam Clip Live, alleen voor interne smoke-test):
+6. **Test-bundle bouwen** (nog onder naam Omni DJ, alleen voor interne smoke-test):
    ```
    cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ"
    source venv/bin/activate
-   mv "/Applications/Clip Live.app" "/Applications/Clip Live.PRE-SESSIE60.app"
+   mv "/Applications/Omni DJ.app" "/Applications/Omni DJ.PRE-SESSIE60.app"
    ./build_macos.sh dmg
-   mv "dist/Clip Live.app" "/Applications/"
-   open "/Applications/Clip Live.app"
+   mv "dist/Omni DJ.app" "/Applications/"
+   open "/Applications/Omni DJ.app"
    ```
 7. **Smoke-test in bundle.** Upload set, drops detecteren, clip exporteren met captions toggle aan, MP4 controleren op caption-tekst. Auth login werkt. Reset-password werkt.
 8. **Als alles groen:** door naar Stap 2 (rebrand).
 9. **Als bug:** fix eerst, terug naar punt 5.
 
-**Output.** Werkende `/Applications/Clip Live.app` met sessie 57-59 in. Niet gedeeld met externen.
+**Output.** Werkende `/Applications/Omni DJ.app` met sessie 57-59 in. Niet gedeeld met externen.
 
 ---
 
 ## 5. Stap 2 — Sessie 60b: Code-rebrand naar Omni DJ (Track A, 4-6u)
 
-**Doel.** Alle interne strings, env-vars, Bundle ID, paden, UI-copy van Clip Live naar Omni DJ. Eenmalige sessie, big-bang.
+**Doel.** Alle interne strings, env-vars, Bundle ID, paden, UI-copy van Omni DJ naar Omni DJ. Eenmalige sessie, big-bang.
 
 **Voorbereiding.** Beantwoord de 8 OPEN VRAGEN in sectie 14 van `PLAN-REBRAND-OMNI-DJ-2026-05-27.md`:
 
@@ -201,7 +201,7 @@ Zie `PLAN-DNS-TRANSIP-CLOUDFLARE-2026-05-28.md`. Inclusief:
    - Site URL: `https://omnidj.com`
    - Redirect URLs: `https://omnidj.com/*`, `https://app.omnidj.com/*`, `http://127.0.0.1:5555/*` (dev)
 2. **Email Templates aanpassen.**
-   - Subject + body: vervang "Clip Live" door "Omni DJ"
+   - Subject + body: vervang "Omni DJ" door "Omni DJ"
    - Footer logo + signature: `omnidj@monohq-labs.com`
    - Reset-password link gaat naar `https://omnidj.com/reset-password` (host op landingspagina als statisch route, of redirect naar `http://127.0.0.1:5555` voor desktop-app)
 3. **Custom SMTP** (in plaats van Supabase default smtp).
@@ -397,7 +397,7 @@ Beta is live als:
 | `PLAN-BETA-LAUNCH-2026-05-28.md` | Dit document (master plan) |
 | `PLAN-DNS-TRANSIP-CLOUDFLARE-2026-05-28.md` | DNS-migratie + Cloudflare Pages setup |
 | `PLAN-APPLE-DEVELOPER-2026-05-28.md` | Apple Dev account + codesign + notarize |
-| `PLAN-REBRAND-OMNI-DJ-2026-05-27.md` | Code-rebrand Clip Live → Omni DJ |
+| `PLAN-REBRAND-OMNI-DJ-2026-05-27.md` | Code-rebrand Omni DJ → Omni DJ |
 | `landing/index.html` | Landingspagina v1 |
 | `landing/privacy.html` | Privacy Policy (Stap 9) |
 | `landing/terms.html` | Terms of Service (Stap 9) |

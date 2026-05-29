@@ -1,5 +1,5 @@
 """
-Clip Live — Desktop launcher
+Omni DJ — Desktop launcher
 
 Wordt gebruikt als entry point in de PyInstaller-bundle. Doet drie dingen:
 
@@ -55,14 +55,14 @@ os.chdir(BUNDLE_DIR)
 # (uploads, output, job_history.json) naar een schrijfbare locatie per OS.
 # app.py leest deze env-vars op meerdere plekken.
 if sys.platform == "darwin":
-    USER_DATA_DIR = Path.home() / "Library" / "Application Support" / "Clip Live"
+    USER_DATA_DIR = Path.home() / "Library" / "Application Support" / "Omni DJ"
 elif sys.platform == "win32":
-    USER_DATA_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "Clip Live"
+    USER_DATA_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "Omni DJ"
 else:
-    USER_DATA_DIR = Path.home() / ".clip-live"
+    USER_DATA_DIR = Path.home() / ".omni-dj"
 
 USER_DATA_DIR.mkdir(parents=True, exist_ok=True)
-os.environ.setdefault("CLIP_LIVE_USER_DATA", str(USER_DATA_DIR))
+os.environ.setdefault("OMNI_DJ_USER_DATA", str(USER_DATA_DIR))
 
 # --------------------------------------------------------------------------- #
 # 2b. Hardcoded publieke config laden (Supabase URL, anon key, Stripe
@@ -107,7 +107,7 @@ def _log(msg: str) -> None:
 # --------------------------------------------------------------------------- #
 # 4. Poort + browser-opener
 # --------------------------------------------------------------------------- #
-PORT = int(os.environ.get("CLIP_LIVE_PORT", "5555"))
+PORT = int(os.environ.get("OMNI_DJ_PORT", "5555"))
 
 
 def _open_url_native(url: str) -> bool:

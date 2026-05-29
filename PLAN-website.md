@@ -134,7 +134,7 @@ omnidj.com/
     └── .env.example                 (SMTP credentials, never committed)
 ```
 
-Flask backend runs on port 5556 (5555 is taken by Clip Live). Next.js dev server on 3000.
+Flask backend runs on port 5556 (5555 is taken by Omni DJ). Next.js dev server on 3000.
 
 ## 3. Section-by-section spec
 

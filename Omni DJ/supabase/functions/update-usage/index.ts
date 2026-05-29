@@ -1,7 +1,7 @@
 /**
  * update-usage  Supabase Edge Function (Deno runtime).
  *
- * Server-side quota bookkeeping for the Clip Live desktop bundle.
+ * Server-side quota bookkeeping for the Omni DJ desktop bundle.
  * The shipped .app cannot hold SUPABASE_SERVICE_ROLE_KEY, so all
  * quota reads, rolling-window resets and increments are routed
  * through this function. JWT verification is REQUIRED.

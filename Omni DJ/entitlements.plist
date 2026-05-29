@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <!--
-        Hardened-runtime entitlements voor Clip Live.
+        Hardened-runtime entitlements voor Omni DJ.
 
         Vereist door Apple notarization. Geeft de gebundelde Python +
         ffmpeg toestemming om:

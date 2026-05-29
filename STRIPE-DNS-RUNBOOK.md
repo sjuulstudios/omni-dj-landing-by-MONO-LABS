@@ -1,6 +1,6 @@
 # Stripe Live + DNS — Switch Runbook
 
-> Stap-voor-stap checklist om Clip Live van Stripe TEST-mode naar LIVE-mode te brengen, plus DNS + TLS opzet voor het launch-domein. Geschreven na een volledige code-audit op 2026-05-12.
+> Stap-voor-stap checklist om Omni DJ van Stripe TEST-mode naar LIVE-mode te brengen, plus DNS + TLS opzet voor het launch-domein. Geschreven na een volledige code-audit op 2026-05-12.
 
 ## TL;DR — wat is er al en wat moet jij doen
 
@@ -30,7 +30,7 @@
 
 1. Log in op https://dashboard.stripe.com
 2. Klik linksonder op het toggle "Test mode" om naar Live mode te schakelen
-3. Als de toggle disabled is → Stripe vraagt eerst om bedrijfsinfo: KvK-nummer (Sjuul Studios), BTW-nummer, bankrekening, bestuurder-info, ID-verificatie
+3. Als de toggle disabled is → Stripe vraagt eerst om bedrijfsinfo: KvK-nummer (MONO LABS), BTW-nummer, bankrekening, bestuurder-info, ID-verificatie
 4. Wacht op verificatie-bevestiging van Stripe (kan paar uur tot 1-2 dagen duren)
 
 ### A2. Live products + prices opnieuw maken
@@ -40,12 +40,12 @@ Test-mode products bestaan NIET in Live-mode. Je moet ze handmatig dupliceren.
 In het Stripe Dashboard met Live-mode AAN:
 
 1. **Products → Add product**
-   - Naam: `Clip Live — Pro`
+   - Naam: `Omni DJ — Pro`
    - Pricing: Recurring, € maandbedrag, EUR
    - → Save → kopieer de **price_id** (begint met `price_`)
 
 2. **Add product** nogmaals:
-   - Naam: `Clip Live — Studio`
+   - Naam: `Omni DJ — Studio`
    - Pricing: Recurring, € maandbedrag, EUR
    - → Save → kopieer de **price_id**
 
@@ -76,17 +76,17 @@ Drie hosts heb je nodig:
 
 | Subdomain | Doel | Wat draait er |
 |---|---|---|
-| `cliplive.app` (root) | Marketing landing page | Statische site of Vercel/Netlify |
-| `app.cliplive.app` | De Flask-app waar gebruikers inloggen | Jouw server / Mac / VPS |
+| `omnidj.com` (root) | Marketing landing page | Statische site of Vercel/Netlify |
+| `app.omnidj.com` | De Flask-app waar gebruikers inloggen | Jouw server / Mac / VPS |
 | (Supabase URL is al `lbabsffxefkrxwzkbzar.supabase.co`) | Auth + DB + webhook edge function | Bestaat al |
 
 ⚠ **Cruciaal**: de Flask-app draait nu op jouw Mac op `127.0.0.1:5555`. Voor productie moet die ergens publiek bereikbaar staan. Drie opties:
 
-- **A. Packaged .dmg/.exe distribueren** (zoals in `Clip Live/.claude/CLAUDE.md` als toekomstig doel staat): elke user runt de Flask-app lokaal, geen publiek domein nodig voor de app zelf. Alleen het marketing-domein `cliplive.app`. **Mijn voorkeur** — past bij de privacy- en upload-architectuur en is wat in jouw productplan staat.
+- **A. Packaged .dmg/.exe distribueren** (zoals in `Omni DJ/.claude/CLAUDE.md` als toekomstig doel staat): elke user runt de Flask-app lokaal, geen publiek domein nodig voor de app zelf. Alleen het marketing-domein `omnidj.com`. **Mijn voorkeur** — past bij de privacy- en upload-architectuur en is wat in jouw productplan staat.
 - **B. SaaS-stijl deployment** op een VPS (Hetzner / DigitalOcean / Fly.io). Vereist herarchitectuur — alle videofiles moeten in cloud storage, ffmpeg moet in een container. Veel werk. Niet aanbevolen voor launch.
-- **C. Hybrid**: marketing op cliplive.app, app blijft lokaal voor de eerste batch users.
+- **C. Hybrid**: marketing op omnidj.com, app blijft lokaal voor de eerste batch users.
 
-Als je voor **A** of **C** kiest, hoef je ALLEEN het marketing-domein op te zetten. Geen `app.cliplive.app` nodig.
+Als je voor **A** of **C** kiest, hoef je ALLEEN het marketing-domein op te zetten. Geen `app.omnidj.com` nodig.
 
 ### B3. DNS records (voor marketing-domein)
 
@@ -95,14 +95,14 @@ Bij Cloudflare Registrar — DNS-tabblad:
 ```
 Type   Name   Content                       Proxy
 A      @      <Vercel/Netlify IP>           Aan
-CNAME  www    cliplive.app                  Aan
+CNAME  www    omnidj.com                  Aan
 ```
 
 Bij Vercel of Netlify: hun docs vertellen welke IP/CNAME exact moet. Standaard krijg je gratis TLS-cert via Let's Encrypt.
 
 ### B4. Email setup (optioneel maar aangeraden)
 
-Voor `support@cliplive.app` / `noreply@cliplive.app`:
+Voor `support@omnidj.com` / `noreply@omnidj.com`:
 
 - Gebruik **Cloudflare Email Routing** (gratis) om mail naar je bestaande Gmail door te sturen
 - Of **Resend** / **Postmark** als je transactional mail wilt versturen (welcome emails, password reset, invoice receipts)
@@ -124,7 +124,7 @@ DKIM + DMARC records krijg je van je email-provider.
 De webhook function staat al in `supabase/functions/stripe-webhook/index.ts`. Check of hij deployed is:
 
 ```
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 supabase functions list
 ```
 
@@ -188,10 +188,10 @@ Als je een 500 ziet → check Supabase function logs via `supabase functions log
 
 ### D1. .env updaten
 
-Open `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/.env` en vervang de Stripe-block. **Maak eerst een backup**:
+Open `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/.env` en vervang de Stripe-block. **Maak eerst een backup**:
 
 ```
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 cp .env .env.pre-live.bak
 ```
 
@@ -210,7 +210,7 @@ STRIPE_WEBHOOK_SECRET=whsec_uitC3
 ### D2. Server restarten
 
 ```
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./start.sh
 ```
 
@@ -244,7 +244,7 @@ Open http://127.0.0.1:5555/api/billing/health in je browser. Verwacht:
 
 ### E1. Maak een nieuw test-account aan
 
-Gebruik je echte email (NIET het `+wftest17` adres) zodat je de receipt mailtjes kunt zien. Bijvoorbeeld `business+livetest1@sjuulstudios.com`.
+Gebruik je echte email (NIET het `+wftest17` adres) zodat je de receipt mailtjes kunt zien. Bijvoorbeeld `omnidj+livetest1@monohq-labs.com`.
 
 ### E2. Doorloop checkout
 
@@ -288,7 +288,7 @@ Als gebruikers de Flask-app lokaal draaien (`127.0.0.1:5555`), heb je geen TLS n
 
 Twee oplossingen:
 
-- **A. Custom protocol handler**: registreer `cliplive://` URI scheme bij macOS/Windows, redirect daarheen ipv https. Vereist .dmg/.exe packaging met dat schema geregistreerd.
+- **A. Custom protocol handler**: registreer `omnidj://` URI scheme bij macOS/Windows, redirect daarheen ipv https. Vereist .dmg/.exe packaging met dat schema geregistreerd.
 - **B. Use Stripe's `localhost` exception**: Stripe accepteert `http://localhost:5555/?billing=success` als success/cancel URL in LIVE mode (alleen localhost — niet 127.0.0.1 of een LAN IP). Pas dan `app.py` line 1352-1354 aan om altijd `localhost` te gebruiken.
 
 Optie B is de snelste. Patch:

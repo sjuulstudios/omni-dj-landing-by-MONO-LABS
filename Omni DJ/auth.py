@@ -1,5 +1,5 @@
 """
-Clip Live - Authentication & Supabase integration.
+Omni DJ - Authentication & Supabase integration.
 
 Loads SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY from .env
 and exposes two clients:
@@ -415,7 +415,7 @@ _COMMON_PASSWORDS = {
     'password', 'password1', 'password123', '12345678', '123456789',
     'qwerty123', 'qwerty1234', 'letmein1', 'letmein123',
     'welcome1', 'welcome123', 'admin123', 'administrator',
-    'clipdrop1', 'clipdrop123', 'djclips01', 'djclips123',
+    'omnidj1', 'omnidj123', 'omni1', 'omni123',
     'iloveyou1', 'monkey123', 'dragon123', 'football1',
 }
 
@@ -442,7 +442,7 @@ def _is_strong_password(pw):
 
 def _reset_redirect_url():
     """Waar Supabase de gebruiker heen stuurt na klik op reset-link.
-    Lokaal (dev-server + .app) is dat 127.0.0.1:5555. Productie is djclips.nl.
+    Lokaal (dev-server + .app) is dat 127.0.0.1:5555. Productie is omnidj.com.
     Beide URLs MOETEN in de Supabase URL-allowlist staan, anders weigert
     Supabase de redirect (security-feature, geen bug)."""
     return os.getenv(

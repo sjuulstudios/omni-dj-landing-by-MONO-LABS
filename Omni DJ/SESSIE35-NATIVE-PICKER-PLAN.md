@@ -174,7 +174,7 @@ Verwacht: een native bestandspicker opent in macOS. Kies een bestand → respons
 - [ ] **Stap 5: Commit**
 
 ```bash
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 git add app.py
 git commit -m "feat: add /api/pick-file native file picker endpoint (macOS + Windows/Linux)"
 ```
@@ -313,7 +313,7 @@ En verwijder de `const LARGE_FILE_THRESHOLD_BYTES = 4 * 1024 * 1024 * 1024;` con
 
 Start de server:
 ```bash
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./start.sh
 ```
 
@@ -328,7 +328,7 @@ Klik "Drop a set". Kies `Franky Rizardo Peru Set.mp4`. Verwacht: de app gaat dir
 - [ ] **Stap 7: Commit**
 
 ```bash
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 git add static/index.html
 git commit -m "feat: replace browser file picker with native /api/pick-file flow — no 4GB limit"
 ```
@@ -342,13 +342,13 @@ De dev server (`./start.sh`) pikt de wijzigingen automatisch op na een herstart.
 - [ ] **Stap 1: Rebuild**
 
 ```bash
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 python3 build.py
 ```
 
 Of via het build-script dat in de vorige sessie werd gebruikt.
 
-- [ ] **Stap 2: Verifieer dat de native picker ook in de .app werkt** — open `dist/Clip Live.app`, klik "Drop a set", controleer of de native picker opent.
+- [ ] **Stap 2: Verifieer dat de native picker ook in de .app werkt** — open `dist/Omni DJ.app`, klik "Drop a set", controleer of de native picker opent.
 
 ---
 

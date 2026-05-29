@@ -1,7 +1,7 @@
 /**
  * create-checkout-session — Supabase Edge Function (Deno runtime).
  *
- * Wordt aangeroepen door de Clip Live desktop-app om een Stripe Checkout
+ * Wordt aangeroepen door de Omni DJ desktop-app om een Stripe Checkout
  * Session te maken zonder dat de STRIPE_SECRET_KEY in de gebundelde
  * .app/.exe hoeft te staan.
  *
@@ -156,7 +156,7 @@ Deno.serve(async (req: Request) => {
     params.customer_update = { address: 'auto', name: 'auto' };
   } else {
     params.customer_email = user.email ?? undefined;
-    // Stripe Tax later inschakelen wanneer Sjuul Studios VAT-NL geverifieerd is.
+    // Stripe Tax later inschakelen wanneer MONO LABS VAT-NL geverifieerd is.
     params.automatic_tax = { enabled: false };
   }
 

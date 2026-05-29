@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# Clip Live — macOS build script
+# Omni DJ — macOS build script
 #
-# Bouwt een Clip Live.app + Clip Live.dmg vanuit de huidige source.
+# Bouwt een Omni DJ.app + Omni DJ.dmg vanuit de huidige source.
 # Werkt op de Mac waarop je ontwikkelt. Aanroep:
 #
 #     ./build_macos.sh                  # alleen .app bouwen (geen signing)
@@ -38,7 +38,7 @@ done
 # 0. Sanity checks
 # --------------------------------------------------------------------------- #
 echo ""
-echo "=== Clip Live build ==="
+echo "=== Omni DJ build ==="
 echo ""
 
 if ! command -v pyinstaller >/dev/null 2>&1; then
@@ -56,17 +56,17 @@ fi
 # 1. Schoonmaken
 # --------------------------------------------------------------------------- #
 echo "→ Oude build/ en dist/ verwijderen..."
-rm -rf build/ "dist/Clip Live" "dist/Clip Live.app" "dist/Clip Live.dmg"
+rm -rf build/ "dist/Omni DJ" "dist/Omni DJ.app" "dist/Omni DJ.dmg"
 
 # --------------------------------------------------------------------------- #
 # 2. PyInstaller
 # --------------------------------------------------------------------------- #
 echo "→ PyInstaller draaien (kan 3–8 minuten duren)..."
-pyinstaller --noconfirm ClipLive.spec
+pyinstaller --noconfirm OmniDJ.spec
 
-APP_PATH="dist/Clip Live.app"
+APP_PATH="dist/Omni DJ.app"
 if [[ ! -d "$APP_PATH" ]]; then
-    echo "FOUT: dist/Clip Live.app is niet gebouwd. Check de PyInstaller-output."
+    echo "FOUT: dist/Omni DJ.app is niet gebouwd. Check de PyInstaller-output."
     exit 1
 fi
 
@@ -92,7 +92,7 @@ SECRET_HITS=$(find "$APP_PATH" \
 if [[ -n "$SECRET_HITS" ]]; then
     echo "FOUT: secret-bestanden gevonden in de bundle:"
     echo "$SECRET_HITS"
-    echo "Verwijder ze uit de source of pas ClipLive.spec datas/excludes aan, en bouw opnieuw."
+    echo "Verwijder ze uit de source of pas OmniDJ.spec datas/excludes aan, en bouw opnieuw."
     exit 1
 fi
 
@@ -126,16 +126,16 @@ chmod +x "$RESOURCES/bin/ffmpeg" "$RESOURCES/bin/ffprobe"
 # worden voordat de Python-code start. We doen dat met een runtime hook
 # alternatief: env-var in Info.plist. Eenvoudigste pad: een launchscript.
 LAUNCH="$APP_PATH/Contents/MacOS/clip-live-launch.sh"
-ORIGINAL_BIN="$APP_PATH/Contents/MacOS/Clip Live"
-mv "$ORIGINAL_BIN" "$APP_PATH/Contents/MacOS/Clip Live.bin"
+ORIGINAL_BIN="$APP_PATH/Contents/MacOS/Omni DJ"
+mv "$ORIGINAL_BIN" "$APP_PATH/Contents/MacOS/Omni DJ.bin"
 cat > "$LAUNCH" <<'EOF'
 #!/usr/bin/env bash
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 export PATH="$DIR/Resources/bin:$PATH"
-exec "$DIR/MacOS/Clip Live.bin" "$@"
+exec "$DIR/MacOS/Omni DJ.bin" "$@"
 EOF
 chmod +x "$LAUNCH"
-# Info.plist verwijst naar CFBundleExecutable=Clip Live; we hernoemen het
+# Info.plist verwijst naar CFBundleExecutable=Omni DJ; we hernoemen het
 # wrapper-script daarheen.
 mv "$LAUNCH" "$ORIGINAL_BIN"
 
@@ -145,7 +145,7 @@ mv "$LAUNCH" "$ORIGINAL_BIN"
 if [[ "$MODE_SIGN" == "yes" ]]; then
     if [[ -z "${APPLE_DEVELOPER_ID:-}" ]]; then
         echo "FOUT: zet APPLE_DEVELOPER_ID environment variable, bv.:"
-        echo "  export APPLE_DEVELOPER_ID=\"Developer ID Application: Sjuul Studios (TEAMID)\""
+        echo "  export APPLE_DEVELOPER_ID=\"Developer ID Application: MONO LABS (TEAMID)\""
         exit 1
     fi
     echo "→ Signen met identiteit: $APPLE_DEVELOPER_ID"
@@ -166,14 +166,14 @@ if [[ "$MODE_NOTARIZE" == "yes" ]]; then
     fi
     if [[ -z "${APPLE_NOTARY_PROFILE:-}" ]]; then
         echo "FOUT: stel eerst een notary-profiel in (eenmalig):"
-        echo "  xcrun notarytool store-credentials cliplive-notary \\"
-        echo "    --apple-id business@sjuulstudios.com \\"
+        echo "  xcrun notarytool store-credentials omnidj-notary \\"
+        echo "    --apple-id omnidj@monohq-labs.com \\"
         echo "    --team-id  TEAMID \\"
         echo "    --password APP-SPECIFIC-PASSWORD"
-        echo "  export APPLE_NOTARY_PROFILE=cliplive-notary"
+        echo "  export APPLE_NOTARY_PROFILE=omnidj-notary"
         exit 1
     fi
-    ZIPFILE="dist/Clip Live.zip"
+    ZIPFILE="dist/Omni DJ.zip"
     /usr/bin/ditto -c -k --keepParent "$APP_PATH" "$ZIPFILE"
     echo "→ Notarization submit (kan 1–15 min duren)..."
     xcrun notarytool submit "$ZIPFILE" \
@@ -192,24 +192,24 @@ if [[ "$MODE_DMG" == "yes" ]]; then
         exit 1
     fi
     echo "→ .dmg bouwen..."
-    cat > /tmp/cliplive_dmg_settings.py <<'EOF'
+    cat > /tmp/omnidj_dmg_settings.py <<'EOF'
 import os
-APP = os.path.join(os.getcwd(), "dist", "Clip Live.app")
+APP = os.path.join(os.getcwd(), "dist", "Omni DJ.app")
 files = [APP]
 symlinks = {"Applications": "/Applications"}
-icon_locations = {"Clip Live.app": (140, 120), "Applications": (500, 120)}
+icon_locations = {"Omni DJ.app": (140, 120), "Applications": (500, 120)}
 window_rect = ((100, 100), (640, 360))
 background = None
 icon_size = 128
 text_size = 16
 EOF
-    dmgbuild -s /tmp/cliplive_dmg_settings.py "Clip Live" "dist/Clip Live.dmg"
-    rm -f /tmp/cliplive_dmg_settings.py
+    dmgbuild -s /tmp/omnidj_dmg_settings.py "Omni DJ" "dist/Omni DJ.dmg"
+    rm -f /tmp/omnidj_dmg_settings.py
 fi
 
 echo ""
 echo "=== Klaar ==="
 echo "App        : $APP_PATH"
-[[ "$MODE_DMG" == "yes" ]] && echo "DMG        : dist/Clip Live.dmg"
+[[ "$MODE_DMG" == "yes" ]] && echo "DMG        : dist/Omni DJ.dmg"
 echo ""
 echo "Test met   : open \"$APP_PATH\""

@@ -1,4 +1,4 @@
-# Clip Live — Quick Reference
+# Omni DJ — Quick Reference
 
 Keep this open. Two terminal rules and the four commands you actually need.
 
@@ -6,8 +6,8 @@ Keep this open. Two terminal rules and the four commands you actually need.
 
 ## Two terminal rules
 
-1. **Wrap paths with spaces in double quotes.** "Clip Live" has a space, so the path always needs quotes:
-   `"/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"`
+1. **Wrap paths with spaces in double quotes.** "Omni DJ" has a space, so the path always needs quotes:
+   `"/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"`
    Without quotes the shell splits on the space and breaks.
 
 2. **Never paste markdown code fences (` ``` `) into the terminal.** Only copy the command on the line between the fences. Pasting ` ```bash ` leaves you stuck at a `>` prompt.
@@ -18,7 +18,7 @@ Keep this open. Two terminal rules and the four commands you actually need.
 
 Open Terminal. Run these one at a time:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 
 ./start.sh
 
@@ -36,7 +36,7 @@ In the terminal window where it's running, press **Ctrl+C**.
 
 ## View the redesign mockup
 
-open "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/clip-live-redesign.html"
+open "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/clip-live-redesign.html"
 
 ---
 
@@ -50,7 +50,7 @@ kill -9 <PID>
 
 **Reset the venv from scratch (last resort):**
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 
 rm -rf venv
 
@@ -64,9 +64,9 @@ rm -rf venv
 
 | Thing | Value |
 |------|------|
-| App folder | `/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter` |
+| App folder | `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter` |
 | Start command | `./start.sh` |
 | URL | http://127.0.0.1:5555 |
 | Stop | Ctrl+C |
-| Mockup | `clip-live-redesign.html` (in `Clip Live/` folder) |
-| Install guide | `INSTALL.md` (in `Clip Live/` folder) |
+| Mockup | `clip-live-redesign.html` (in `Omni DJ/` folder) |
+| Install guide | `INSTALL.md` (in `Omni DJ/` folder) |

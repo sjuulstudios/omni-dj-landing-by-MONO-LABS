@@ -1,4 +1,4 @@
-# Clip Live — HANDOVER ARCHIVE
+# Omni DJ — HANDOVER ARCHIVE
 
 > **Wat is dit:** chronologisch archief van sessies 1 t/m 26, lossless verplaatst uit `HANDOVER.md` op 2026-05-26 om de actieve handover slank te houden.
 >
@@ -45,7 +45,7 @@
 
 ### 1 — Wise bankrekening setup
 
-- Wise Business account actief onder naam Sjuul Studios (eenmanszaak)
+- Wise Business account actief onder naam MONO LABS (eenmanszaak)
 - Wise Advanced (€60 eenmalig) nodig voor echte IBAN + account details
 - Fiscaal identificatienummer = BSN (niet BTW-nummer of KVK)
 - Wise geeft een **Belgisch IBAN (BE)** — Wise is in België geregistreerd
@@ -578,14 +578,14 @@ ALTER TABLE public.profiles
    - Back-button (← arrow-icoon) — bij sectie 1 wordt 'ie hidden of cancelt naar Log-in tab
    - Sectie-content met smooth slide-left animation op next, slide-right op back (CSS `transform: translateX()` + `transition`)
 
-3. **Sectie 1 — "Where did you hear about Clip Drop Live?"**
+3. **Sectie 1 — "Where did you hear about Omni DJ?"**
    - 9 bubble-knoppen (border-radius:999px, single-select), labels:
      `An (artist) friend`, `Your manager`, `Whatsapp`, `TikTok`, `Instagram`, `Google`, `Reddit`, `Facebook`, `Other`
    - "Other" → onthult description-input met smooth max-height transition
    - Next-knop disabled tot één gekozen
    - "Next" → slide-left naar sectie 2
 
-4. **Sectie 2 — "What are the reasons for wanting to use Clip Drop Live? (multiple)"**
+4. **Sectie 2 — "What are the reasons for wanting to use Omni DJ? (multiple)"**
    - 4 bubble-knoppen (multi-select):
      `I cannot afford a videographer or video editor`, `It saves me time so I can focus on making music`, `It makes social sharing easier`, `I can upload social posts right after my show`
    - Next-knop disabled tot ≥1 gekozen
@@ -651,7 +651,7 @@ Totaal effort: 21-32 uur autonoom werk. Mag in één run mits geen blockers.
 ### Toestemmingen die ik nu vraag — antwoord met "ja" of "nee"
 
 - **Debug-mode** weer naar `True` voor de duur van de sessie (zelfde deal als sessie 21). → **Ja gevraagd, ja gekregen** in opvolgende bericht.
-- **Supabase migration** voor de profiles intake-columns uitvoeren via `mcp__1f3c9775__apply_migration` op project `lbabsffxefkrxwzkbzar` (Clip Drop Live). Migration-naam: `add_intake_columns_to_profiles`. Idempotent (`ADD COLUMN IF NOT EXISTS`). → vraag aan Sjuul.
+- **Supabase migration** voor de profiles intake-columns uitvoeren via `mcp__1f3c9775__apply_migration` op project `lbabsffxefkrxwzkbzar` (Omni DJ). Migration-naam: `add_intake_columns_to_profiles`. Idempotent (`ADD COLUMN IF NOT EXISTS`). → vraag aan Sjuul.
 - **Ultralytics + opencv install** in de venv (~150 MB total inclusief torch-wheel). Optionele coremltools later voor M-series acceleratie. → vraag aan Sjuul.
 - **Eerste YOLO-run** vereist netwerk om weights te trekken (1× ~5MB). → vraag aan Sjuul.
 
@@ -1041,7 +1041,7 @@ Pro-tier feature was sinds SESSIE 14-16 visueel ontgrendeld (Settings-card + int
 
 ### Live test via Claude in Chrome MCP
 
-Test-account `business+cliptest@sjuulstudios.com` werkte niet met de in HANDOVER vermelde password — fresh account aangemaakt: `business+wftest17@sjuulstudios.com` / `WatchTest17!`, user_id `c08189f0-1715-4296-903e-e912976b0665`. Plan voor live-test van Pro features ge-flipped via `supabase_admin.table('profiles').update({'plan': 'pro', ...})` omdat Stripe Checkout (`checkout.stripe.com`) browser-MCP restricted is. Helper-script voor toekomstige test-flips:
+Test-account `omnidj+test@monohq-labs.com` werkte niet met de in HANDOVER vermelde password — fresh account aangemaakt: `business+wftest17@sjuulstudios.com` / `WatchTest17!`, user_id `c08189f0-1715-4296-903e-e912976b0665`. Plan voor live-test van Pro features ge-flipped via `supabase_admin.table('profiles').update({'plan': 'pro', ...})` omdat Stripe Checkout (`checkout.stripe.com`) browser-MCP restricted is. Helper-script voor toekomstige test-flips:
 
 ```python
 from auth import supabase_admin
@@ -1159,7 +1159,7 @@ Volgorde uitgevoerd: 5c → 5b → 5d → 6. Alle wijzigingen live-getest in Chr
   - `> 4 GB` → `openLocalPathPicker({reason:'large_file_auto_route', fileName, fileSize})` — modal opent met contextuele banner i.p.v. de generic title.
 - `openLocalPathPicker(ctx)` accepteert nu optioneel een ctx-object. Bij `reason==='large_file_auto_route'`:
   - Title wordt "This file is too large for browser upload"
-  - Nieuwe `#lp-context` div toont `<filename> · <size> is over the 4.0 GB browser limit. Paste its absolute path on disk below — Clip Live will analyse it in place, no copy needed.`
+  - Nieuwe `#lp-context` div toont `<filename> · <size> is over the 4.0 GB browser limit. Paste its absolute path on disk below — Omni DJ will analyse it in place, no copy needed.`
   - Default desc verbergt zich; placeholder vult `e.g. /Users/yourname/.../<filename>` in.
   - Zonder ctx (manual call) blijft alles op de oorspronkelijke "Open large file (no copy)" weergave — backwards-compat.
 - CSS: `.lp-context` met amber wash matchend met de modal-style.
@@ -1206,7 +1206,7 @@ static/index.html.pre-6-unify-upload.bak  (6 frontend)
 
 ## SESSIE 15 — marathon UX-/recut-/storage-fix-sessie (2026-05-10)
 
-Twaalf+ fixes plus vier features geparkeerd. Alles end-to-end live geverifieerd via Claude in Chrome (logged in als `business+cliptest@sjuulstudios.com`). Sjuul reset de server tussendoor; Claude testte zelfstandig.
+Twaalf+ fixes plus vier features geparkeerd. Alles end-to-end live geverifieerd via Claude in Chrome (logged in als `omnidj+test@monohq-labs.com`). Sjuul reset de server tussendoor; Claude testte zelfstandig.
 
 ### Wat is er gedaan
 
@@ -1413,7 +1413,7 @@ Vijf changes in één sessie. Alle pure frontend behalve Bug 1b (één `/api/his
 
 Server herstarten:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./start.sh
 
 Browser: http://127.0.0.1:5555
@@ -1993,7 +1993,7 @@ Pre-req: Flask app draait op http://127.0.0.1:5555 (`./start.sh`).
 
 1. **Smoke-test endpoint shapes**:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./test_quota.sh
 
 Verwacht:
@@ -2033,7 +2033,7 @@ Verwacht:
 
 Open Terminal en run:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 source venv/bin/activate
 pip install -r requirements.txt
 
@@ -2085,7 +2085,7 @@ supabase functions deploy stripe-webhook --no-verify-jwt
 ### Stap 4 — Test de flow
 
 1. Start de Flask app: `./start.sh`. Browser: http://127.0.0.1:5555
-2. Log in met test-account: `business+cliptest@sjuulstudios.com` / `TestPassword2026`
+2. Log in met test-account: `omnidj+test@monohq-labs.com` / `TestPassword2026`
 3. In de account-chip linksonder zie je nu een gouden "Upgrade to Pro" knop (FREE plan).
 4. Klik → je gaat naar Stripe Checkout (hosted page).
 5. Vul testkaart in: `4242 4242 4242 4242`, expiry `12/30`, CVC `123`, naam/postcode willekeurig.
@@ -2109,7 +2109,7 @@ supabase functions deploy stripe-webhook --no-verify-jwt
 - Live mode aanzetten — pas vóór launch.
 
 ### Test-account
-`business+cliptest@sjuulstudios.com` / `TestPassword2026` — kan via test-checkout naar Pro upgraden om de webhook te valideren. Verwijderbaar via Supabase dashboard → Auth → Users.
+`omnidj+test@monohq-labs.com` / `TestPassword2026` — kan via test-checkout naar Pro upgraden om de webhook te valideren. Verwijderbaar via Supabase dashboard → Auth → Users.
 
 ### Stripe credentials (referentie)
 
@@ -2212,7 +2212,7 @@ Phase 1 van de paid-launch architectuur: auth fundament. App gaat van local-only
 ### Frontend (static/index.html)
 - **Auth overlay** (full-screen modal): brand-card met tabs Login/Sign up, email + password fields, error/success-balk. Verbergt de app totdat sessie geldig is. CSS gebruikt bestaande tokens (--ink-*, --amber, --serif).
 - **Sidebar account chip** onderin: email, plan-badge (FREE amber / PRO sterker amber / STUDIO solid gold), Log out knop.
-- `STATE.session` = `{access_token, refresh_token, expires_at, email, user_id, profile, cached_at}`, persisted in `localStorage.clipLive.session`.
+- `STATE.session` = `{access_token, refresh_token, expires_at, email, user_id, profile, cached_at}`, persisted in `localStorage.omniDj.session`.
 - `api()` helper attacht `Authorization: Bearer <token>` automatisch wanneer STATE.session bestaat.
 - Boot-flow: probeer cache te restoren → `/api/auth/me` server-verify → render account chip + `postLoginBoot()`. 401 of geen sessie → `showAuthOverlay`.
 - **Offline grace 24h**: als server unreachable maar `cached_at < 24h` + profile aanwezig → laat user in op cached profile.
@@ -2226,7 +2226,7 @@ Phase 1 van de paid-launch architectuur: auth fundament. App gaat van local-only
 - Frontend: alle 6 UI-scenarios groen — eerste login, herlaad-met-cache, logout, signup-tab switch, error-state, fresh signup.
 
 ### Test-account
-`business+cliptest@sjuulstudios.com` / `TestPassword2026` — blijft staan voor Phase 2 testing, anders te wissen via Supabase dashboard → Auth → Users.
+`omnidj+test@monohq-labs.com` / `TestPassword2026` — blijft staan voor Phase 2 testing, anders te wissen via Supabase dashboard → Auth → Users.
 
 ### Wat nog NIET werkt / volgende fases
 - Phase 2: Stripe — products in dashboard, checkout flow, webhook → Supabase Edge Function die `profiles.plan/stripe_customer_id` updates. Customer Portal link voor managen/cancellen.
@@ -2463,7 +2463,7 @@ OUTPUT_DIR        $TMPDIR/dj-clip-cutter/output/<job>/  — proxy/landscape/vert
 
 **App starten:**
 ```
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./start.sh
 ```
 Browser: http://127.0.0.1:5555

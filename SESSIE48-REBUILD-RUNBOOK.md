@@ -11,13 +11,13 @@ wijzigingen tussen die build en de huidige code-state.
 
 Wat zit er nieuw in deze build (sinds laatste .dmg van 08:28):
 
-- Sessie 41+42 — fonts-systeem (ClipLivePicker, 11 built-in fonts,
+- Sessie 41+42 — fonts-systeem (OmniDJPicker, 11 built-in fonts,
   system-font scan ~438 op Mac, refresh-knop), 3 font-bronnen merged in cutter
 - Sessie 43a+43b — export-pipeline fix: auto-bake captions in export, rename-veld
   in modal, schone filenames + sidecar, ratio-tiles, caption/wm toggles,
   folder-whitelist user-home only, queue-bar
 - Sessie 44 — selectie-preview-balk onderaan editor
-- Sessie 45 — v2 shell achter feature-flag `localStorage.clipLiveRedesignV2='1'`
+- Sessie 45 — v2 shell achter feature-flag `localStorage.omniDjRedesignV2='1'`
 - Sessie 46 — v2 dashboard / clips-grid (CSS-only)
 - Sessie 47 — v2 editor / timeline / drawers (CSS-only)
 - Sessie 48 — v2 modals (auth/wizard/forgot/upgrade/aspect/export-settings, CSS-only)
@@ -36,7 +36,7 @@ gaan bundelen. Als hier iets faalt, geen zin om een .app te bouwen.
 
 Server starten (sluit eerst andere dev-servers af met Ctrl+C):
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 
 ./start.sh
 
@@ -48,14 +48,14 @@ Eerst zonder de v2-redesign, om te bevestigen dat de oude flow nog 100% werkt.
 
 In DevTools console (F12):
 
-localStorage.setItem('clipLiveRedesignV2','0')
+localStorage.setItem('omniDjRedesignV2','0')
 
 Reload de pagina.
 
 Check:
 
 1. Login werkt nog (jouw bestaande account)
-2. Upload-pagina is de oude UI (sidebar links: Clip Live / Drop a set / Library / Clips / Brand Stack / Settings)
+2. Upload-pagina is de oude UI (sidebar links: Omni DJ / Drop a set / Library / Clips / Brand Stack / Settings)
 3. Open een bestaande set → clip-grid laadt in oude stijl
 4. Open een clip in de editor → trim/text/track-drawers werken
 5. Export single clip → aspect-modal opent in **oude stijl** (controle: scrim is warm-dark, niet pure zwart)
@@ -67,13 +67,13 @@ Als één van deze 6 punten faalt, stop en meld het.
 
 In DevTools console:
 
-localStorage.setItem('clipLiveRedesignV2','1')
+localStorage.setItem('omniDjRedesignV2','1')
 
 Reload de pagina.
 
 Check (Fase 1 — shell):
 
-1. V2-sidebar verschijnt: workspace-button bovenaan ("Sjuul Studios · Pro plan") + 5 nav-items (Clips / Brand / Social / Calendar / Insights) + Settings-footer onderin
+1. V2-sidebar verschijnt: workspace-button bovenaan ("MONO LABS · Pro plan") + 5 nav-items (Clips / Brand / Social / Calendar / Insights) + Settings-footer onderin
 2. Topbar met breadcrumb "Clips"
 3. Linksonder zit een klein `v2 shell`-toggle-knopje (label "ON")
 
@@ -139,7 +139,7 @@ moeten alle 4 functions "Active" staan met groen vinkje.
 Dev-server afsluiten met Ctrl+C in de terminal waar `./start.sh` draait.
 Dan:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 
 source venv/bin/activate
 
@@ -157,21 +157,21 @@ Dan de build:
 
 ./build_macos.sh dmg
 
-Wat dit doet: bouwt `dist/Clip Live.app` en `dist/Clip Live.dmg`. Duurt
+Wat dit doet: bouwt `dist/Omni DJ.app` en `dist/Omni DJ.dmg`. Duurt
 ~5 minuten. Veel output is normaal. De defensieve secrets-scan uit
 sessie 30 controleert of er per ongeluk .env of service_role keys in
 de bundle zitten — die check moet groen blijven.
 
 **Verwacht eind-resultaat:**
 
-dist/Clip Live.app
-dist/Clip Live.dmg  (~170-180 MB)
+dist/Omni DJ.app
+dist/Omni DJ.dmg  (~170-180 MB)
 
 Als de build faalt:
 
 - Lees de laatste 20 regels output
 - Meld de exacte error
-- **Niet** zelf gaan dingen aanpassen aan ClipLive.spec of build_macos.sh
+- **Niet** zelf gaan dingen aanpassen aan OmniDJ.spec of build_macos.sh
 
 ---
 
@@ -179,11 +179,11 @@ Als de build faalt:
 
 Eerst de oude `.app` uit `/Applications` weghalen (als die er staat):
 
-rm -rf "/Applications/Clip Live.app"
+rm -rf "/Applications/Omni DJ.app"
 
-Open de nieuwe `.dmg` en sleep `Clip Live.app` naar `/Applications`:
+Open de nieuwe `.dmg` en sleep `Omni DJ.app` naar `/Applications`:
 
-open "dist/Clip Live.dmg"
+open "dist/Omni DJ.dmg"
 
 Sleep de app handmatig in het Finder-venster naar de Applications-pijl.
 Sluit het .dmg venster.
@@ -191,7 +191,7 @@ Sluit het .dmg venster.
 Strip Gatekeeper-quarantine zodat hij meteen opent (alleen nodig op
 **jouw** Mac omdat de build unsigned is):
 
-xattr -dr com.apple.quarantine "/Applications/Clip Live.app"
+xattr -dr com.apple.quarantine "/Applications/Omni DJ.app"
 
 Open vanuit Applications via rechts-klik → Open → bevestig.
 
@@ -221,7 +221,7 @@ Doe deze in deze volgorde, één voor één:
 
 Als één van deze 16 punten faalt:
 
-- Open `launcher.log` (staat in `~/Library/Application Support/Clip Live/`)
+- Open `launcher.log` (staat in `~/Library/Application Support/Omni DJ/`)
 - Meld het exacte punt + de laatste 20 regels uit `launcher.log`
 
 ---
@@ -294,6 +294,6 @@ cp "cutter.py.pre-sessie42.bak" "cutter.py"
   Normaal, gebeurt alleen de eerste keer.
 - **Feature-flag default** — als de v2-flag default UIT staat in de bundle,
   zie je oude UI bij eerste opening. Dat is correct (non-destructief uitrol).
-  Om v2 te zien: F12 → console → `localStorage.setItem('clipLiveRedesignV2','1')` → reload.
+  Om v2 te zien: F12 → console → `localStorage.setItem('omniDjRedesignV2','1')` → reload.
 - **AntiVirus / Gatekeeper** kan unsigned bundles flaggen. Voor jouw Mac:
   `xattr -dr com.apple.quarantine ...` oplost. Voor klanten: signing nodig.

@@ -1,6 +1,6 @@
 # Stripe webhook — Supabase Edge Function
 
-Mirrors Stripe subscription events into the `profiles` table so Clip Live
+Mirrors Stripe subscription events into the `profiles` table so Omni DJ
 sees plan changes the moment Stripe confirms a payment.
 
 ## Deploy (eerste keer)

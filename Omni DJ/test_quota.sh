@@ -10,7 +10,7 @@
 #
 # Pre-req:  Flask app running on 127.0.0.1:5555, account exists in Supabase.
 
-EMAIL="${1:-${EMAIL:-business+cliptest@sjuulstudios.com}}"
+EMAIL="${1:-${EMAIL:-omnidj+test@monohq-labs.com}}"
 PASSWORD="${2:-${PASSWORD:-TestPassword2026}}"
 BASE="http://127.0.0.1:5555"
 

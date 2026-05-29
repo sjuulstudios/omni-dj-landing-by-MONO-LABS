@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# Opruimscript voor de 138 .bak files in het Clip Live project.
+# Opruimscript voor de 138 .bak files in het Omni DJ project.
 #
 # Maakt eerst een tar.gz-backup, verwijdert dan de originelen.
 # Veilig: als de tar.gz mislukt, wordt er niets verwijderd.
 #
 # Gebruik:
-#     cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live"
+#     cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ"
 #     bash cleanup_bak_files.sh
 #
 # Wat het NIET aanraakt:
@@ -21,7 +21,7 @@ cd "$(dirname "$0")"
 ARCHIVE="_bak-archive-2026-05-17.tar.gz"
 
 echo ""
-echo "=== Clip Live — .bak opruimen ==="
+echo "=== Omni DJ — .bak opruimen ==="
 echo ""
 
 echo "Stap 1/4 — .bak files inventariseren..."

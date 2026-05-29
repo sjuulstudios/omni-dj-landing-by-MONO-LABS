@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Clip Live</title>
+<title>Omni DJ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -8722,7 +8722,7 @@
         <span class="v2-ws-icon" aria-hidden="true">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
         </span>
-        <span class="v2-ws-name" id="v2WsName">Sjuul Studios</span>
+        <span class="v2-ws-name" id="v2WsName">MONO LABS</span>
         <span class="v2-ws-plan v2-plan-free" id="v2WsPlan">FREE</span>
         <span class="v2-ws-chev" aria-hidden="true">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -8807,7 +8807,7 @@
         <div class="v2-footer-avatar" id="v2AccountAvatar">SS</div>
         <div class="v2-footer-account-info">
           <div class="v2-footer-account-name" id="v2AccountName">Sjuul Smits</div>
-          <div class="v2-footer-account-email" id="v2AccountEmail">business@sjuulstudios.com</div>
+          <div class="v2-footer-account-email" id="v2AccountEmail">omnidj@monohq-labs.com</div>
         </div>
       </button>
     </div>
@@ -9072,7 +9072,7 @@
     <div class="brand-row">
       <div class="brand-mark"></div>
       <div>
-        <div class="brand-name">Clip Live</div>
+        <div class="brand-name">Omni DJ</div>
         <div class="brand-sub">DJ-set studio</div>
       </div>
     </div>
@@ -9565,7 +9565,7 @@
         <div>
           <div class="eyebrow">Working on your set</div>
           <h1>Finding the best <em>moments</em> in your set.</h1>
-          <p class="sub">Clip Live listens to your set, finds the drops, and cuts them into ready-to-post clips. This takes a few minutes for an hour-long set. You can leave this tab open in the background.</p>
+          <p class="sub">Omni DJ listens to your set, finds the drops, and cuts them into ready-to-post clips. This takes a few minutes for an hour-long set. You can leave this tab open in the background.</p>
         </div>
       </div>
 
@@ -10597,7 +10597,7 @@
             <p style="font-size:11.5px;color:var(--paper-dim);line-height:1.5;margin:0 0 10px">Manage your workspace and artists. Multi-artist (up to 3) is included with the Studio plan.</p>
             <div class="prof-field">
               <label for="settings-ws-name">Workspace name</label>
-              <input type="text" id="settings-ws-name" maxlength="80" value="Sjuul Studios">
+              <input type="text" id="settings-ws-name" maxlength="80" value="MONO LABS">
             </div>
             <div style="margin-top:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -11107,7 +11107,7 @@ function $$(sel, root){ return Array.from((root||document).querySelectorAll(sel)
 // Bug-fix 1a — persist STATE.jobId across hard-reloads. Without this the
 // editor/dashboard always boots into "upload" mode even if the user was
 // mid-cut. Restore happens in postLoginBoot() once STATE.history is in.
-const ACTIVE_JOB_STORAGE_KEY = 'clipLive.activeJobId';
+const ACTIVE_JOB_STORAGE_KEY = 'omniDj.activeJobId';
 function setActiveJobId(jobId){
   const prev = STATE.jobId;
   STATE.jobId = jobId || null;
@@ -11134,7 +11134,7 @@ function loadActiveJobId(){
 // clip; cleared after a successful recut (Save & Re-export) since the
 // new clip-file is the new baseline.
 function _trimStorageKey(jobId, clipIdx){
-  return `clipLive.trim.${jobId}.${clipIdx}`;
+  return `omniDj.trim.${jobId}.${clipIdx}`;
 }
 function saveTrimState(jobId, clipIdx, trim){
   if (!jobId || clipIdx == null || !trim) return;
@@ -11562,7 +11562,7 @@ async function openLocalPathPicker(ctx){
       <div class="lp-card">
         <h3 id="lp-title">Open large file (no copy)</h3>
         <div id="lp-context" class="lp-context" style="display:none"></div>
-        <p class="lp-desc" id="lp-desc">Paste the absolute path to a DJ-set <b>file</b> or <b>folder</b> on your disk. Clip Live analyses it in place - no bytes are copied. Best for sets longer than 2 hours or files larger than 8 GB.</p>
+        <p class="lp-desc" id="lp-desc">Paste the absolute path to a DJ-set <b>file</b> or <b>folder</b> on your disk. Omni DJ analyses it in place - no bytes are copied. Best for sets longer than 2 hours or files larger than 8 GB.</p>
         <input id="lp-path" type="text" placeholder="/Users/yourname/Documents/OMNI DJ - TEST DJ-SETS/  or  …/big-set.mp4" autocomplete="off" spellcheck="false">
         <div class="lp-row">
           <button class="btn ghost" onclick="closeLocalPathPicker()">Cancel</button>
@@ -11596,7 +11596,7 @@ async function openLocalPathPicker(ctx){
       ctxEl.innerHTML =
         `<b>${escapeHtml(nm)}</b>${sizeStr ? ` · ${escapeHtml(sizeStr)}` : ''}`
         + ` is over the ${_fmtBytes(LARGE_FILE_THRESHOLD_BYTES)} browser limit. `
-        + `Paste its absolute path on disk below - Clip Live will analyse it in place, no copy needed.`;
+        + `Paste its absolute path on disk below - Omni DJ will analyse it in place, no copy needed.`;
       ctxEl.style.display = '';
     }
     if (descEl) descEl.style.display = 'none';
@@ -11674,7 +11674,7 @@ async function submitLocalPath(){
     return;
   }
   if (scan && (!scan.files || !scan.files.length)) {
-    msg.textContent = 'Folder has no video/audio files Clip Live can read.';
+    msg.textContent = 'Folder has no video/audio files Omni DJ can read.';
     go.disabled = false; go.textContent = 'Analyse';
     return;
   }
@@ -14963,7 +14963,7 @@ function renderHome(){
     root.innerHTML = `
       <div class="empty-state">
         <h3>No sets yet</h3>
-        <p>Drop a long-form recording - Clip Live finds the drops, transitions, and cue points and cuts vertical clips.</p>
+        <p>Drop a long-form recording - Omni DJ finds the drops, transitions, and cue points and cuts vertical clips.</p>
         <button class="btn btn-primary" onclick="switchView('upload')">Drop a set →</button>
       </div>`;
     return;
@@ -15233,7 +15233,7 @@ async function openExportInEditor(jobId, clipIdx){
 async function copyExportToFolder(jobId, filename){
   if (!jobId || !filename) return;
   // Reuse the same native folder picker the main export flow uses.
-  const lastDir = (() => { try { return localStorage.getItem('clipLive.exportDir') || null; } catch(_) { return null; }})();
+  const lastDir = (() => { try { return localStorage.getItem('omniDj.exportDir') || null; } catch(_) { return null; }})();
   let pick;
   try {
     pick = await api('/api/pick-folder', { method: 'POST', body: {
@@ -15247,7 +15247,7 @@ async function copyExportToFolder(jobId, filename){
   if (pick && pick.cancelled) return;
   const target = pick && pick.path;
   if (!target) { toast('No folder chosen', 'bad'); return; }
-  try { localStorage.setItem('clipLive.exportDir', target); } catch(_) {}
+  try { localStorage.setItem('omniDj.exportDir', target); } catch(_) {}
   const enc = encodeURIComponent(filename);
   try {
     await api(`/api/exports/${jobId}/${enc}/copy-to`, { method: 'POST', body: {
@@ -15304,7 +15304,7 @@ function renderUpload(){
   if (card && desc) {
     const path = STATE.watchFolder && STATE.watchFolder.path;
     if (path) {
-      desc.innerHTML = `<b>${escapeHtml(path)}</b> - Clip Live is monitoring. Any new <code>.wav</code> or <code>.mp4</code> dropped here will be cut into shorts automatically.`;
+      desc.innerHTML = `<b>${escapeHtml(path)}</b> - Omni DJ is monitoring. Any new <code>.wav</code> or <code>.mp4</code> dropped here will be cut into shorts automatically.`;
       card.style.display = '';
     } else {
       card.style.display = 'none';
@@ -15347,7 +15347,7 @@ function renderUpload(){
    a list of phase substrings that mark it as the active step. */
 /* SESSIE 30 - humanised loading copy. The technical names (ffmpeg /
    videotoolbox / librosa / demucs) were noise to actual DJs; the new
-   strings describe what Clip Live is doing in plain English. The match
+   strings describe what Omni DJ is doing in plain English. The match
    arrays are unchanged so the phase-detection in setProcUI still works. */
 const PROC_STEPS = [
   { id: 'decode',  t: 'Reading your live DJ set...',              sub: '',  match: ['decode','load','probe','extract'] },
@@ -15809,7 +15809,7 @@ async function renderDashboard(){
         root.innerHTML = `
           <div class="empty-state">
             <h3>This set is no longer loaded</h3>
-            <p>Clip Live couldn't find the working data for <code>${escapeHtml(jid)}</code>. It may have been deleted from disk, or the server was restarted before this set was saved.</p>
+            <p>Omni DJ couldn't find the working data for <code>${escapeHtml(jid)}</code>. It may have been deleted from disk, or the server was restarted before this set was saved.</p>
             <div style="display:flex; gap:.5rem; justify-content:center; margin-top:1rem; flex-wrap:wrap;">
               <button class="btn" onclick="switchView('upload')">+ Upload a new set</button>
               <button class="btn ghost" onclick="forgetJob('${jid}')">Remove from history</button>
@@ -17083,7 +17083,7 @@ function pickExportSettings(label, opts){
 
     // Restore last-used choice.
     let last;
-    try { last = JSON.parse(localStorage.getItem('clipLive.exportSettings') || '{}'); } catch(_) { last = {}; }
+    try { last = JSON.parse(localStorage.getItem('omniDj.exportSettings') || '{}'); } catch(_) { last = {}; }
     if (sCodec) sCodec.value = last.codec      || 'match';
     if (sFps)   sFps.value   = last.fps        || 'match';
     if (sRes)   sRes.value   = last.resolution || 'source';
@@ -17269,7 +17269,7 @@ function pickExportSettings(label, opts){
     const folderResetBtn = document.getElementById('exs-folder-reset');
     let currentOutputDir = null;
     try {
-      const remembered = localStorage.getItem('clipLive.lastExportDir');
+      const remembered = localStorage.getItem('omniDj.lastExportDir');
       if (remembered) currentOutputDir = remembered;
     } catch(_) {}
     const refreshFolderRow = () => {
@@ -17291,7 +17291,7 @@ function pickExportSettings(label, opts){
         }});
         if (!pick || pick.cancelled || !pick.path) return;
         currentOutputDir = pick.path;
-        try { localStorage.setItem('clipLive.lastExportDir', currentOutputDir); } catch(_) {}
+        try { localStorage.setItem('omniDj.lastExportDir', currentOutputDir); } catch(_) {}
         refreshFolderRow();
       } catch(e) {
         toast('Map-keuze mislukt: ' + (e.message || e), 'bad');
@@ -17299,7 +17299,7 @@ function pickExportSettings(label, opts){
     };
     const onFolderReset = () => {
       currentOutputDir = null;
-      try { localStorage.removeItem('clipLive.lastExportDir'); } catch(_) {}
+      try { localStorage.removeItem('omniDj.lastExportDir'); } catch(_) {}
       refreshFolderRow();
     };
     if (folderPickBtn) folderPickBtn.addEventListener('click', onFolderPick);
@@ -17361,7 +17361,7 @@ function pickExportSettings(label, opts){
         outputDir: currentOutputDir || null,
       };
       try {
-        localStorage.setItem('clipLive.exportSettings', JSON.stringify({
+        localStorage.setItem('omniDj.exportSettings', JSON.stringify({
           codec: v.codec, fps: v.fps, resolution: v.resolution,
           ratios: v.ratios, overlays: v.overlays,
         }));
@@ -21214,7 +21214,7 @@ function renderEditorTextLayers(opts){
     pickerBtn.addEventListener('click', (ev) => {
       const L2 = STATE.editorText && STATE.editorText.layers[STATE.editorText.selectedIdx];
       if (!L2) return;
-      ClipLivePicker.open(ev.currentTarget, {
+      OmniDJPicker.open(ev.currentTarget, {
         value: L2.color || '#ffffff',
         withOpacity: false,
         onChange: (hex) => editorTextUpdateLayer({ color: hex }),
@@ -21497,7 +21497,7 @@ function _bindEditorTextEditorInputs(){
     const cur = (L.bg && typeof L.bg === 'object') ? L.bg
               : (L.bg === true) ? { color:'#000000', opacity:0.55 }
               : null;
-    ClipLivePicker.open(ev.currentTarget, {
+    OmniDJPicker.open(ev.currentTarget, {
       value:   cur?.color || '#000000',
       opacity: cur?.opacity ?? 0.55,
       withOpacity: false, // opacity heeft eigen slider in de UI, niet in popover
@@ -21549,12 +21549,12 @@ function _bindEditorTextEditorInputs(){
 /*   - hex-input (live tweerichtings)                                 */
 /*   - optionele opacity-slider (withOpacity:true)                    */
 /* API:                                                                */
-/*   ClipLivePicker.open(anchorEl, {value, withOpacity, onChange})    */
+/*   OmniDJPicker.open(anchorEl, {value, withOpacity, onChange})    */
 /* onChange wordt aangeroepen bij elke wijziging met een hex-string.  */
 /* Escape, click-outside, en re-open op zelfde anchor sluiten 'm.     */
 /* ================================================================ */
 
-const ClipLivePicker = (() => {
+const OmniDJPicker = (() => {
   let pop = null, state = null, opts = null, _docBound = false;
 
   // ---- Color math ---------------------------------------------------
@@ -23225,7 +23225,7 @@ async function brandWatermarkUpdate(patch){
 // the visibility of the siblings that follow until the next panel-h. State
 // persists in localStorage so the user's choice survives reloads. Default
 // is collapsed for everything except the first section.
-const _BS_COLLAPSE_KEY = 'cliplive.brandstack.collapsed.v1';
+const _BS_COLLAPSE_KEY = 'omniDj.brandstack.collapsed.v1';
 function _bsLoadCollapseState(){
   try { return JSON.parse(localStorage.getItem(_BS_COLLAPSE_KEY) || '{}') || {}; }
   catch(_){ return {}; }
@@ -23767,7 +23767,7 @@ async function renderSettings(){
     pick.addEventListener('click', async () => {
       const cur = (STATE.watchFolder && STATE.watchFolder.path) || '';
       const path = prompt(
-        'Enter the absolute path of the folder Clip Live should watch.\n'
+        'Enter the absolute path of the folder Omni DJ should watch.\n'
         + 'New audio/video files dropped here will be auto-processed.',
         cur
       );
@@ -23995,14 +23995,14 @@ async function renderSettings(){
   const mailLogs = $('#settings-mail-logs');
   if (mailLogs && !mailLogs.dataset.bound) {
     mailLogs.dataset.bound = '1';
-    const subject = encodeURIComponent('Clip Live beta - feedback');
+    const subject = encodeURIComponent('Omni DJ beta - feedback');
     const body = encodeURIComponent(
       'Hi Sjuul,\n\n' +
       '[Describe what happened, what you expected, and what went wrong.]\n\n' +
       'I have attached the diagnostic ZIP (use the "Download logs" button to generate it first).\n\n' +
       'Thanks!\n'
     );
-    mailLogs.href = `mailto:business@sjuulstudios.com?subject=${subject}&body=${body}`;
+    mailLogs.href = `mailto:omnidj@monohq-labs.com?subject=${subject}&body=${body}`;
   }
 }
 
@@ -24181,7 +24181,7 @@ function renderSidebarRecent(){
 /* ============================================================ */
 /* AUTH                                                         */
 /* ============================================================ */
-const AUTH_STORAGE_KEY = 'clipLive.session';
+const AUTH_STORAGE_KEY = 'omniDj.session';
 const SESSION_OFFLINE_MAX_MS = 24 * 60 * 60 * 1000; // 24h offline grace
 
 function loadSessionFromStorage(){
@@ -24353,9 +24353,9 @@ function wizardInit(){
     _bindWizard();
   }
   // Hydrate any persisted state from sessionStorage (so a refresh halfway
-  // through doesn't wipe answers). Stored under 'clipLive.wizardState'.
+  // through doesn't wipe answers). Stored under 'omniDj.wizardState'.
   try {
-    const persisted = sessionStorage.getItem('clipLive.wizardState');
+    const persisted = sessionStorage.getItem('omniDj.wizardState');
     if (persisted) {
       const parsed = JSON.parse(persisted);
       if (parsed && parsed.answers) {
@@ -24479,7 +24479,7 @@ function _bindWizard(){
 
 function _wizPersist(){
   try {
-    sessionStorage.setItem('clipLive.wizardState', JSON.stringify(STATE.signupWizard));
+    sessionStorage.setItem('omniDj.wizardState', JSON.stringify(STATE.signupWizard));
   } catch(_){}
 }
 
@@ -24698,7 +24698,7 @@ async function wizardSubmit(){
     // Show success splash for ~900ms, then close overlay and boot.
     wizardGoTo(_WIZ_SECTIONS, true);
     setTimeout(async () => {
-      try { sessionStorage.removeItem('clipLive.wizardState'); } catch(_){}
+      try { sessionStorage.removeItem('omniDj.wizardState'); } catch(_){}
       hideAuthOverlay();
       await postLoginBoot();
     }, 900);
@@ -25198,25 +25198,25 @@ function onSidebarCloudSyncClick(){
 /* ============================================================ */
 /* BOOT                                                         */
 /* ============================================================ */
-/* SESSIE 59 — Purge clipLive.* localStorage entries for jobs that are not in
+/* SESSIE 59 — Purge omniDj.* localStorage entries for jobs that are not in
  * STATE.history (i.e. niet meer toegankelijk voor de huidige user). Veilig:
- * raakt alleen clipLive.trim.<jobid>.* en clipLive.activeJobId. Brand-state,
+ * raakt alleen omniDj.trim.<jobid>.* en omniDj.activeJobId. Brand-state,
  * exportSettings, redesign-flag etc. blijven onaangetast. */
 function _cleanStaleJobCache(){
   if (!Array.isArray(STATE.history)) return;
   var validIds = new Set(STATE.history.map(function(h){ return h && h.id; }).filter(Boolean));
   // 1) activeJobId
   var savedActive = null;
-  try { savedActive = localStorage.getItem('clipLive.activeJobId'); } catch(_){}
+  try { savedActive = localStorage.getItem('omniDj.activeJobId'); } catch(_){}
   if (savedActive && !validIds.has(savedActive)) {
-    try { localStorage.removeItem('clipLive.activeJobId'); } catch(_){}
+    try { localStorage.removeItem('omniDj.activeJobId'); } catch(_){}
   }
-  // 2) trim-keys: clipLive.trim.<jobid>.<idx>
+  // 2) trim-keys: omniDj.trim.<jobid>.<idx>
   var allKeys = [];
   try { allKeys = Object.keys(localStorage); } catch(_){ return; }
   var removed = 0;
   allKeys.forEach(function(k){
-    if (typeof k !== 'string' || k.indexOf('clipLive.trim.') !== 0) return;
+    if (typeof k !== 'string' || k.indexOf('omniDj.trim.') !== 0) return;
     var parts = k.split('.');
     if (parts.length < 4) return;
     var jid = parts[2];
@@ -25248,7 +25248,7 @@ async function postLoginBoot(){
   if (watch.status === 'fulfilled')   STATE.watchFolder  = watch.value;
 
   /* SESSIE 59 — localStorage cache-residue cleanup.
-     Verwijder clipLive.trim.<jobid>.* en clipLive.activeJobId als de
+     Verwijder omniDj.trim.<jobid>.* en omniDj.activeJobId als de
      bijbehorende job NIET in /api/history zit voor deze user. Voorkomt
      verwarring dat oude jobs nog "lijken te bestaan" in de UI na een
      account-switch op dezelfde Mac, of na server-side job-deletion. */
@@ -25269,7 +25269,7 @@ async function postLoginBoot(){
   //
   // SESSIE 54 — in v2-modus is de landing-pagina altijd Analyse (geen auto-
   // resume in project). Gebruiker bereikt projecten via Library.
-  const v2On = (function(){ try { return localStorage.getItem('clipLiveRedesignV2') === '1'; } catch(_){ return false; }})();
+  const v2On = (function(){ try { return localStorage.getItem('omniDjRedesignV2') === '1'; } catch(_){ return false; }})();
   if (v2On) {
     switchView('analyse');
     return;
@@ -25331,14 +25331,14 @@ window.addEventListener('DOMContentLoaded', boot);
 
 /* ============================================================
    REDESIGN v2 — Fase 1 wire-up (2026-05-26)
-   Feature-flag via localStorage('clipLiveRedesignV2') = '1'.
+   Feature-flag via localStorage('omniDjRedesignV2') = '1'.
    Mount: verplaats #app (de oude top-level wrapper, of body's
    directe view-children) in .v2-content-wrap. Nav-items roepen
    bestaande switchView() aan. Veilig: bij flag uit is alle v2
    DOM display:none en gebeurt er niets met de oude tree.
    ============================================================ */
 (function v2Init(){
-  var FLAG_KEY = 'clipLiveRedesignV2';
+  var FLAG_KEY = 'omniDjRedesignV2';
 
   function isV2On(){
     try { return localStorage.getItem(FLAG_KEY) === '1'; } catch(_) { return false; }
@@ -25475,7 +25475,7 @@ window.addEventListener('DOMContentLoaded', boot);
 
   function v2HydrateAccount(){
     var s = window.AUTH || window.SESSION || (window.STATE && STATE.user) || null;
-    var email = (s && (s.email || s.user_email)) || 'business@sjuulstudios.com';
+    var email = (s && (s.email || s.user_email)) || 'omnidj@monohq-labs.com';
     var name  = (s && (s.name || s.full_name || (email.split('@')[0]))) || 'Sjuul Smits';
     var initials = (name||'S').split(/\s+/).map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
     var elN = document.getElementById('v2AccountName');
@@ -25535,7 +25535,7 @@ window.addEventListener('DOMContentLoaded', boot);
       if (typeof p === 'string') return p.toLowerCase();
     } catch(_){}
     try {
-      var lp = localStorage.getItem('clipLivePlanOverride');
+      var lp = localStorage.getItem('omniDjPlanOverride');
       if (lp) return lp.toLowerCase();
     } catch(_){}
     return 'free';
@@ -25556,7 +25556,7 @@ window.addEventListener('DOMContentLoaded', boot);
     var artistEl = document.getElementById('v2ArtistName');
     if (!artistEl) return;
     var active = null;
-    try { active = localStorage.getItem('clipLiveActiveArtist'); } catch(_){}
+    try { active = localStorage.getItem('omniDjActiveArtist'); } catch(_){}
     if (!active || !active.trim()) {
       // Fallback: gebruik artist_name uit profile
       try {
@@ -25609,7 +25609,7 @@ window.addEventListener('DOMContentLoaded', boot);
 
   function v2WsDropdownContent(){
     var plan = v2GetCurrentPlan();
-    var wsName = (document.getElementById('v2WsName') || {}).textContent || 'Sjuul Studios';
+    var wsName = (document.getElementById('v2WsName') || {}).textContent || 'MONO LABS';
     var html = '';
     html += '<div class="v2-ws-dropdown-header">Workspace</div>';
     html += '<div class="v2-ws-dropdown-item is-active" data-action="ws-select">';
@@ -25627,7 +25627,7 @@ window.addEventListener('DOMContentLoaded', boot);
   function v2ArtistDropdownContent(){
     var plan = v2GetCurrentPlan();
     var defaultArtist = null;
-    try { defaultArtist = localStorage.getItem('clipLiveActiveArtist'); } catch(_){}
+    try { defaultArtist = localStorage.getItem('omniDjActiveArtist'); } catch(_){}
     if (!defaultArtist) {
       try {
         var st = window.STATE || {};
@@ -25722,7 +25722,7 @@ window.addEventListener('DOMContentLoaded', boot);
         v2CloseAllDropdowns();
         if (typeof window.switchView === 'function') window.switchView('settings');
       } else if (a === 'artist-select') {
-        try { localStorage.setItem('clipLiveActiveArtist', act.dataset.artist || ''); } catch(_){}
+        try { localStorage.setItem('omniDjActiveArtist', act.dataset.artist || ''); } catch(_){}
         v2PaintArtistChip();
         v2CloseAllDropdowns();
       } else {
@@ -25739,7 +25739,7 @@ window.addEventListener('DOMContentLoaded', boot);
   function v2GetArtists(){
     // Read artists from localStorage (Fase 5 stub). Fase 5b: Supabase.
     try {
-      var raw = localStorage.getItem('clipLiveArtists');
+      var raw = localStorage.getItem('omniDjArtists');
       if (raw) {
         var arr = JSON.parse(raw);
         if (Array.isArray(arr) && arr.length) return arr;
@@ -25756,7 +25756,7 @@ window.addEventListener('DOMContentLoaded', boot);
   }
 
   function v2SaveArtists(arr){
-    try { localStorage.setItem('clipLiveArtists', JSON.stringify(arr || [])); } catch(_){}
+    try { localStorage.setItem('omniDjArtists', JSON.stringify(arr || [])); } catch(_){}
   }
 
   function v2RenderArtistsList(){

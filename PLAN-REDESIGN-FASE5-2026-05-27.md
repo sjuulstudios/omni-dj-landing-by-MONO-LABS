@@ -2,7 +2,7 @@
 
 **Datum:** 2026-05-27 (v3 — Sjuul's antwoorden op beslispunten + concrete content-wijzigingen verwerkt)
 **Sessie:** 54 (volgend op sessie 53)
-**Product:** Omni DJ (codebase nog Clip Live)
+**Product:** Omni DJ (codebase nog Omni DJ)
 **Status:** voorstel, wacht op akkoord Sjuul
 
 ---
@@ -17,7 +17,7 @@ Alle nog niet-geraakte views naar v2 brengen, de sidebar herstructureren naar **
 
 | # | v2 | v3 (huidig) |
 |---|---|---|
-| 1 | Artist-chip placeholder "Clip Drop Live" | **"Artist name"** (placeholder, alle "Clip Drop Live"-refs weg) |
+| 1 | Artist-chip placeholder "Omni DJ" | **"Artist name"** (placeholder, alle "Omni DJ"-refs weg) |
 | 2 | Analyse-page sub "Drop, open, or auto-watch — we find the drops..." | **"Drag & drop or select your DJ-set."** |
 | 3 | Dropzone met "— up to 4 hours" + `[Choose file]`-knop | Dropzone strak: alleen "Drop a set here" + formats (geen knop, geen "up to 4 hours") |
 | 4 | "Or use:" label + 4 tiles incl. "Choose file / Local picker" | Geen "Or use:"-label; "Choose file" tile **weg** (duplicaat). Tiles overgebleven: Watch folder + Dropbox + Drive |
@@ -42,7 +42,7 @@ Sessies 45-48 hebben sidebar, dashboard/clips-grid, editor/timeline en 5 modals 
 | 5 | `#view-publish` | regel 7090 | Playfair section-titles |
 | 6 | `#view-settings` | regel 7136 | Playfair eyebrow + italic op "Local-first and yours.", "Watch folder", "Brand kit" |
 | 7 | "CLIP PICKER · Pick the keepers" hero | boven dashboard | Playfair italic + uppercase eyebrow |
-| 8 | Workspace-knop linksboven sidebar | huidige sidebar | "Sjuul Studios · Pro plan" statisch label, niet klikbaar, geen artist-laag |
+| 8 | Workspace-knop linksboven sidebar | huidige sidebar | "MONO LABS · Pro plan" statisch label, niet klikbaar, geen artist-laag |
 
 `reset-password.html` blijft bewust uit scope (standalone landingspagina).
 
@@ -54,8 +54,8 @@ Sessies 45-48 hebben sidebar, dashboard/clips-grid, editor/timeline en 5 modals 
 
 ```
 ┌─────────────────────────────────────┐
-│ ⚡ Sjuul Studios   [FREE] ▾          │   ← workspace + plan chip (klikbaar)
-│ ⏵ Clip Drop Live ▾                   │   ← artist-picker (klikbaar)
+│ ⚡ MONO LABS   [FREE] ▾          │   ← workspace + plan chip (klikbaar)
+│ ⏵ Omni DJ ▾                   │   ← artist-picker (klikbaar)
 ├─────────────────────────────────────┤
 │                                       │
 │ ▤  Analyse        ← NIEUW (top-level) │
@@ -67,7 +67,7 @@ Sessies 45-48 hebben sidebar, dashboard/clips-grid, editor/timeline en 5 modals 
 │                                       │
 ├─────────────────────────────────────┤
 │ ⚙  Settings                           │
-│ 👤  business@sjuulstudios.com         │
+│ 👤  omnidj@monohq-labs.com         │
 └─────────────────────────────────────┘
 ```
 
@@ -95,10 +95,10 @@ Sessies 45-48 hebben sidebar, dashboard/clips-grid, editor/timeline en 5 modals 
 
 ```
 ┌─────────────────────────────────────┐
-│ ⚡  Sjuul Studios       [FREE] ▾     │ ← chip 1: workspace
+│ ⚡  MONO LABS       [FREE] ▾     │ ← chip 1: workspace
 └─────────────────────────────────────┘
 ┌─────────────────────────────────────┐
-│ ⏵  Clip Drop Live          ▾         │ ← chip 2: actieve artist
+│ ⏵  Omni DJ          ▾         │ ← chip 2: actieve artist
 └─────────────────────────────────────┘
 ```
 
@@ -328,7 +328,7 @@ Voorlopig grotendeels placeholder (Postiz-integratie staat in Fase 5c uit conten
 
 ### 4.7 Workspace + artist switcher (sidebar bovenin)
 
-**Nu:** statische tekst "Sjuul Studios · Pro plan" op één regel.
+**Nu:** statische tekst "MONO LABS · Pro plan" op één regel.
 
 **Nieuw — 2 gestapelde chips:**
 
@@ -336,7 +336,7 @@ Voorlopig grotendeels placeholder (Postiz-integratie staat in Fase 5c uit conten
 <div class="v2-ws-stack">
   <button class="v2-ws-chip" data-role="workspace">
     <span class="v2-ws-icon">⚡</span>
-    <span class="v2-ws-name">Sjuul Studios</span>
+    <span class="v2-ws-name">MONO LABS</span>
     <span class="v2-ws-plan v2-plan-free">FREE</span>
     <span class="v2-ws-chev">▾</span>
   </button>
@@ -360,7 +360,7 @@ Voorlopig grotendeels placeholder (Postiz-integratie staat in Fase 5c uit conten
 - "+ Add artist" (STUDIO, indien < 3 artists) of "Add more artists with Studio →" (FREE/PRO) of niets (STUDIO + 3 artists bereikt)
 - "Manage artists" → Settings
 
-**Visuele referentie van jouw screenshot:** dezelfde compacte chip-stijl als Supabase ("Sjuul Studios FREE" / "Clip Drop Live"), met:
+**Visuele referentie van jouw screenshot:** dezelfde compacte chip-stijl als Supabase ("MONO LABS FREE" / "Omni DJ"), met:
 - Kleine icoon-glyph links
 - Naam-tekst middenin
 - Plan-badge of weglaten (alleen op workspace-chip)
@@ -544,7 +544,7 @@ SESSIE 53 (klaar) ──► visuele verificatie (5 min, Sjuul)
                           │        │
                           │        └──► Sessie 55 = rebuild .app/.dmg
                           │                  │
-                          │                  └──► Code-rebrand Clip Live → Omni DJ
+                          │                  └──► Code-rebrand Omni DJ → Omni DJ
                           │                            │
                           │                            └──► omnidj.com koppelen
                           │                                      │

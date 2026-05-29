@@ -18,6 +18,6 @@ if [ -n "$PID_ON_PORT" ]; then
   sleep 1
 fi
 source venv/bin/activate
-nohup python3 app.py 5555 > /tmp/cliplive_restart.log 2>&1 &
+nohup python3 app.py 5555 > /tmp/omnidj_restart.log 2>&1 &
 disown
 echo "started pid=$!"

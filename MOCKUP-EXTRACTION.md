@@ -1,4 +1,4 @@
-# Clip Live Redesign — Mockup Extraction
+# Omni DJ Redesign — Mockup Extraction
 
 ## File Map
 
@@ -238,7 +238,7 @@
       </div>
       <div class="side-item">
         <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg></span>
-        Sjuul Studios — Q2
+        MONO LABS — Q2
       </div>
       <div class="side-item">
         <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg></span>
@@ -283,7 +283,7 @@
         <div class="quick">
           <div class="ico-lg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h18M5 13 9 5h6l4 8M5 13v6h14v-6"/></svg></div>
           <h3>Watch a folder</h3>
-          <p>Drop sets into a Dropbox / Drive / local folder — Clip Live cuts them automatically.</p>
+          <p>Drop sets into a Dropbox / Drive / local folder — Omni DJ cuts them automatically.</p>
         </div>
       </div>
 
@@ -438,7 +438,7 @@ None (scene-header is keyed for scroll spy via global JS at end of file).
       </div>
       <div style="margin-top:22px;padding:14px 16px;border:1px solid var(--line-2);border-radius:14px;background:rgba(232,183,102,0.06);max-width:440px">
         <div style="font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--amber);text-transform:uppercase;margin-bottom:6px">● Watched folder</div>
-        <div style="font-size:13.5px;color:var(--paper);line-height:1.5"><b style="color:var(--amber-2)">Dropbox / DJ Sets / Recorded</b> — Clip Live is monitoring. Any new <code style="font-family:var(--mono);font-size:12px;color:var(--paper-dim)">.wav</code> or <code style="font-family:var(--mono);font-size:12px;color:var(--paper-dim)">.mp4</code> dropped here will be cut into shorts automatically.</div>
+        <div style="font-size:13.5px;color:var(--paper);line-height:1.5"><b style="color:var(--amber-2)">Dropbox / DJ Sets / Recorded</b> — Omni DJ is monitoring. Any new <code style="font-family:var(--mono);font-size:12px;color:var(--paper-dim)">.wav</code> or <code style="font-family:var(--mono);font-size:12px;color:var(--paper-dim)">.mp4</code> dropped here will be cut into shorts automatically.</div>
       </div>
     </div>
     <div class="dropzone">
@@ -1306,7 +1306,7 @@ None.
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
         <div class="panel-h">
           <div class="ti" style="font-size:16px">Brand kit</div>
-          <div class="ct">Sjuul Studios · default</div>
+          <div class="ct">MONO LABS · default</div>
         </div>
         <div class="style-row">
           <label>Logo</label>

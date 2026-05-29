@@ -115,12 +115,12 @@ Dashboard → **Authentication → Email Templates → Reset Password**
 - **Niet langer maken.** 24 uur is een security-anti-pattern voor reset flows
 
 ### 1.2 — Custom email template
-Vervang Supabase's default templates door eigen Nederlandse versies in Clipdrop-stijl. Voorbeeld:
+Vervang Supabase's default templates door eigen Nederlandse versies in Omni DJ-stijl. Voorbeeld:
 
 ```html
-<h2>Wachtwoord resetten — Clipdrop</h2>
+<h2>Wachtwoord resetten — Omni DJ</h2>
 <p>Hi {{ .Email }},</p>
-<p>Je vroeg een nieuw wachtwoord aan voor je Clipdrop account.</p>
+<p>Je vroeg een nieuw wachtwoord aan voor je Omni DJ account.</p>
 <p>Klik op deze knop om een nieuw wachtwoord te kiezen:</p>
 <a href="{{ .ConfirmationURL }}"
    style="background:#e8b766;color:#1a1208;padding:12px 24px;
@@ -130,14 +130,14 @@ Vervang Supabase's default templates door eigen Nederlandse versies in Clipdrop-
 <p>De link is 1 uur geldig en kan maar 1× gebruikt worden.</p>
 <p>Niet zelf aangevraagd? Negeer deze mail — er gebeurt niets met je account.</p>
 <hr>
-<small>Clipdrop · djclips.nl · Niet reageren op deze mail.</small>
+<small>Omni DJ · omnidj.com · Niet reageren op deze mail.</small>
 ```
 
 ### 1.3 — Redirect URL configureren
 Dashboard → **Authentication → URL Configuration**
-- **Site URL:** `https://djclips.nl` (productie)
+- **Site URL:** `https://omnidj.com` (productie)
 - **Redirect URLs (allowlist):**
-  - `https://djclips.nl/reset-password`
+  - `https://omnidj.com/reset-password`
   - `http://127.0.0.1:5555/reset-password` (lokaal voor de desktop app)
 
 **KRITIEK:** Zonder allowlist kan iemand een phishing-URL als reset-redirect injecteren. Supabase whitelist alleen exact deze URLs.
@@ -145,7 +145,7 @@ Dashboard → **Authentication → URL Configuration**
 ### 1.4 — Custom SMTP (later, na launch)
 Standaard verstuurt Supabase via hun eigen mailserver met afzender `noreply@mail.app.supabase.io`. Dat lijkt onbetrouwbaar voor eindgebruikers (spam-flag).
 
-Aanbeveling vóór beta-launch: koppel **Postmark** (transactional-email specialist, ~$15/mo voor 10k mails) of **Resend** (modern, $20/mo). Beide hebben gratis tiers voor de eerste maand. Daarmee komt de mail van `noreply@djclips.nl` af.
+Aanbeveling vóór beta-launch: koppel **Postmark** (transactional-email specialist, ~$15/mo voor 10k mails) of **Resend** (modern, $20/mo). Beide hebben gratis tiers voor de eerste maand. Daarmee komt de mail van `noreply@omnidj.com` af.
 
 Dashboard → **Project Settings → Auth → SMTP Settings**
 
@@ -296,14 +296,14 @@ def _is_strong_password(pw):
 
 _COMMON_PASSWORDS = {
     'password', 'password1', '12345678', 'qwerty123', 'letmein1',
-    'welcome1', 'admin123', 'clipdrop1', 'djclips01',
+    'welcome1', 'admin123', 'omnidj1', 'omni1',
     # voeg toe na launch op basis van logs van geblokkeerde pogingen
 }
 
 def _reset_redirect_url():
     """Where Supabase redirects after user clicks the reset-link in email."""
     # Default: productie domain. Lokaal kan via env override.
-    return os.getenv('RESET_REDIRECT_URL', 'https://djclips.nl/reset-password')
+    return os.getenv('RESET_REDIRECT_URL', 'https://omnidj.com/reset-password')
 ```
 
 ---
@@ -367,7 +367,7 @@ Voordeel: schoon gescheiden van de hoofdapp, geen interferentie met routing. Sup
 <html lang="nl">
 <head>
   <meta charset="utf-8">
-  <title>Wachtwoord resetten — Clipdrop</title>
+  <title>Wachtwoord resetten — Omni DJ</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="auth-page">
@@ -488,7 +488,7 @@ Loop dit lijstje af na implementatie. Elke regel is een poging tot misbruik die 
 | 12 | Reset met `new_password: "12345678"` | `{ok: false}` — alleen cijfers, geen letters |
 | 13 | Login in tab A, vraag reset in tab B, reset via mail | Tab A's sessie blijft werken (Supabase invalidate alleen `scope='others'` — eigen sessie blijft) |
 | 14 | Login op laptop, login op telefoon, reset via mail op telefoon | Laptop wordt automatisch uitgelogd bij volgende API-call (sign_out others) |
-| 15 | Reset-mail komt binnen | Van `noreply@djclips.nl` (post-SMTP-config), niet `noreply@mail.app.supabase.io` |
+| 15 | Reset-mail komt binnen | Van `noreply@omnidj.com` (post-SMTP-config), niet `noreply@mail.app.supabase.io` |
 | 16 | Bekijk Supabase auth.audit_log_entries na reset | Logt `password_recovery_requested` + `password_updated` events met IP |
 
 ---
@@ -508,11 +508,11 @@ Edge case: iemand zit ingelogd in tab A en klikt "Wachtwoord vergeten" in tab B 
 Standaard logt Supabase **alle sessies behalve de huidige** uit na password change. Dit is in `reset_password()` boven al gedekt met `scope='others'`. Verifieer in productie of dit ook echt zo werkt — Supabase wijzigt API's vaker dan ik zou willen.
 
 ### 5.5 — Bundled desktop-app
-De `.dmg` versie van Clip Live draait op `http://127.0.0.1:5555`. Reset-mail moet daar óók naartoe kunnen linken voor lokale ontwikkeling/testing. Twee opties:
+De `.dmg` versie van Omni DJ draait op `http://127.0.0.1:5555`. Reset-mail moet daar óók naartoe kunnen linken voor lokale ontwikkeling/testing. Twee opties:
 
-**A.** Twee verschillende reset-URLs in Supabase allowlist (`https://djclips.nl/reset-password` + `http://127.0.0.1:5555/reset-password`)
+**A.** Twee verschillende reset-URLs in Supabase allowlist (`https://omnidj.com/reset-password` + `http://127.0.0.1:5555/reset-password`)
 
-**B.** Reset-link wijst altijd naar `https://djclips.nl/reset-password`, en die pagina detecteert of de gebruiker eigenlijk de desktop-app gebruikt en redirect dan naar `http://127.0.0.1:5555/reset-password#...`. Lastiger.
+**B.** Reset-link wijst altijd naar `https://omnidj.com/reset-password`, en die pagina detecteert of de gebruiker eigenlijk de desktop-app gebruikt en redirect dan naar `http://127.0.0.1:5555/reset-password#...`. Lastiger.
 
 **Aanbeveling:** A. Eenvoudig en explicieter.
 
@@ -573,7 +573,7 @@ Als we dit gaan implementeren — niet nu, maar in een dedicated sessie — dan 
 4. Mail-flow testen: registreer testaccount → forgot → kijk in inbox → klik link → check redirect
 5. Frontend bouwen (Fase 3) zodra backend bewezen werkt
 6. Security checklist (Fase 4) doorlopen
-7. Pas dán naar productie (na DNS-koppeling van djclips.nl in Cloudflare)
+7. Pas dán naar productie (na DNS-koppeling van omnidj.com in Cloudflare)
 
 ---
 

@@ -1,4 +1,4 @@
-# ClipLive Video Editor — Feature Expansion Plan
+# OmniDJ Video Editor — Feature Expansion Plan
 
 ## What exists today
 

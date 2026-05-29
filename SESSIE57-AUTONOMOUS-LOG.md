@@ -146,8 +146,8 @@ Geen wijzigingen aan: `app.py`, `cutter.py`, `analyzer.py`, `auth.py`, `launcher
 Open Terminal en plak (één voor één):
 
 ```
-osascript -e 'tell application "Clip Live" to quit' 2>/dev/null
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+osascript -e 'tell application "Omni DJ" to quit' 2>/dev/null
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./start.sh
 ```
 
@@ -155,7 +155,7 @@ Open Chrome op: http://127.0.0.1:5555
 
 In de console (cmd+option+J):
 ```
-localStorage.setItem('clipLiveRedesignV2','1'); location.reload();
+localStorage.setItem('omniDjRedesignV2','1'); location.reload();
 ```
 
 Check de volgende dingen:
@@ -197,7 +197,7 @@ Check de volgende dingen:
 Mijn sandbox kon niet committen. Doe het zo handmatig:
 
 ```
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ"
 rm -f .git/index.lock
 git status
 ```
@@ -222,18 +222,18 @@ git commit -m "[Fase A] Brand-view afgesplitst + Brand Kit + Watermark + Caption
 ### Stap 3 — PyInstaller rebuild (5-15 min)
 
 ```
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 source venv/bin/activate
-mv "/Applications/Clip Live.app" "/Applications/Clip Live.PRE-SESSIE57.app"
+mv "/Applications/Omni DJ.app" "/Applications/Omni DJ.PRE-SESSIE57.app"
 ./build_macos.sh dmg
-mv "dist/Clip Live.app" "/Applications/"
-open "/Applications/Clip Live.app"
+mv "dist/Omni DJ.app" "/Applications/"
+open "/Applications/Omni DJ.app"
 ```
 
 Rollback bij issue:
 ```
-rm -rf "/Applications/Clip Live.app"
-mv "/Applications/Clip Live.PRE-SESSIE57.app" "/Applications/Clip Live.app"
+rm -rf "/Applications/Omni DJ.app"
+mv "/Applications/Omni DJ.PRE-SESSIE57.app" "/Applications/Omni DJ.app"
 ```
 
 ---
@@ -289,6 +289,6 @@ Smoketest-output, Chrome MCP screenshots, dev-server checks.
 
 1. Lees dit bestand bottom-to-top voor de laatste status.
 2. Check `git log` op `feature/auto-mode-and-brand-redesign` voor de commits.
-3. Start dev-server: `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh`
+3. Start dev-server: `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter" && ./start.sh`
 4. Open http://127.0.0.1:5555 met v2-flag aan
 5. Visuele test van Fase A wijzigingen (instructies komen onderaan dit bestand zodra Fase A klaar is)

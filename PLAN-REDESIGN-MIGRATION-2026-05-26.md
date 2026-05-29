@@ -1,4 +1,4 @@
-# Clip Live — Redesign Migration Plan
+# Omni DJ — Redesign Migration Plan
 **Datum:** 2026-05-26
 **Bron-design:** `clip-live-redesign-v2.html` (akkoord van Sjuul gekregen)
 **Bron-design-systeem:** `PLAN-REDESIGN-2026-05-26.md`

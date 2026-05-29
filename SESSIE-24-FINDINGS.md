@@ -15,7 +15,7 @@ Pipeline werkt end-to-end. Eén echte bug gevonden (librosa half-tempo op melodi
 ## Setup
 
 - Server: `http://127.0.0.1:5555`, productie-mode (debug=False), ffmpeg 8.1.1 met drawtext + h264_videotoolbox, demucs/torch+mps aanwezig.
-- Account: `business+wftest17@sjuulstudios.com` — login via `/api/auth/login` levert direct een access_token + session-state in `localStorage.clipLive.session`.
+- Account: `business+wftest17@sjuulstudios.com` — login via `/api/auth/login` levert direct een access_token + session-state in `localStorage.omniDj.session`.
 - Brand Stack van wftest17: `bpm_stamp.enabled = true`, format `bpm_key`, corner `tr`, color white. Default kit zonder eigen fonts/logo.
 
 ---
@@ -161,7 +161,7 @@ Edge-case suite (8 cases) unit-getest standalone:
 - 60 BPM → 120 (boundary lower, doubles)
 - 65 BPM → 130 (doubles)
 
-Beeld bewijs: [SESSIE-24-bpm-fix-stamp.png](computer:///Users/sjuulsmits/Documents/Claude/Projects/Clip Live/SESSIE-24-bpm-fix-stamp.png)
+Beeld bewijs: [SESSIE-24-bpm-fix-stamp.png](computer:///Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/SESSIE-24-bpm-fix-stamp.png)
 
 Backup: `analyzer.py.pre-sessie24.bak`.
 

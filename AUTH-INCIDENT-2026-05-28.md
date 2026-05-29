@@ -45,25 +45,25 @@ Sjuul gebruikt 2 accounts op dezelfde Mac (testing + productie). localStorage va
 
 ### Hypothese C: stale Bearer-token
 
-Een refresh-token van een ander account in `clipLive.session` localStorage, auto-verlengd. Onwaarschijnlijk maar testbaar.
+Een refresh-token van een ander account in `omniDj.session` localStorage, auto-verlengd. Onwaarschijnlijk maar testbaar.
 
 ## Diagnostische acties voor Sjuul
 
 ### Direct in browser console (paste line-by-line, geen markdown fence):
 
-(function(){var t = JSON.parse(localStorage.getItem('clipLive.session') || '{}'); console.log('USER ID hint:', String(t.user && t.user.id || '').slice(0,8) + '...'); console.log('EMAIL:', t.user && t.user.email); console.log('EXPIRES:', t.expires_at ? new Date(t.expires_at*1000).toISOString() : 'no exp'); return 'see console';})()
+(function(){var t = JSON.parse(localStorage.getItem('omniDj.session') || '{}'); console.log('USER ID hint:', String(t.user && t.user.id || '').slice(0,8) + '...'); console.log('EMAIL:', t.user && t.user.email); console.log('EXPIRES:', t.expires_at ? new Date(t.expires_at*1000).toISOString() : 'no exp'); return 'see console';})()
 
-Verwacht: Sjuul's eigen email (sjuul@monohq-labs.com of business@sjuulstudios.com). Als 't iemand anders is → echte cross-account leak.
+Verwacht: Sjuul's eigen email (sjuul@monohq-labs.com of omnidj@monohq-labs.com). Als 't iemand anders is → echte cross-account leak.
 
 ### Library-test:
 
-fetch('/api/history', {headers: {Authorization: 'Bearer ' + JSON.parse(localStorage.getItem('clipLive.session')).access_token}}).then(r=>r.json()).then(h=>console.log('history count:', h.length, 'first id:', h[0] && h[0].id, 'user_id:', h[0] && h[0].user_id))
+fetch('/api/history', {headers: {Authorization: 'Bearer ' + JSON.parse(localStorage.getItem('omniDj.session')).access_token}}).then(r=>r.json()).then(h=>console.log('history count:', h.length, 'first id:', h[0] && h[0].id, 'user_id:', h[0] && h[0].user_id))
 
 Verwacht: alle entries hebben `user_id === Sjuul's id`. Als 't anders is, log de afwijkende.
 
 ### Trim-keys op andere user:
 
-(function(){return Object.keys(localStorage).filter(k=>k.startsWith('clipLive.trim.')).map(k=>{var jid=k.split('.')[2]; return {jobId:jid, val_len:(localStorage.getItem(k)||'').length};});})()
+(function(){return Object.keys(localStorage).filter(k=>k.startsWith('omniDj.trim.')).map(k=>{var jid=k.split('.')[2]; return {jobId:jid, val_len:(localStorage.getItem(k)||'').length};});})()
 
 Verwacht: alle job-ids moeten van Sjuul zijn. Eentje van een ander account = residue van een test-flow.
 

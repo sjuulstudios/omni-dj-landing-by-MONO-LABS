@@ -8,7 +8,7 @@
 
 Controleer dat de dev-server lokaal nog werkt met de nieuwe code:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./start.sh
 
 Open in een browser: http://127.0.0.1:5555
@@ -29,7 +29,7 @@ Als één van deze faalt, stop en meld het.
 
 Dit moet als eerst gebeuren want anders kan de gebundelde .app niet uploaden.
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 supabase functions deploy update-usage
 
 Verwacht: "Deployed Function update-usage". Geen `--no-verify-jwt` flag —
@@ -62,7 +62,7 @@ Anders krijgen mensen in de bundle een 401 bij Save in Settings → Profile.
 
 ## Stap 3 — .dmg bouwen
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./build_macos.sh dmg
 
 Duurt 3-8 minuten. De nieuwe secret-scan in stap 3 van het script faalt
@@ -71,18 +71,18 @@ hoort er geen te zijn). Als dat alarm afgaat: stop, vraag mij.
 
 Output:
 
-dist/Clip Live.app
-dist/Clip Live.dmg
+dist/Omni DJ.app
+dist/Omni DJ.dmg
 
 ## Stap 4 — Smoketest in de gebundelde .app
 
-xattr -dr com.apple.quarantine "/Applications/Clip Live.app"
+xattr -dr com.apple.quarantine "/Applications/Omni DJ.app"
 
 (De-quarantine alleen nodig als je de .app eerst naar /Applications hebt
 gesleept vanuit de .dmg. Voor rechtstreeks testen kan dat ook vanuit
 dist/.)
 
-open "dist/Clip Live.app"
+open "dist/Omni DJ.app"
 
 Verwacht: browser opent op http://127.0.0.1:5555.
 
@@ -107,7 +107,7 @@ Als één van deze faalt: stop, kopieer de exacte foutmelding, vraag mij.
 Uit Sessie 29 staat er nog een cleanup-script klaar voor 18 owner-less
 job folders:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 python3 scripts/cleanup_legacy_jobs.py
 
 Dat is dry-run. Lijst eruit checken. Daarna echt opruimen:
@@ -118,7 +118,7 @@ python3 scripts/cleanup_legacy_jobs.py --apply
 
 Als iets fundamenteel niet werkt, ga terug naar pre-sessie30:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 cp app.py.pre-sessie30.bak app.py
 cp auth.py.pre-sessie30.bak auth.py
 cp static/index.html.pre-sessie30.bak static/index.html

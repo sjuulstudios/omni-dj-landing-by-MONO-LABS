@@ -1,4 +1,4 @@
-# Clip Live — Content Calendar + Multi-artist + Ads platform plan
+# Omni DJ — Content Calendar + Multi-artist + Ads platform plan
 
 > **Versie:** 1.1 — 2026-05-26
 > **Auteur:** Claude + Sjuul (vervolg op PLAN-MOAT-FEATURES-2026-05-26.md)
@@ -27,7 +27,7 @@ Dit document beschrijft de complete architectuur, fasering, dependencies en wat 
 
 ## 1. Strategische logica — waarom dit een natuurlijke uitbreiding is
 
-Clip Live's huidige user is "een DJ die clips maakt". De volgende stappen in zijn workflow zijn:
+Omni DJ's huidige user is "een DJ die clips maakt". De volgende stappen in zijn workflow zijn:
 - Clips schedulen (waar/wanneer posten).
 - Posts publiceren (handmatig of automatisch).
 - Posts boosten met ads.
@@ -39,7 +39,7 @@ Door **alle stappen** in één tool aan te bieden bouw je een **echte moat**: ee
 
 ---
 
-## 2. Huidige staat van Clip Live — feitelijk gechecked (sessie 43-staat)
+## 2. Huidige staat van Omni DJ — feitelijk gechecked (sessie 43-staat)
 
 | Onderdeel | Status |
 |---|---|
@@ -47,7 +47,7 @@ Door **alle stappen** in één tool aan te bieden bouw je een **echte moat**: ee
 | Supabase `profiles` met `plan/usage_this_period/stripe_*` | ✅ Live, RLS in version control (`supabase/migrations/001_rls_policies.sql`) |
 | Audit log + RBAC (`user/beta/admin`) | ✅ Live (sessie 35, migraties 002+003) |
 | Rate limiting (flask-limiter, 7 endpoints) | ✅ Live (sessie 32) |
-| Stripe checkout + portal + webhook + edge functions | ✅ Live in **sandbox** — productie wacht op djclips.nl DNS-cutover |
+| Stripe checkout + portal + webhook + edge functions | ✅ Live in **sandbox** — productie wacht op omnidj.com DNS-cutover |
 | Password-reset flow end-to-end | ✅ Live (sessie 40) |
 | `.app` build + DATA_DIR fix | ✅ Live (sessie 40) |
 | Brand Stack (logo, fonts, watermark, colors) | ✅ Live (sessie 31+41+42) |
@@ -60,7 +60,7 @@ Door **alle stappen** in één tool aan te bieden bouw je een **echte moat**: ee
 **Belangrijke beperkingen om mee te ontwerpen:**
 
 - `profiles` is **1-op-1 met `auth.users`** — er is geen `workspace`-laag. Multi-artist vereist een **schema-uitbreiding** met `workspaces` + `workspace_members` + alle resource-tabellen krijgen `workspace_id` als scope-key.
-- Stripe staat op sandbox. **Vóór** we nieuwe products/tiers in productie zetten moet eerst djclips.nl + Stripe live-mode klaar zijn (fase 3+4 op de bestaande roadmap).
+- Stripe staat op sandbox. **Vóór** we nieuwe products/tiers in productie zetten moet eerst omnidj.com + Stripe live-mode klaar zijn (fase 3+4 op de bestaande roadmap).
 - Sessie 43 (export-pipeline) **moet eerst af** — anders kunnen users geen captions in exports en is de hele calendar-pitch een halve waarheid.
 
 ---
@@ -249,7 +249,7 @@ create table public.social_accounts (
 **Architectuur volgt het Intellijend-model uit moat-plan (sectie 5).** Wat dit document toevoegt: concrete API-routes en de "Ad Orchestrator" als aparte Node-service.
 
 ```
-[Clip Live Flask]
+[Omni DJ Flask]
     ↓ POST /api/ads/campaign
 [Supabase: ad_campaigns insert]
     ↓ message
@@ -259,7 +259,7 @@ create table public.social_accounts (
     ↓ stats (hourly poll)
 [Supabase: ad_results]
     ↓
-[Clip Live Dashboard]
+[Omni DJ Dashboard]
 ```
 
 **Datamodel:**
@@ -281,7 +281,7 @@ create table public.ad_campaigns (
 create table public.ad_creatives (
   id                uuid primary key default gen_random_uuid(),
   campaign_id       uuid references public.ad_campaigns(id) on delete cascade,
-  clip_id           text,                           -- bron-clip uit Clip Live
+  clip_id           text,                           -- bron-clip uit Omni DJ
   variant_label     text,                           -- "9:16 short" / "1:1 long"
   external_creative_id text,                        -- Meta/TikTok creative id
   status            text                            -- testing|winner|paused
@@ -311,7 +311,7 @@ create table public.ad_results (
 |---|---|
 | Hosting | **Postiz Cloud** voor v1 (geen self-host, geen App Review nodig — Postiz heeft die al gedaan voor TikTok/IG/YT) |
 | API | Public API + OAuth2 Developer App |
-| Multi-tenant | 1 Postiz-org per Clip Live workspace |
+| Multi-tenant | 1 Postiz-org per Omni DJ workspace |
 | OAuth flow | User klikt "Connect TikTok" in onze UI → wij redirecten naar Postiz OAuth → user logt in op Postiz (eenmalig per artiest) → krijgt `pos_xxxxx` token terug → wij slaan op in `social_accounts` |
 | Posts plannen | POST naar Postiz `/posts` met `type: "schedule"` |
 | Autopublish | Werkt automatisch — wij plannen, Postiz publisht op tijd |
@@ -323,11 +323,11 @@ create table public.ad_results (
 
 **Alternatief overwogen, verworpen:** eigen Meta/TikTok/YT App Review doen. Onderzoek toont 2–6 weken doorlooptijd per platform + frequente rejections. Postiz heeft dit al, voor ons = months ahead.
 
-### 5a. Wanneer is Clip Live online vs. lokaal — bevestigd
+### 5a. Wanneer is Omni DJ online vs. lokaal — bevestigd
 
 Sjuul vroeg: "Wordt de Postiz API enkel gebruikt wanneer de user hiervoor prompt?" — **bevestigd, ja.** Concreet wat lokaal blijft vs. wat online gaat:
 
-**Blijft 100% lokaal (geen Postiz, geen Clip Live cloud-call):**
+**Blijft 100% lokaal (geen Postiz, geen Omni DJ cloud-call):**
 - Audio-analyse via librosa
 - Drop-detectie + clip-generatie via ffmpeg
 - Brand Stack editen (logo, fonts, kleuren, watermark)
@@ -363,7 +363,7 @@ Sjuul vroeg: "Wordt de Postiz API enkel gebruikt wanneer de user hiervoor prompt
 5. **Indie record label** — €200–2.000/mnd
 6. **Majors/agencies** — €2k–25k/mnd enterprise
 
-**Witte vlek (uit research):** er bestaat **vrijwel niets** specifiek voor DJ-managers. B-Side, A.MUSE, Toolroom Management gebruiken Notion + Soundcharts + Linkfire. Clip Live kan deze niche claimen.
+**Witte vlek (uit research):** er bestaat **vrijwel niets** specifiek voor DJ-managers. B-Side, A.MUSE, Toolroom Management gebruiken Notion + Soundcharts + Linkfire. Omni DJ kan deze niche claimen.
 
 ### Voorgestelde tier-structuur (vervangt/verfijnt tier-tabel uit moat-plan §8)
 
@@ -400,17 +400,17 @@ Uit research blijkt: **business verification + App Review duren weken** en hange
 
 | Actie | Doorlooptijd | Wat Sjuul moet doen |
 |---|---|---|
-| **Meta Business Verification** | 3–14 dagen | KVK-uittreksel, DNS TXT op djclips.nl, KVK-adres, evt. bankafschrift |
-| **Meta Developer App + Marketing API** | 1 dag setup + 2–6 weken review | App aanmaken, privacy policy live op djclips.nl, demo-video opnemen |
+| **Meta Business Verification** | 3–14 dagen | KVK-uittreksel, DNS TXT op omnidj.com, KVK-adres, evt. bankafschrift |
+| **Meta Developer App + Marketing API** | 1 dag setup + 2–6 weken review | App aanmaken, privacy policy live op omnidj.com, demo-video opnemen |
 | **TikTok For Business + developer-registratie** | 3–7 dagen verify + 2–4 weken review | TikTok Business account, developer-agreement tekenen |
 | **Google Ads MCC + developer token** | 4–8 weken (Standard Access) | Google Cloud project, MCC aanvragen, tool-demo voor Google rep |
 | **Privacy policy uitbreiden** | 1 dag | "We manage ads on your behalf"-clausule erin (verplicht door alle drie reviews) |
 
-**Aanbeveling (oud, v1.0):** start Meta + TikTok direct na djclips.nl DNS-cutover. **Vervangen door v1.1-beslissing**: pas opstarten na Fase 3 + research-fase 4a.
+**Aanbeveling (oud, v1.0):** start Meta + TikTok direct na omnidj.com DNS-cutover. **Vervangen door v1.1-beslissing**: pas opstarten na Fase 3 + research-fase 4a.
 
 ---
 
-## 7a. Geld-flow via Clip Live — research-vraag (v1.1, 2026-05-26)
+## 7a. Geld-flow via Omni DJ — research-vraag (v1.1, 2026-05-26)
 
 > Sjuul vroeg: "Ik wil geld WEL via onze tool laten lopen. Wij geven het uit en mix-en-matchen accounts." Dit is een **fundamentele wijziging** ten opzichte van v1.0 (waar geld direct van user naar Meta/TikTok zou stromen). Dat opent juridische en operationele complexiteit die we eerst moeten doorgronden. Daarom is de hele ads-fase **research-first** gemaakt.
 
@@ -487,7 +487,7 @@ Dit is **alleen mogelijk in Model A of C** (waar wij het geld in handen hebben).
 ### Fase 0 — Voorbereiding (parallel, kost 0 dev-tijd, alleen wachten)
 
 - ✅ Sessie 43 (export-pipeline fix) — al ingepland, blocker voor de hele rest
-- 📅 djclips.nl DNS-cutover via Cloudflare
+- 📅 omnidj.com DNS-cutover via Cloudflare
 - 📅 Stripe live-mode aan (na DNS)
 - 📅 Privacy policy uitbreiden met "we manage social publishing"-clausule (ads-clausule pas later, samen met Fase 4a)
 - ⏳ **Meta Business Verification + TikTok For Business** — **NIET nu starten** (verschoven naar Fase 4a research zoals beslist in v1.1)
@@ -572,7 +572,7 @@ Zelfde structuur als fase 5, maar voor TikTok Marketing API. Kan deels vanaf bes
 
 - Google Ads (lange App Review 4–8 wkn voor Standard Access)
 - Refinement van geld-flow op basis van leerlessen Fase 5+6
-- White-label voor labels (eigen branding van Clip Live binnen label-account)
+- White-label voor labels (eigen branding van Omni DJ binnen label-account)
 
 ---
 
@@ -580,7 +580,7 @@ Zelfde structuur als fase 5, maar voor TikTok Marketing API. Kan deels vanaf bes
 
 | Fase | Dev-tijd | Wachttijd (parallel) | Sjuul-input |
 |---|---|---|---|
-| 0 | 0 (al ingepland) | sessie 43 + djclips.nl | sessie 43 afronden |
+| 0 | 0 (al ingepland) | sessie 43 + omnidj.com | sessie 43 afronden |
 | 1 — Multi-tenant | 3–4 weken | — | workspace-naam beslissen |
 | 2 — Calendar UI | 2–3 weken | — | UI-feedback |
 | 3 — Postiz publish | 3–4 weken | — | Postiz Cloud account |
@@ -609,7 +609,7 @@ Zelfde structuur als fase 5, maar voor TikTok Marketing API. Kan deels vanaf bes
 ### Vóór Fase 1 (binnen 2 weken)
 
 4. **Sessie 43 (export-pipeline) klaar** — anders heeft Calendar geen exporteerbare clips.
-5. **djclips.nl live** — nodig voor Postiz OAuth-callback URL + later voor reviews.
+5. **omnidj.com live** — nodig voor Postiz OAuth-callback URL + later voor reviews.
 
 ### Vóór Fase 3 (Postiz publishing)
 
@@ -619,7 +619,7 @@ Zelfde structuur als fase 5, maar voor TikTok Marketing API. Kan deels vanaf bes
 ### Vóór Fase 4a (Ads-research) — niet urgent meer
 
 8. Bereid je voor op 2–3 weken research samen + sessie met NL-jurist/fiscalist (€500–€1.500).
-9. KVK-uittreksel + domein-eigendom-bewijs op djclips.nl (wel handig om al klaar te hebben liggen).
+9. KVK-uittreksel + domein-eigendom-bewijs op omnidj.com (wel handig om al klaar te hebben liggen).
 
 ### Optioneel maar handig
 
@@ -648,7 +648,7 @@ Zelfde structuur als fase 5, maar voor TikTok Marketing API. Kan deels vanaf bes
 - **AI-caption-generatie** — staat in moat-plan §4, kan parallel met Calendar maar is geen blocker.
 - **Managed-tier met % van ad-spend** — juridisch beest (PSP-vergunning), pas fase 7.
 - **Google Ads integratie** — te lange App Review (4–8 wkn Standard Access), uitstellen tot v2.
-- **Witte-label voor labels** (eigen branding van Clip Live binnen label-account) — interessante v3-feature, niet nu.
+- **Witte-label voor labels** (eigen branding van Omni DJ binnen label-account) — interessante v3-feature, niet nu.
 - **Analytics-feedback-loop terug naar editor** (welke clip-types presteren best per genre) — staat in moat-plan §1, fase 6+.
 
 ---
@@ -661,8 +661,8 @@ Concreet voor week 22 (2026-05-26 tot 2026-06-01):
 2. **Sjuul beslist workspace-naam** (Workspace / Roster / Artist / Project).
 3. ~~Meta Business Verification~~ ~~TikTok For Business~~ — **uitgesteld** naar Fase 4a (v1.1-beslissing).
 4. **Sjuul rondt sessie 43 (43a + 43b + 44) af** — export-pipeline blocker voor Calendar v1.
-5. **Sjuul plant djclips.nl DNS-cutover** met Cloudflare.
-6. **Wij plannen sessie 45+ in** om Fase 1 (multi-tenant fundament) te beginnen zodra 43 + djclips.nl klaar zijn.
+5. **Sjuul plant omnidj.com DNS-cutover** met Cloudflare.
+6. **Wij plannen sessie 45+ in** om Fase 1 (multi-tenant fundament) te beginnen zodra 43 + omnidj.com klaar zijn.
 
 Daarna fase-voor-fase de roadmap doorlopen: Multi-tenant → Calendar → Postiz publishing → Polish → **dan pas** ads-research starten.
 
@@ -691,7 +691,7 @@ Geen retorische — letterlijk te beantwoorden voor we beginnen:
   - Postiz Cloud bevestigd + sectie 5a toegevoegd over "wanneer wel/niet online".
   - Ads-systeem verschoven naar laatste fase (was Fase 4 → nu Fase 5+6+7). Multi-tenant + Calendar + Postiz publishing + Polish komen eerst.
   - Nieuwe Fase 4a "Ads research" toegevoegd met geld-flow-research (Model A agency / B PSP / C Stripe Connect).
-  - Sectie 7a uitgewerkt: "geld via Clip Live" + PSP-vergunning-uitleg + mix-en-matchen-budget voor managers.
+  - Sectie 7a uitgewerkt: "geld via Omni DJ" + PSP-vergunning-uitleg + mix-en-matchen-budget voor managers.
   - Pricing-sectie (6) geparkeerd als TBD — prijzen niet vastleggen tot na v1.
   - Meta + TikTok verificatie-acties **niet meer met urgentie** in sectie 10.
   - Werkschatting-tabel sectie 9 bijgewerkt: v1 (Fase 1–4) = 13–15 wkn, full v2 (incl. ads) = 28–35 wkn.

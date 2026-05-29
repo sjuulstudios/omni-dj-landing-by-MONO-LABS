@@ -1,4 +1,4 @@
-# Clip Live — Local Installation Guide
+# Omni DJ — Local Installation Guide
 
 A complete walkthrough for getting **dj-clip-cutter** running on your Mac, plus how to view the new `clip-live-redesign.html` mockup.
 
@@ -50,13 +50,13 @@ Verify with `ffmpeg -version`. You should see version info and a list of compile
 The project already lives at:
 
 ```
-/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter
+/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter
 ```
 
-Open a Terminal and cd into it (the quotes matter because of the space in "Clip Live"):
+Open a Terminal and cd into it (the quotes matter because of the space in "Omni DJ"):
 
 ```bash
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ```
 
 Confirm you're in the right place — you should see `start.sh`, `app.py`, `analyzer.py`, `cutter.py`, `requirements.txt`, and a `static/` folder:
@@ -108,7 +108,7 @@ These are not required to use the tool — `requirements.txt` covers the core ex
 This pulls a large download (~2GB for PyTorch) but unlocks Demucs stem separation, which feeds the drop classifier. On Apple Silicon it runs on the MPS backend so it's very fast.
 
 ```bash
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 source venv/bin/activate
 pip install torch demucs
 ```
@@ -118,7 +118,7 @@ pip install torch demucs
 If you want to push finished clips straight to YouTube from the app:
 
 ```bash
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 source venv/bin/activate
 pip install google-api-python-client google-auth-oauthlib
 ```
@@ -132,13 +132,13 @@ You'll also need to wire up Google OAuth credentials — see `uploader.py` for t
 The new visual prototype is a single self-contained HTML file at:
 
 ```
-/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/clip-live-redesign.html
+/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/clip-live-redesign.html
 ```
 
 Open it in your default browser:
 
 ```bash
-open "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/clip-live-redesign.html"
+open "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/clip-live-redesign.html"
 ```
 
 The sticky top nav scroll-spies through eight scenes plus the GPU plan section. No build step, no dependencies — just the file.
@@ -175,7 +175,7 @@ pip install torch demucs
 **Reset the venv from scratch**
 If dependencies get into a weird state, nuke the venv and let `start.sh` rebuild it:
 ```bash
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 rm -rf venv
 ./start.sh
 ```
@@ -196,9 +196,9 @@ In the terminal window where `start.sh` is running, press **Ctrl+C**. That shuts
 | What | Command |
 |------|---------|
 | Install ffmpeg | `brew install ffmpeg` |
-| Go to project | `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"` |
+| Go to project | `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"` |
 | Start the app | `./start.sh` |
 | Open in browser | http://127.0.0.1:5555 |
-| View the mockup | `open "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/clip-live-redesign.html"` |
+| View the mockup | `open "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/clip-live-redesign.html"` |
 | Stop the app | Ctrl+C in the terminal |
 | Reset venv | `rm -rf venv && ./start.sh` |

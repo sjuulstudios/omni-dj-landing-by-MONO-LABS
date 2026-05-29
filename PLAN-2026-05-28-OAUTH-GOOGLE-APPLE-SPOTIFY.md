@@ -34,9 +34,9 @@ Supabase Auth ondersteunt OAuth providers out-of-the-box via de "Providers" tab 
 1. Ga naar [Google Cloud Console](https://console.cloud.google.com) → nieuw project of bestaand "Omni DJ"
 2. APIs & Services → OAuth consent screen → External, fill in:
    - App name: Omni DJ
-   - User support email: business@sjuulstudios.com
+   - User support email: omnidj@monohq-labs.com
    - Authorized domains: `omnidj.com`, `supabase.co`
-   - Developer contact: business@sjuulstudios.com
+   - Developer contact: omnidj@monohq-labs.com
 3. Credentials → Create credentials → OAuth client ID:
    - Application type: Web application
    - Name: Omni DJ Web
@@ -145,7 +145,7 @@ def auth_callback():
     expires_at: parseInt(params.get('expires_at') || '0', 10),
     token_type: params.get('token_type') || 'bearer'
   };
-  localStorage.setItem('clipLive.session', JSON.stringify(session));
+  localStorage.setItem('omniDj.session', JSON.stringify(session));
   // For Spotify: fetch profile + tops once (see Fase 3)
   // Then redirect to home
   window.location.href = '/';

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# Initialiseert een lokale git-repository voor het Clip Live project.
+# Initialiseert een lokale git-repository voor het Omni DJ project.
 # Geen remote — alles blijft op je Mac. Je kunt later een private GitHub
 # of GitLab koppelen als je dat wilt.
 #
 # Gebruik:
-#     cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live"
+#     cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ"
 #     bash init_git.sh
 #
 # Wat het doet:
@@ -24,7 +24,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo ""
-echo "=== Clip Live — git init ==="
+echo "=== Omni DJ — git init ==="
 echo ""
 
 if [[ -d .git ]]; then
@@ -47,7 +47,7 @@ git symbolic-ref HEAD refs/heads/main
 
 # Lokale identity als die niet globaal is gezet
 if ! git config user.email >/dev/null 2>&1; then
-    git config user.email "business@sjuulstudios.com"
+    git config user.email "omnidj@monohq-labs.com"
     git config user.name  "Sjuul Smits"
 fi
 
@@ -69,12 +69,12 @@ echo "Stap 4/5 — bestanden toevoegen (kan even duren bij eerste keer)..."
 git add .
 
 echo "Stap 5/5 — baseline commit..."
-git commit -q -m "Baseline: Clip Live project — pre-installer release prep
+git commit -q -m "Baseline: Omni DJ project — pre-installer release prep
 
 Bevat:
   - dj-clip-cutter/ : Flask backend + frontend (Flask, librosa, FFmpeg)
-  - landing/        : clipdroplive.com landingspagina
-  - PyInstaller     : ClipLive.spec + launcher.py + build_macos.sh
+  - landing/        : omnidj.com landingspagina
+  - PyInstaller     : OmniDJ.spec + launcher.py + build_macos.sh
   - Juridisch       : privacy.html + terms.html (sub-processors, CCPA, force majeure, etc.)
   - Documentatie    : INSTALLER-RUNBOOK.md + bestaande HANDOVER.md
 "

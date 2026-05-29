@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Clip Live — cleanup tool voor owner-less jobs in output/ (SESSIE 29)
+Omni DJ — cleanup tool voor owner-less jobs in output/ (SESSIE 29)
 
 Achtergrond
 -----------
@@ -113,14 +113,14 @@ def _human(n: int) -> str:
 
 
 def main():
-    ap = argparse.ArgumentParser(description='Clean up owner-less job folders from Clip Live output/')
+    ap = argparse.ArgumentParser(description='Clean up owner-less job folders from Omni DJ output/')
     ap.add_argument('--apply', action='store_true', help='Daadwerkelijk verplaatsen naar quarantine. Zonder deze flag = dry-run.')
     ap.add_argument('--yes', action='store_true', help='Sla "yes" prompt over (voor automation).')
     args = ap.parse_args()
 
     candidates, owned, errors = find_candidates(OUTPUT_DIR)
 
-    print(f'\nClip Live — cleanup_legacy_jobs.py')
+    print(f'\nOmni DJ — cleanup_legacy_jobs.py')
     print(f'OUTPUT_DIR: {OUTPUT_DIR}')
     print()
     for e in errors:
@@ -159,7 +159,7 @@ def main():
     quarantine.mkdir(parents=True, exist_ok=False)
 
     report_lines = [
-        f'Clip Live cleanup report — {datetime.now().isoformat()}',
+        f'Omni DJ cleanup report — {datetime.now().isoformat()}',
         f'OUTPUT_DIR: {OUTPUT_DIR}',
         f'Quarantine: {quarantine}',
         f'Kandidaten: {len(candidates)}',

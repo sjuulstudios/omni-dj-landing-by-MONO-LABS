@@ -339,7 +339,7 @@
             headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ...payload,
-              _subject: 'Clipdrop Live — new account signup',
+              _subject: 'Omni DJ — new account signup',
               _replyto: payload.email,
             }),
           }).catch(() => { /* silent — UI moves on regardless */ });

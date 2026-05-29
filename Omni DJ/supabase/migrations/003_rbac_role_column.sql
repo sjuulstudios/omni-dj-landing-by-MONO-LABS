@@ -1,5 +1,5 @@
 -- ============================================================================
--- Clip Live / Clip Drop — RBAC: role kolom op profiles
+-- Omni DJ / Omni DJ — RBAC: role kolom op profiles
 -- ============================================================================
 --
 -- Versie:        003
@@ -93,11 +93,11 @@ create policy "Users can update own profile (safe columns)"
 -- update public.profiles
 -- set role = 'admin'
 -- where id = (
---     select id from auth.users where email = 'business@sjuulstudios.com'
+--     select id from auth.users where email = 'omnidj@monohq-labs.com'
 -- );
 --
 -- Verifieer: select id, role from public.profiles
---            where id = (select id from auth.users where email = 'business@sjuulstudios.com');
+--            where id = (select id from auth.users where email = 'omnidj@monohq-labs.com');
 -- --> role = admin
 
 

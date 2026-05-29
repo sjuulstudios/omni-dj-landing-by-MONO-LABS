@@ -1,4 +1,4 @@
-# Clip Live — LESSONS LEARNED
+# Omni DJ — LESSONS LEARNED
 
 > **Wat is dit:** patroon-bibliotheek met terugkerende bugs, werkmanieren die werken, en vaakgestelde vragen + canonieke antwoorden. Bedoeld voor snelle raadpleging vóór je iets aanraakt dat eerder is uitgezocht.
 >
@@ -25,11 +25,11 @@
 
 - **Symptoom:** in `./start.sh` werkt alles, in de gebundelde `.app` faalt iets stilletjes (clips renderen niet, processen hangen)
 - **Status:** **actief open bug** sessie 39 — clips renderen niet in .app
-- **Oorzaak-patroon:** ffmpeg-pad klopt niet vanuit de `.app` bundle, OF schrijfrechten op `~/Library/Application Support/Clip Live/`
+- **Oorzaak-patroon:** ffmpeg-pad klopt niet vanuit de `.app` bundle, OF schrijfrechten op `~/Library/Application Support/Omni DJ/`
 - **Diagnose-recept:**
-  1. `"/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/dist/Clip Live.app/Contents/Resources/bin/ffmpeg" -version`
+  1. `"/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/dist/Omni DJ.app/Contents/Resources/bin/ffmpeg" -version`
   2. `find ~/Library/Application\ Support/Clip\ Live/ -name "*.log" -o -name "*.json" 2>/dev/null | head -10`
-  3. App via terminal draaien: `"/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/dist/Clip Live.app/Contents/MacOS/Clip Live" 2>&1 | grep -i "error\|fail\|ffmpeg"`
+  3. App via terminal draaien: `"/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/dist/Omni DJ.app/Contents/MacOS/Omni DJ" 2>&1 | grep -i "error\|fail\|ffmpeg"`
 - **Regel:** elke bug die alleen in de .app voorkomt → eerst ffmpeg-pad + schrijfrechten checken
 - **Bonus-historie:** in sessie 27 was `webbrowser.open` ook al een .app-only bug — werd vervangen door `subprocess.run(['open', url])`. Patroon: macOS bundling breekt subtiele cross-platform-gewoontes
 
@@ -73,11 +73,11 @@
 - **🟡 BELANGRIJK voor v1.0:** weer aanzetten zodra eigen SMTP (SendGrid/Postmark/Resend) is gekoppeld. NIET vergeten vóór paid launch
 - **Regel:** voor test-accounts altijd echte TLDs gebruiken (`.com`, `.nl`), niet `.test`
 
-### Hardcoded `clipdroplive.com` in landing
+### Hardcoded `omnidj.com` in landing
 
-- **Symptoom:** `landing/index.html` heeft `https://clipdroplive.com/` HARDCODED op meerdere plekken (canonical URL, og:image, og:url)
+- **Symptoom:** `landing/index.html` heeft `https://omnidj.com/` HARDCODED op meerdere plekken (canonical URL, og:image, og:url)
 - **Status:** nog niet gefixt — wacht op DNS-cutover
-- **Regel:** search-and-replace naar `https://djclips.nl/` doen pas wanneer DNS gekoppeld is, anders breken og-images en Google-indexering tijdens transitie. In één commit met de cutover
+- **Regel:** search-and-replace naar `https://omnidj.com/` doen pas wanneer DNS gekoppeld is, anders breken og-images en Google-indexering tijdens transitie. In één commit met de cutover
 
 ---
 
@@ -147,16 +147,16 @@
 
 ### "Hoe start ik de app?"
 
-Dev-server: `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter" && ./start.sh` → browser naar http://127.0.0.1:5555
+Dev-server: `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter" && ./start.sh` → browser naar http://127.0.0.1:5555
 
-`.app` bundle: dubbelklik `dist/Clip Live.app`, of via terminal voor debug-output: `"/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter/dist/Clip Live.app/Contents/MacOS/Clip Live"`
+`.app` bundle: dubbelklik `dist/Omni DJ.app`, of via terminal voor debug-output: `"/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter/dist/Omni DJ.app/Contents/MacOS/Omni DJ"`
 
 ### "Werkt deze fix ook in de .app build?"
 
 **Belangrijke onderscheid:** dev-server (`./start.sh`) en gebundelde `.app` gedragen zich anders:
 
 - **ffmpeg-pad:** dev-server gebruikt systeem-ffmpeg (Homebrew of PATH), `.app` gebruikt `Contents/Resources/bin/ffmpeg`
-- **Werk-paden:** dev-server schrijft naar `dj-clip-cutter/output/`, `.app` schrijft naar `~/Library/Application Support/Clip Live/`
+- **Werk-paden:** dev-server schrijft naar `dj-clip-cutter/output/`, `.app` schrijft naar `~/Library/Application Support/Omni DJ/`
 - **Browser-open:** dev-server gebruikt `webbrowser.open()`, `.app` MOET `subprocess.run(['open', url])` (sessie 27 fix)
 - **Schrijfrechten:** `.app` kan schrijfrechten-issues hebben in App Support folder
 - **Frontend serving:** PyInstaller bakt `index.html` in de bundle → na elke frontend-change MOET je rebuilden
@@ -187,7 +187,7 @@ Reeds verwerkte jobs op disk (sessie 24, voor regressie-vergelijking):
 ### "Hoe deploy ik een edge function?"
 
 ```
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 supabase functions deploy <function-name>
 ```
 
@@ -218,13 +218,13 @@ Definitief uit scope (NIET meer voorstellen, zie sessie 33):
 
 ### "Hoe gaat email werken?"
 
-Beslissing sessie 36: **Google Workspace ($6/mo)** voor djclips.nl. Superieure deliverability tov TransIP/iCloud. Eerst Google Workspace opzetten → krijg MX/SPF/DKIM-waarden → invullen in Cloudflare DNS.
+Beslissing sessie 36: **Google Workspace ($6/mo)** voor omnidj.com. Superieure deliverability tov TransIP/iCloud. Eerst Google Workspace opzetten → krijg MX/SPF/DKIM-waarden → invullen in Cloudflare DNS.
 
 ### "Welke werkmappen zijn er?"
 
-- **Hoofd-app + alles privé:** `~/Documents/Claude/Projects/Clip Live/` (git met baseline + ongepushte changes)
-- **Landing publiek deploy:** `~/Documents/Claude/Projects/clipdrop-landing-deploy/` (eigen git, gekoppeld aan GitHub `sjuulstudios/djclips.nl-by-MONO-LABS`)
-- **Originele landing in Clip Live:** `~/Documents/Claude/Projects/Clip Live/landing/` (de SOURCE of truth — als je hier iets wijzigt, óók in clipdrop-landing-deploy zetten en pushen)
+- **Hoofd-app + alles privé:** `~/Documents/Claude/Projects/Omni DJ/` (git met baseline + ongepushte changes)
+- **Landing publiek deploy:** `~/Documents/Claude/Projects/clipdrop-landing-deploy/` (eigen git, gekoppeld aan GitHub `sjuulstudios/omnidj.com-by-MONO-LABS`)
+- **Originele landing in Omni DJ:** `~/Documents/Claude/Projects/Omni DJ/landing/` (de SOURCE of truth — als je hier iets wijzigt, óók in clipdrop-landing-deploy zetten en pushen)
 
 ---
 

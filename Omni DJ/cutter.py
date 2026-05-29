@@ -844,7 +844,7 @@ def _load_system_fonts_cache():
     brand-kit + system font resolver only)."""
     # DATA_DIR isn't defined in cutter.py, mirror app.py's logic:
     data_dir = os.environ.get(
-        "CLIP_LIVE_USER_DATA",
+        "OMNI_DJ_USER_DATA",
         os.path.dirname(os.path.abspath(__file__))
     )
     cache_path = os.path.join(data_dir, 'system_fonts_cache.json')

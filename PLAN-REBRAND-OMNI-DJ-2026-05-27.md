@@ -21,8 +21,8 @@ Alles hieronder is bevestigd door Sjuul op 2026-05-27. Als één hiervan verande
 |---|---|
 | Timing | Big bang — alles in één sessie |
 | Beta-users / data | Geen users, dus Stripe + Supabase project **behouden** (alleen renamen) |
-| Oude naam | Volledig verwijderen — alle varianten (Clip Live, Clipdrop, Clip Drop, Clipdrop Live, Clip Drop Live, DJClips, djclips.nl, clipdroplive.com, clipdrop.com) |
-| Project-folder | **Al gedaan in sessie 59:** `/Clip Live/` → `/Omni DJ/` en `/dj-clip-cutter/` → `/Omni DJ/` (twee keer Omni DJ — Sjuul koos title-case ipv kebab-case) |
+| Oude naam | Volledig verwijderen — alle varianten (Omni DJ, Omni DJ, Omni DJ, Omni DJ, Omni DJ, DJClips, omnidj.com, omnidj.com, omnidj.com) |
+| Project-folder | **Al gedaan in sessie 59:** `/Omni DJ/` → `/Omni DJ/` en `/dj-clip-cutter/` → `/Omni DJ/` (twee keer Omni DJ — Sjuul koos title-case ipv kebab-case) |
 | Product-naam | **Omni DJ** (title case — niet "OMNI DJ" all-caps, niet "OmniDJ" PascalCase) |
 | Code/folders/env-vars | `omni-dj` / `omnidj` / `OMNI_DJ` (kebab-case lowercase, soms upper voor env) |
 | Domein | `omni.com` (geen subdomein, geen 'dj' in URL) |
@@ -42,16 +42,16 @@ De codebase bevat **vijf verschillende oude merknamen**, soms door elkaar in het
 
 | Variant | Waar gevonden | Aantal hits (ruw) |
 |---|---|---|
-| `Clip Live` | App-titel, HANDOVER, plannen, build-script, .app-bundle naam | ~500 |
-| `cliplive` / `ClipLive` | Bundle ID `com.sjuulstudios.cliplive`, env-var prefix `CLIP_LIVE_*`, PyInstaller spec, localStorage keys `clipLive.*`, feature-flag `clipLiveRedesignV2` | ~150 |
-| `Clip Drop` / `Clipdrop` | Supabase migrations comment, oude folder `CLIP DROP DJ-SETS`, project-naam in Supabase = "Clip Drop Live" | ~50 |
-| `Clipdrop Live` / `clipdroplive.com` | Landing-pagina (`landing/index.html` titel, og:url, canonical), oud productie-domein | ~30 |
-| `DJClips` / `djclips.nl` | Beoogd productie-domein, GitHub repo `sjuulstudios/djclips.nl-by-MONO-LABS`, reset-password footer, oude wachtwoord-blacklist | ~75 |
-| `Sjuul Studios` / `sjuulstudios` | Copyright, Apple Developer ID, Apple ID `business@sjuulstudios.com`, KvK/VAT context in Stripe webhook | ~40 |
+| `Omni DJ` | App-titel, HANDOVER, plannen, build-script, .app-bundle naam | ~500 |
+| `cliplive` / `OmniDJ` | Bundle ID `com.monolabs.omnidj`, env-var prefix `CLIP_LIVE_*`, PyInstaller spec, localStorage keys `clipLive.*`, feature-flag `omniDjRedesignV2` | ~150 |
+| `Omni DJ` / `Omni DJ` | Supabase migrations comment, oude folder `CLIP DROP DJ-SETS`, project-naam in Supabase = "Omni DJ" | ~50 |
+| `Omni DJ` / `omnidj.com` | Landing-pagina (`landing/index.html` titel, og:url, canonical), oud productie-domein | ~30 |
+| `DJClips` / `omnidj.com` | Beoogd productie-domein, GitHub repo `sjuulstudios/omnidj.com-by-MONO-LABS`, reset-password footer, oude wachtwoord-blacklist | ~75 |
+| `MONO LABS` / `sjuulstudios` | Copyright, Apple Developer ID, Apple ID `omnidj@monohq-labs.com`, KvK/VAT context in Stripe webhook | ~40 |
 
 **Totaal:** ±900 occurrences over 71 files.
 
-**Eén "MONO LABS"-referentie bestaat al** in oude GitHub repo-naam (`djclips.nl-by-MONO-LABS`) en in oude HANDOVER (`.backups/HANDOVER-pre-compact-2026-05-26.md`). Goede aanwijzing voor consistente spelling = "MONO LABS" met spatie + caps.
+**Eén "MONO LABS"-referentie bestaat al** in oude GitHub repo-naam (`omnidj.com-by-MONO-LABS`) en in oude HANDOVER (`.backups/HANDOVER-pre-compact-2026-05-26.md`). Goede aanwijzing voor consistente spelling = "MONO LABS" met spatie + caps.
 
 ---
 
@@ -61,35 +61,35 @@ Deze tabel is de bron-van-waarheid voor search-and-replace. Hou je hieraan, ande
 
 | Context | Voor | Na |
 |---|---|---|
-| Product-naam in UI / marketing / docs / titles | Clip Live, Clipdrop Live, Clip Drop Live, Clipdrop | **Omni DJ** |
-| Product-naam in zinnen ("the Clip Live app") | "Clip Live", "the Clip Live app" | "Omni DJ" |
+| Product-naam in UI / marketing / docs / titles | Omni DJ, Omni DJ, Omni DJ, Omni DJ | **Omni DJ** |
+| Product-naam in zinnen ("the Omni DJ app") | "Omni DJ", "the Omni DJ app" | "Omni DJ" |
 | All-caps mention | CLIP LIVE | **OMNI DJ** (alleen in headings die nu al all-caps zijn) |
-| Bedrijfsnaam | Sjuul Studios | **MONO LABS** |
-| Footer-attributie | "© 2026 Sjuul Studios" | **"© 2026 MONO LABS"** |
-| Tagline-vorm | "Clip Live" alleen | **"Omni DJ by MONO LABS"** (in top-nav + footer + about) |
-| Code-folders | `dj-clip-cutter`, `Clip Live`, `CLIP DROP DJ-SETS` | **`Omni DJ`** (subfolder), `Omni DJ` (workspace-root), `OMNI DJ - TEST DJ-SETS` (sessie 59 actual rename) |
-| Bundle ID | `com.sjuulstudios.cliplive` | **`com.monolabs.omnidj`** |
-| .app file | `Clip Live.app` | **`Omni DJ.app`** |
-| .dmg file | `Clip Live.dmg` | **`Omni DJ.dmg`** |
-| Env-vars | `CLIP_LIVE_USER_DATA`, `CLIP_LIVE_PORT`, `CLIP_LIVE_BIND` | **`OMNI_DJ_USER_DATA`**, **`OMNI_DJ_PORT`**, **`OMNI_DJ_BIND`** |
-| localStorage keys | `clipLive.session`, `clipLive.activeJobId`, `clipLive.trim.*`, `clipLive.exportDir`, `clipLive.exportSettings`, `clipLive.lastExportDir`, `clipLive.wizardState`, `cliplive.brandstack.collapsed.v1`, `clipLiveRedesignV2` | **`omniDj.session`**, **`omniDj.activeJobId`**, **`omniDj.trim.*`**, **`omniDj.exportDir`**, **`omniDj.exportSettings`**, **`omniDj.lastExportDir`**, **`omniDj.wizardState`**, **`omniDj.brandstack.collapsed.v1`**, **`omniDjRedesignV2`** |
-| macOS user-data folder | `~/Library/Application Support/Clip Live` | **`~/Library/Application Support/Omni DJ`** |
-| Windows user-data | `%APPDATA%\Clip Live` | **`%APPDATA%\Omni DJ`** |
+| Bedrijfsnaam | MONO LABS | **MONO LABS** |
+| Footer-attributie | "© 2026 MONO LABS" | **"© 2026 MONO LABS"** |
+| Tagline-vorm | "Omni DJ" alleen | **"Omni DJ by MONO LABS"** (in top-nav + footer + about) |
+| Code-folders | `dj-clip-cutter`, `Omni DJ`, `CLIP DROP DJ-SETS` | **`Omni DJ`** (subfolder), `Omni DJ` (workspace-root), `OMNI DJ - TEST DJ-SETS` (sessie 59 actual rename) |
+| Bundle ID | `com.monolabs.omnidj` | **`com.monolabs.omnidj`** |
+| .app file | `Omni DJ.app` | **`Omni DJ.app`** |
+| .dmg file | `Omni DJ.dmg` | **`Omni DJ.dmg`** |
+| Env-vars | `OMNI_DJ_USER_DATA`, `OMNI_DJ_PORT`, `OMNI_DJ_BIND` | **`OMNI_DJ_USER_DATA`**, **`OMNI_DJ_PORT`**, **`OMNI_DJ_BIND`** |
+| localStorage keys | `omniDj.session`, `clipLive.activeJobId`, `clipLive.trim.*`, `clipLive.exportDir`, `clipLive.exportSettings`, `clipLive.lastExportDir`, `clipLive.wizardState`, `omniDj.brandstack.collapsed.v1`, `omniDjRedesignV2` | **`omniDj.session`**, **`omniDj.activeJobId`**, **`omniDj.trim.*`**, **`omniDj.exportDir`**, **`omniDj.exportSettings`**, **`omniDj.lastExportDir`**, **`omniDj.wizardState`**, **`omniDj.brandstack.collapsed.v1`**, **`omniDjRedesignV2`** |
+| macOS user-data folder | `~/Library/Application Support/Omni DJ` | **`~/Library/Application Support/Omni DJ`** |
+| Windows user-data | `%APPDATA%\Omni DJ` | **`%APPDATA%\Omni DJ`** |
 | Linux user-data | `~/.clip-live` | **`~/.omni-dj`** |
-| Domain | clipdroplive.com, djclips.nl | **omni.com** |
-| Marketing-email (FROM) | business@sjuulstudios.com | **omnidj@monohq-labs.com** |
-| Sjuul's persoonlijk admin-account | business@sjuulstudios.com (test) | **sjuul@monohq-labs.com** |
-| Apple Notary keychain profile | `cliplive-notary` | **`omnidj-notary`** |
-| Stripe product-namen | "Clip Live — Pro" / "Clip Live — Studio" | **"Omni DJ — Pro"** / **"Omni DJ — Studio"** |
+| Domain | omnidj.com, omnidj.com | **omni.com** |
+| Marketing-email (FROM) | omnidj@monohq-labs.com | **omnidj@monohq-labs.com** |
+| Sjuul's persoonlijk admin-account | omnidj@monohq-labs.com (test) | **sjuul@monohq-labs.com** |
+| Apple Notary keychain profile | `omnidj-notary` | **`omnidj-notary`** |
+| Stripe product-namen | "Omni DJ — Pro" / "Omni DJ — Studio" | **"Omni DJ — Pro"** / **"Omni DJ — Studio"** |
 | Stripe webhook URL (referentie) | (test-mode op huidige Supabase) | blijft hetzelfde Supabase-project, alleen rename |
-| Supabase project display-name | "Clip Drop Live" | **"Omni DJ"** |
-| Supabase password-reset redirect | `http://127.0.0.1:5555/static/reset-password.html` (lokaal) + `https://djclips.nl/reset-password` (geweest) | lokaal blijft, productie wordt **`https://omni.com/reset-password`** |
-| GitHub repo (landing) | `sjuulstudios/djclips.nl-by-MONO-LABS` | **`monolabs/omni-dj-landing`** (of vergelijkbaar — zie sectie 9) |
+| Supabase project display-name | "Omni DJ" | **"Omni DJ"** |
+| Supabase password-reset redirect | `http://127.0.0.1:5555/static/reset-password.html` (lokaal) + `https://omnidj.com/reset-password` (geweest) | lokaal blijft, productie wordt **`https://omni.com/reset-password`** |
+| GitHub repo (landing) | `sjuulstudios/omnidj.com-by-MONO-LABS` | **`monolabs/omni-dj-landing`** (of vergelijkbaar — zie sectie 9) |
 
 ### Edge-cases die search-and-replace mist
 
-- **`cliplive` in losse `.spec` strings, build-script (`cliplive_dmg_settings.py`, `cliplive_restart.log`), tracking.py (`cliplive-track-`), test_quota.sh prefix** — case-sensitive search nodig.
-- **Wachtwoord-blacklist in `auth.py:418`** bevat `'clipdrop1'`, `'clipdrop123'`, `'djclips01'`, `'djclips123'` — vervangen door `'omnidj1'`, `'omnidj123'`, `'omni1'`, `'omni123'`.
+- **`cliplive` in losse `.spec` strings, build-script (`omnidj_dmg_settings.py`, `omnidj_restart.log`), tracking.py (`omnidj-track-`), test_quota.sh prefix** — case-sensitive search nodig.
+- **Wachtwoord-blacklist in `auth.py:418`** bevat `'omnidj1'`, `'omnidj123'`, `'omni1'`, `'omni123'` — vervangen door `'omnidj1'`, `'omnidj123'`, `'omni1'`, `'omni123'`.
 - **Comments in oude .bak-backups** — die negeren we (zie sectie 7).
 - **HANDOVER session-log markers** als `SESSIE 51 fix` blijven — zijn historische verwijzingen naar code-commits, geen brand.
 
@@ -105,16 +105,16 @@ Volledige lijst van wat in elk bestand gewijzigd moet worden. Geen volledige dif
 
 | File | Hits | Wat moet veranderen |
 |---|---|---|
-| `dj-clip-cutter/app.py` | 13 + 7 | Comment-strings, `CLIP_LIVE_USER_DATA` → `OMNI_DJ_USER_DATA` (incl. de fallback-check op regel 187/1397), `CLIP_LIVE_BIND`/`CLIP_LIVE_PORT` env-vars, alle `Clip Live`-mentions in docstrings + log-messages. Let op: de env-var-rename moet **gecoordineerd** met `launcher.py`. |
-| `dj-clip-cutter/launcher.py` | 4 + 2 | `Clip Live` mentions in docstring/folder-pad (`Library/Application Support/Clip Live` → `Omni DJ`), `APPDATA/Clip Live` → `Omni DJ`, `~/.clip-live` → `~/.omni-dj`, `os.environ.setdefault("CLIP_LIVE_USER_DATA"...)` → `OMNI_DJ_USER_DATA`, `os.environ.get("CLIP_LIVE_PORT")` → `OMNI_DJ_PORT`. |
-| `dj-clip-cutter/cutter.py` | 1 + 1 | `CLIP_LIVE_USER_DATA` op regel 847 (fallback-rij in env-var-zoeklijst) → `OMNI_DJ_USER_DATA`. Cliplive-mention checken. |
-| `dj-clip-cutter/auth.py` | 4 + 2 | Comments + redirect-URL hint (`djclips.nl`), wachtwoord-blacklist `clipdrop1/clipdrop123/djclips01/djclips123` → `omnidj1/omnidj123/omni1/omni123`. |
-| `dj-clip-cutter/billing.py` | 3 | "Clip Live" comments, Sjuul Studios-vermelding indien aanwezig. |
-| `dj-clip-cutter/runtime_config.py` | 1 | Docstring "Clip Live — runtime configuration" → "Omni DJ — runtime configuration". Keys blijven (Supabase URL etc.). |
+| `dj-clip-cutter/app.py` | 13 + 7 | Comment-strings, `OMNI_DJ_USER_DATA` → `OMNI_DJ_USER_DATA` (incl. de fallback-check op regel 187/1397), `OMNI_DJ_BIND`/`OMNI_DJ_PORT` env-vars, alle `Omni DJ`-mentions in docstrings + log-messages. Let op: de env-var-rename moet **gecoordineerd** met `launcher.py`. |
+| `dj-clip-cutter/launcher.py` | 4 + 2 | `Omni DJ` mentions in docstring/folder-pad (`Library/Application Support/Omni DJ` → `Omni DJ`), `APPDATA/Omni DJ` → `Omni DJ`, `~/.clip-live` → `~/.omni-dj`, `os.environ.setdefault("OMNI_DJ_USER_DATA"...)` → `OMNI_DJ_USER_DATA`, `os.environ.get("OMNI_DJ_PORT")` → `OMNI_DJ_PORT`. |
+| `dj-clip-cutter/cutter.py` | 1 + 1 | `OMNI_DJ_USER_DATA` op regel 847 (fallback-rij in env-var-zoeklijst) → `OMNI_DJ_USER_DATA`. Cliplive-mention checken. |
+| `dj-clip-cutter/auth.py` | 4 + 2 | Comments + redirect-URL hint (`omnidj.com`), wachtwoord-blacklist `clipdrop1/clipdrop123/djclips01/djclips123` → `omnidj1/omnidj123/omni1/omni123`. |
+| `dj-clip-cutter/billing.py` | 3 | "Omni DJ" comments, MONO LABS-vermelding indien aanwezig. |
+| `dj-clip-cutter/runtime_config.py` | 1 | Docstring "Omni DJ — runtime configuration" → "Omni DJ — runtime configuration". Keys blijven (Supabase URL etc.). |
 | `dj-clip-cutter/uploader.py` | 1 | Comment-strings. |
 | `dj-clip-cutter/spectrogram.py` | 1 | Comment. |
 | `dj-clip-cutter/watch_folder.py` | 1 | Comment. |
-| `dj-clip-cutter/tracking.py` | 1 | `tempfile.TemporaryDirectory(prefix='cliplive-track-')` → `prefix='omnidj-track-'`. |
+| `dj-clip-cutter/tracking.py` | 1 | `tempfile.TemporaryDirectory(prefix='omnidj-track-')` → `prefix='omnidj-track-'`. |
 | `dj-clip-cutter/launcher.py` log-prefix | — | `launcher.log` filename blijft (per-user data dir wordt al door rename gevangen). |
 | `dj-clip-cutter/test_export_settings.py` | 2 | Comments / hard-coded paths. |
 
@@ -122,18 +122,18 @@ Volledige lijst van wat in elk bestand gewijzigd moet worden. Geen volledige dif
 
 | File | Hits | Wat moet veranderen |
 |---|---|---|
-| `dj-clip-cutter/static/index.html` | 43 + 2 + 16 localStorage | `<title>Clip Live</title>` → `Omni DJ`, alle visible "Clip Live"-strings, **alle localStorage-keys** (zie sectie 2 — 9 keys totaal), `clipLiveRedesignV2` feature-flag, FLAG_KEY constant. Watch-out: `body.redesign-v2` blijft (CSS klasse, niet brand). Footer "by MONO LABS" toevoegen. |
-| `dj-clip-cutter/static/reset-password.html` | 7 | Title, body-text "Clip Live", footer `Clip Live · djclips.nl` → `Omni DJ · omni.com`, "Terug naar Clip Live"-knop tekst. Plus localStorage-key `clipLive.session` → `omniDj.session`. |
-| `landing/index.html` | 17 | **Volledige rebrand**: title "Clipdrop Live - Detect drops..." → "Omni DJ - ...", meta-description, og:title, og:url `clipdroplive.com` → `omni.com`, og:image-URL, canonical, twitter:image, brand-name span, hero-text "Clipdrop Live finds the drops", alle button labels die de naam noemen. |
-| `landing/terms.html` | 15 | Brand-name + entity-naam (Sjuul Studios → MONO LABS). |
+| `dj-clip-cutter/static/index.html` | 43 + 2 + 16 localStorage | `<title>Omni DJ</title>` → `Omni DJ`, alle visible "Omni DJ"-strings, **alle localStorage-keys** (zie sectie 2 — 9 keys totaal), `omniDjRedesignV2` feature-flag, FLAG_KEY constant. Watch-out: `body.redesign-v2` blijft (CSS klasse, niet brand). Footer "by MONO LABS" toevoegen. |
+| `dj-clip-cutter/static/reset-password.html` | 7 | Title, body-text "Omni DJ", footer `Omni DJ · omnidj.com` → `Omni DJ · omni.com`, "Terug naar Omni DJ"-knop tekst. Plus localStorage-key `omniDj.session` → `omniDj.session`. |
+| `landing/index.html` | 17 | **Volledige rebrand**: title "Omni DJ - Detect drops..." → "Omni DJ - ...", meta-description, og:title, og:url `omnidj.com` → `omni.com`, og:image-URL, canonical, twitter:image, brand-name span, hero-text "Omni DJ finds the drops", alle button labels die de naam noemen. |
+| `landing/terms.html` | 15 | Brand-name + entity-naam (MONO LABS → MONO LABS). |
 | `landing/privacy.html` | 14 | Brand-name + entity-naam + Data Controller info. |
-| `landing/contact.html` | 5 | Brand-name + contact-email `business@sjuulstudios.com` → `omnidj@monohq-labs.com`. |
+| `landing/contact.html` | 5 | Brand-name + contact-email `omnidj@monohq-labs.com` → `omnidj@monohq-labs.com`. |
 | `landing/README.md` | 16 | Repo-docs. |
 | `landing/script.js` | 1 | Brand-mention in comment of analytics-tag. |
 | `landing/styles.css` | 2 | Comments. |
-| `landing/sitemap.xml` | 4 | URLs `https://clipdroplive.com/...` → `https://omni.com/...`. |
+| `landing/sitemap.xml` | 4 | URLs `https://omnidj.com/...` → `https://omni.com/...`. |
 | `landing/robots.txt` | 1 | Sitemap-URL. |
-| `landing/og-image.svg` | 1 | SVG bevat de brand-text "Clipdrop Live" — moet "Omni DJ" worden (of nieuwe SVG genereren). |
+| `landing/og-image.svg` | 1 | SVG bevat de brand-text "Omni DJ" — moet "Omni DJ" worden (of nieuwe SVG genereren). |
 | `landing/favicon.svg` | 0 hits maar | Visueel checken: huidig favicon is mogelijk gestileerde "C" — als dat zo is, vervangen door simpele "O" of MONO LABS-mark. Sub-task voor visual-refresh. |
 | `landing/vercel.json` | 0 (verwacht) | Check redirects / headers — moet niks oud-domein staan. |
 
@@ -141,12 +141,12 @@ Volledige lijst van wat in elk bestand gewijzigd moet worden. Geen volledige dif
 
 | File | Hits | Wat moet veranderen |
 |---|---|---|
-| `dj-clip-cutter/ClipLive.spec` (→ rename naar `OmniDJ.spec`) | 14 | Docstring, `bundle_identifier="com.sjuulstudios.cliplive"` → `com.monolabs.omnidj`, `name="Clip Live"` (3x in EXE/COLLECT/BUNDLE), `Clip Live.app`, `CFBundleName`/`CFBundleDisplayName`, copyright `© 2026 Sjuul Studios` → `© 2026 MONO LABS`, alle `NS*UsageDescription` strings die "Clip Live" noemen → "Omni DJ". |
-| `dj-clip-cutter/build_macos.sh` | 23 | Header-comment, `pyinstaller --noconfirm ClipLive.spec` → `OmniDJ.spec`, alle `dist/Clip Live.app` paden → `dist/Omni DJ.app`, `cliplive-launch.sh` interne wrapper → `omni-dj-launch.sh`, notary-profile-naam `cliplive-notary` → `omnidj-notary`, Apple ID `business@sjuulstudios.com` → `omnidj@monohq-labs.com` (LET OP: dit is alleen het voorbeeld in de help-tekst. Echte Apple Developer-account is een aparte vraag — zie OPEN VRAGEN). DMG-settings tempfile `cliplive_dmg_settings.py` → `omnidj_dmg_settings.py`. Final `dmgbuild ... "Clip Live" "dist/Clip Live.dmg"` → `"Omni DJ" "dist/Omni DJ.dmg"`. |
+| `dj-clip-cutter/OmniDJ.spec` (→ rename naar `OmniDJ.spec`) | 14 | Docstring, `bundle_identifier="com.monolabs.omnidj"` → `com.monolabs.omnidj`, `name="Omni DJ"` (3x in EXE/COLLECT/BUNDLE), `Omni DJ.app`, `CFBundleName`/`CFBundleDisplayName`, copyright `© 2026 MONO LABS` → `© 2026 MONO LABS`, alle `NS*UsageDescription` strings die "Omni DJ" noemen → "Omni DJ". |
+| `dj-clip-cutter/build_macos.sh` | 23 | Header-comment, `pyinstaller --noconfirm OmniDJ.spec` → `OmniDJ.spec`, alle `dist/Omni DJ.app` paden → `dist/Omni DJ.app`, `omni-dj-launch.sh` interne wrapper → `omni-dj-launch.sh`, notary-profile-naam `omnidj-notary` → `omnidj-notary`, Apple ID `omnidj@monohq-labs.com` → `omnidj@monohq-labs.com` (LET OP: dit is alleen het voorbeeld in de help-tekst. Echte Apple Developer-account is een aparte vraag — zie OPEN VRAGEN). DMG-settings tempfile `omnidj_dmg_settings.py` → `omnidj_dmg_settings.py`. Final `dmgbuild ... "Omni DJ" "dist/Omni DJ.dmg"` → `"Omni DJ" "dist/Omni DJ.dmg"`. |
 | `dj-clip-cutter/entitlements.plist` | 1 | Identifier-references als die in de plist staan. |
-| `dj-clip-cutter/start.sh` | 0 (mogelijk) | Header-comment, `cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"` → nieuwe pad `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ/`. |
-| `dj-clip-cutter/_restart.sh` | 1 | `/tmp/cliplive_restart.log` → `/tmp/omnidj_restart.log`. |
-| `dj-clip-cutter/test_auth.sh` | 1 | Test-email `business+cliptest@sjuulstudios.com` → `omnidj+test@monohq-labs.com` (of nieuwe test-mailbox — zie sectie 5). |
+| `dj-clip-cutter/start.sh` | 0 (mogelijk) | Header-comment, `cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"` → nieuwe pad `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ/`. |
+| `dj-clip-cutter/_restart.sh` | 1 | `/tmp/omnidj_restart.log` → `/tmp/omnidj_restart.log`. |
+| `dj-clip-cutter/test_auth.sh` | 1 | Test-email `omnidj+test@monohq-labs.com` → `omnidj+test@monohq-labs.com` (of nieuwe test-mailbox — zie sectie 5). |
 | `dj-clip-cutter/test_quota.sh` | 1 | Idem. |
 | `dj-clip-cutter/scripts/set-stripe-secrets.sh` | 2 | Header-comment + werkdirectory-pad. |
 | `dj-clip-cutter/scripts/cleanup_legacy_jobs.py` | 6 | Brand-mentions + pad-defaults. |
@@ -159,16 +159,16 @@ Edge functions zelf draaien in Deno op Supabase — alleen comments updaten (gee
 
 | File | Hits | Wat moet veranderen |
 |---|---|---|
-| `dj-clip-cutter/supabase/functions/create-checkout-session/index.ts` | 2 | Comments "Clip Live desktop-app" → "Omni DJ desktop-app", deploy-pad in docstring. **Sjuul Studios-mention** rond Stripe Tax. |
-| `dj-clip-cutter/supabase/functions/create-portal-session/index.ts` | 1 | Idem + "Sjuul Studios". |
+| `dj-clip-cutter/supabase/functions/create-checkout-session/index.ts` | 2 | Comments "Omni DJ desktop-app" → "Omni DJ desktop-app", deploy-pad in docstring. **MONO LABS-mention** rond Stripe Tax. |
+| `dj-clip-cutter/supabase/functions/create-portal-session/index.ts` | 1 | Idem + "MONO LABS". |
 | `dj-clip-cutter/supabase/functions/stripe-webhook/index.ts` | 1 | Idem. |
 | `dj-clip-cutter/supabase/functions/stripe-webhook/README.md` | 3 | Comments. |
 | `dj-clip-cutter/supabase/functions/update-usage/index.ts` | 2 | Comments. |
-| `dj-clip-cutter/supabase/migrations/001_rls_policies.sql` | 1 | Header-comment "Clip Live / Clip Drop" → "Omni DJ". |
+| `dj-clip-cutter/supabase/migrations/001_rls_policies.sql` | 1 | Header-comment "Omni DJ / Omni DJ" → "Omni DJ". |
 | `dj-clip-cutter/supabase/migrations/002_audit_logs.sql` | 1 | Idem. |
 | `dj-clip-cutter/supabase/migrations/003_rbac_role_column.sql` | 1 | Idem. |
 | `dj-clip-cutter/supabase/migrations/README.md` | 3 | Idem. |
-| `dj-clip-cutter/supabase/.temp/linked-project.json` | 1 | `"name":"Clip Drop Live"` → `"name":"Omni DJ"`. Wordt ook bijgewerkt zodra je in dashboard rename doet (deze JSON wordt gegenereerd door `supabase link`). |
+| `dj-clip-cutter/supabase/.temp/linked-project.json` | 1 | `"name":"Omni DJ"` → `"name":"Omni DJ"`. Wordt ook bijgewerkt zodra je in dashboard rename doet (deze JSON wordt gegenereerd door `supabase link`). |
 
 ### 3.5 Documentatie / .md-bestanden
 
@@ -177,14 +177,14 @@ Per Sjuul's beslissing: **alle .md-bestanden hernoemen + interne refs updaten** 
 | File | Hits | Actie |
 |---|---|---|
 | `.claude/CLAUDE.md` | 5 | Volledige rewrite — projectnaam, paden, app-titel, app-starten-instructies. |
-| `HANDOVER.md` | 62 | Rewrite: title, alle session-summary bullets die "Clip Live" zeggen, paden, `.app`-naam. |
+| `HANDOVER.md` | 62 | Rewrite: title, alle session-summary bullets die "Omni DJ" zeggen, paden, `.app`-naam. |
 | `HANDOVER-ARCHIVE.md` | 51 | Idem. |
 | `LESSONS-LEARNED.md` | 18 | Idem. |
 | `INSTALL.md` | 12 | App-naam + paden + commando's. |
 | `INSTALLER-RUNBOOK.md` | 20 | Bundle-naam, paden, Apple-cert references. |
 | `QUICK-REFERENCE.md` | 9 | Terminal-cheatsheet — paden + start-commando. |
 | `MOCKUP-EXTRACTION.md` | 3 | References. |
-| `PLAN-CONTENT-CALENDAR-2026-05-26.md` | 25 + 11 djclips | Volledige rewrite (referenties naar djclips.nl, Clip Live, MONO LABS). |
+| `PLAN-CONTENT-CALENDAR-2026-05-26.md` | 25 + 11 djclips | Volledige rewrite (referenties naar omnidj.com, Omni DJ, MONO LABS). |
 | `PLAN-MOAT-FEATURES-2026-05-26.md` | 17 | Idem. |
 | `PLAN-REDESIGN-2026-05-26.md` | 3 | Idem. |
 | `PLAN-REDESIGN-MIGRATION-2026-05-26.md` | 4 | Idem. |
@@ -196,10 +196,10 @@ Per Sjuul's beslissing: **alle .md-bestanden hernoemen + interne refs updaten** 
 | `SESSIE31-REBUILD-RUNBOOK.md` | 10 | Idem. |
 | `SESSIE33-RECUT-QUEUE-PLAN.md` | 0 (te checken) | Idem. |
 | `SESSIE34-CAPTION-FONTS-PLAN.md` | 3 | Idem. |
-| `SESSIE34-PASSWORD-RESET-PLAN.md` | 15 + 10 djclips | Hardcoded `djclips.nl` URLs + email-template footer "Clipdrop · djclips.nl" → "Omni DJ · omni.com". |
+| `SESSIE34-PASSWORD-RESET-PLAN.md` | 15 + 10 djclips | Hardcoded `omnidj.com` URLs + email-template footer "Omni DJ · omnidj.com" → "Omni DJ · omni.com". |
 | `SESSIE43-EXPORT-PIPELINE-PLAN.md` | 1 | Idem. |
 | `SESSIE48-REBUILD-RUNBOOK.md` | 18 | Bundle-naam + .dmg-naam + paden. |
-| `STRIPE-DNS-RUNBOOK.md` | 15 + 7 djclips | Hele runbook praat over "Clip Live", `cliplive.app` als beoogd domein, Sjuul Studios. Volledige rewrite of vervangen door nieuwe Omni DJ-versie. |
+| `STRIPE-DNS-RUNBOOK.md` | 15 + 7 djclips | Hele runbook praat over "Omni DJ", `cliplive.app` als beoogd domein, MONO LABS. Volledige rewrite of vervangen door nieuwe Omni DJ-versie. |
 | `dj-clip-cutter/SESSIE35-NATIVE-PICKER-PLAN.md` | 9 + 1 | Idem. |
 | `dj-clip-cutter/VIDEO_EDITOR_PLAN.md` | 1 | Idem. |
 | `landing/README.md` | 16 | Repo-docs. |
@@ -232,18 +232,18 @@ Per Sjuul's beslissing: **alle .md-bestanden hernoemen + interne refs updaten** 
 > **UPDATE 2026-05-28 (sessie 59) — DEZE SECTIE IS GROTENDEELS AL UITGEVOERD.** Sjuul heeft op 28 mei handmatig in Finder drie folders hernoemd. Belangrijk verschil met dit plan: Sjuul koos voor **`Omni DJ/Omni DJ/`** (twee keer Omni DJ, sub-folder gelijk aan root-naam) in plaats van het oorspronkelijk geplande `Omni DJ/omni-dj/` (kebab-case subfolder).
 >
 > **Wat al gedaan is in sessie 59:**
-> - ✅ Root folder: `/Clip Live/` → `/Omni DJ/`
-> - ✅ Subfolder: `Clip Live/dj-clip-cutter/` → `Omni DJ/Omni DJ/`
+> - ✅ Root folder: `/Omni DJ/` → `/Omni DJ/`
+> - ✅ Subfolder: `Omni DJ/dj-clip-cutter/` → `Omni DJ/Omni DJ/`
 > - ✅ Test-sets folder: `CLIP DROP DJ-SETS/` → `OMNI DJ - TEST DJ-SETS/`
 > - ✅ Live code-paden gepatcht (zie sessie 59 HANDOVER): `build_sess53.sh`, `test_export_settings.py`, `cleanup_legacy_jobs.py`, 4× supabase functions deploy-headers, `stripe-webhook/README.md`, `static/index.html` placeholders.
 > - ✅ Claude's cowork-mount wijst naar `/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/`.
 >
 > **Wat nog moet (in big-bang rebrand-sessie):**
 > - ❌ Backup van project (tar.gz) — sectie 4.1 hieronder, doe alsnog vóór de sed-rebrand begint
-> - ❌ Oude `Clip Live.app` uit `/Applications` verwijderen
+> - ❌ Oude `Omni DJ.app` uit `/Applications` verwijderen
 > - ❌ Sjuul's terminal-alias updaten naar `cd "~/Documents/Claude/Projects/Omni DJ/Omni DJ"` (twee keer Omni DJ)
-> - ❌ Oude `~/Library/Application Support/Clip Live/` user-data weggooien
-> - ❌ Alle resterende `Clip Live`-mentions in code/UI/docs scrubben (zie sectie 7)
+> - ❌ Oude `~/Library/Application Support/Omni DJ/` user-data weggooien
+> - ❌ Alle resterende `Omni DJ`-mentions in code/UI/docs scrubben (zie sectie 7)
 >
 > **Consequenties voor de rest van dit plan:**
 > - In de pad-tabellen en sed-commando's hieronder is `dj-clip-cutter/` → `Omni DJ/` (de sub-folder), niet `omni-dj/` zoals oorspronkelijk gepland
@@ -258,11 +258,11 @@ Per Sjuul's beslissing: **alle .md-bestanden hernoemen + interne refs updaten** 
    ```
 2. **Sluit alles wat naar het project wijst:**
    - Stop dev-server (Cmd+Tab Terminal → Ctrl+C, of `lsof -nP -iTCP:5555 -sTCP:LISTEN` → kill PID).
-   - Quit `Clip Live.app` als die draait (Cmd+Q).
+   - Quit `Omni DJ.app` als die draait (Cmd+Q).
    - Quit alle editors (VS Code, Sublime, etc.) die de folder open hebben.
 3. **Verwijder oude `.app` uit `/Applications`:**
    ```bash
-   rm -rf "/Applications/Clip Live.app"
+   rm -rf "/Applications/Omni DJ.app"
    ```
 4. **Verwijder oude user-data folder** (geen users, dus niks belangrijks):
    ```bash
@@ -281,10 +281,10 @@ Per Sjuul's beslissing: **alle .md-bestanden hernoemen + interne refs updaten** 
 | Wat | Waar | Fix |
 |---|---|---|
 | `start.sh` cd-commando | `start.sh` regel 1 | Path zelf is relatief (`cd "$(dirname "$0")"` of vergelijkbaar) — werkt ongeacht naam. Maar als hij absoluut pad heeft: aanpassen. |
-| Sjuul's terminal-shortcut | `~/.zshrc` of een alias | Sjuul moet zijn alias updaten van `cd "~/Documents/Claude/Projects/Clip Live/dj-clip-cutter"` naar `cd "~/Documents/Claude/Projects/Omni DJ/Omni DJ"` (twee keer Omni DJ). |
+| Sjuul's terminal-shortcut | `~/.zshrc` of een alias | Sjuul moet zijn alias updaten van `cd "~/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"` naar `cd "~/Documents/Claude/Projects/Omni DJ/Omni DJ"` (twee keer Omni DJ). |
 | HANDOVER-cd-instructies | `HANDOVER.md`, `QUICK-REFERENCE.md`, alle SESSIE-RUNBOOK.md | Already in scope sectie 3.5. |
 | Supabase CLI link-state | `dj-clip-cutter/supabase/.temp/linked-project.json` | Wordt opnieuw gegenereerd bij volgende `supabase link`. Of handmatig pad-onafhankelijk maken. |
-| `~/Library/Application Support/Clip Live/` (user-data) | macOS gebruikers-folder | Niet renamen — wordt opnieuw aangemaakt door nieuwe launcher.py als `Omni DJ`. **Geen users, dus geen migratie van job_history nodig.** Wel: handmatig oude folder weggooien als clean-up: `rm -rf ~/Library/Application\ Support/Clip\ Live`. |
+| `~/Library/Application Support/Omni DJ/` (user-data) | macOS gebruikers-folder | Niet renamen — wordt opnieuw aangemaakt door nieuwe launcher.py als `Omni DJ`. **Geen users, dus geen migratie van job_history nodig.** Wel: handmatig oude folder weggooien als clean-up: `rm -rf ~/Library/Application\ Support/Clip\ Live`. |
 
 ---
 
@@ -297,10 +297,10 @@ Het Supabase-project blijft hetzelfde (ref: `lbabsffxefkrxwzkbzar`). Alleen rena
 #### Stap 1 — Project display-name renamen
 
 1. Log in op https://supabase.com/dashboard
-2. Selecteer project "Clip Drop Live" (ref `lbabsffxefkrxwzkbzar`)
+2. Selecteer project "Omni DJ" (ref `lbabsffxefkrxwzkbzar`)
 3. Linker sidebar onderaan: **Settings** (tandwiel-icoon)
 4. Eerste tab: **General**
-5. Bovenaan: **Project Name** veld → wijzig van `Clip Drop Live` naar **`Omni DJ`**
+5. Bovenaan: **Project Name** veld → wijzig van `Omni DJ` naar **`Omni DJ`**
 6. Klik **Save** rechtsonder
 7. **Verifieer:** ververs pagina → projectnaam links bovenin staat als "Omni DJ"
 
@@ -311,10 +311,10 @@ Supabase mailt automatisch bij signup + password-reset. Templates verwijzen waar
 1. **Authentication** (linker sidebar) → **Email Templates**
 2. Per template (er zijn er ~4: Confirm signup, Magic Link, Change Email Address, Reset Password) klik **Customize**
 3. Vervang in subject + HTML body alle voorkomens van:
-   - `Clip Drop Live` → `Omni DJ`
-   - `Clip Live` → `Omni DJ`
-   - Footer-mention `Sjuul Studios` → `MONO LABS`
-   - URLs `djclips.nl` of `clipdroplive.com` → `omni.com`
+   - `Omni DJ` → `Omni DJ`
+   - `Omni DJ` → `Omni DJ`
+   - Footer-mention `MONO LABS` → `MONO LABS`
+   - URLs `omnidj.com` of `omnidj.com` → `omni.com`
 4. **Save** per template
 
 **Template-tekst voorbeeld voor "Reset Password" (vervang volledig):**
@@ -334,7 +334,7 @@ Supabase mailt automatisch bij signup + password-reset. Templates verwijzen waar
 2. **Site URL:** `http://127.0.0.1:5555` (laat lokaal, voor dev) — voeg later `https://omni.com` toe als productie-URL
 3. **Redirect URLs (allowlist):**
    - Houden: `http://127.0.0.1:5555/static/reset-password.html`
-   - Verwijderen: `https://djclips.nl/reset-password` (als die er staat)
+   - Verwijderen: `https://omnidj.com/reset-password` (als die er staat)
    - Toevoegen: `https://omni.com/reset-password`
    - Toevoegen: `https://omni.com/auth/callback` (voor toekomstige OAuth)
 4. **Save**
@@ -409,12 +409,12 @@ Stripe-product-IDs blijven hetzelfde (`price_1TUoYNA5DKhJaSAF6xynooY9` voor Pro,
 
 #### Stap 2 — Products + Prices renamen
 
-1. **Products** → klik op `Clip Live — Pro` (of vergelijkbare oude naam)
+1. **Products** → klik op `Omni DJ — Pro` (of vergelijkbare oude naam)
 2. Klik **Edit product**
-3. **Name:** `Clip Live — Pro` → **`Omni DJ — Pro`**
-4. **Description:** vervang elke "Clip Live"-mention door "Omni DJ"
+3. **Name:** `Omni DJ — Pro` → **`Omni DJ — Pro`**
+4. **Description:** vervang elke "Omni DJ"-mention door "Omni DJ"
 5. **Save**
-6. Herhaal voor `Clip Live — Studio` → `Omni DJ — Studio`
+6. Herhaal voor `Omni DJ — Studio` → `Omni DJ — Studio`
 7. **Verifieer:** Products-lijst toont nu beide nieuwe namen
 8. **Price IDs blijven gelijk** — geen verdere actie in code nodig
 
@@ -441,7 +441,7 @@ Domein is bij een registrar gekocht (Sjuul moet bevestigen welke — zie OPEN VR
 
 #### Stap 1 — Cloudflare-account + site toevoegen
 
-1. Ga naar https://dash.cloudflare.com (login met je bestaande Sjuul-account dat al `clipdrop.com` heeft — zie HANDOVER-archive)
+1. Ga naar https://dash.cloudflare.com (login met je bestaande Sjuul-account dat al `omnidj.com` heeft — zie HANDOVER-archive)
 2. **+ Add a site** rechtsboven
 3. Vul `omni.com` in → **Continue**
 4. Kies plan: **Free** (voldoende voor landing + DNS + SSL)
@@ -532,9 +532,9 @@ De `landing/` folder is een statische site. Deploy via Cloudflare Pages voor gra
 
 ### 5.6 Apple Developer (codesigning)
 
-**Geen actie nodig deze sessie** mits Sjuul z'n bestaande Apple Developer-account `business@sjuulstudios.com` blijft gebruiken.
+**Geen actie nodig deze sessie** mits Sjuul z'n bestaande Apple Developer-account `omnidj@monohq-labs.com` blijft gebruiken.
 
-**Maar:** de Bundle ID `com.sjuulstudios.cliplive` wordt vervangen door `com.monolabs.omnidj`. Apple wil je eventueel hebben dat je de nieuwe Bundle ID registreert bij https://developer.apple.com → Certificates, Identifiers & Profiles → Identifiers → +. Dit is ALLEEN strikt nodig als je de app submit aan de Mac App Store. Voor distributie via .dmg buiten de store is registratie van Bundle ID niet vereist — alleen valid Developer ID Application certificaat.
+**Maar:** de Bundle ID `com.monolabs.omnidj` wordt vervangen door `com.monolabs.omnidj`. Apple wil je eventueel hebben dat je de nieuwe Bundle ID registreert bij https://developer.apple.com → Certificates, Identifiers & Profiles → Identifiers → +. Dit is ALLEEN strikt nodig als je de app submit aan de Mac App Store. Voor distributie via .dmg buiten de store is registratie van Bundle ID niet vereist — alleen valid Developer ID Application certificaat.
 
 **Sub-task voor later:** Apple Developer-account transferren of nieuwe account aanvragen onder MONO LABS-naam ($99/jaar). Dat is OUT OF SCOPE voor de big-bang rebrand-sessie.
 
@@ -553,12 +553,12 @@ Nadat code-side en folder-rename klaar zijn:
 
 2. **Oude bundle weg uit `/Applications`:**
    ```bash
-   rm -rf "/Applications/Clip Live.app"
+   rm -rf "/Applications/Omni DJ.app"
    ```
 
 3. **Oude user-data weg (geen users, dus geen verlies):**
    ```bash
-   rm -rf "/Users/sjuulsmits/Library/Application Support/Clip Live"
+   rm -rf "/Users/sjuulsmits/Library/Application Support/Omni DJ"
    ```
 
 4. **PyInstaller rebuild met nieuwe spec:**
@@ -582,14 +582,14 @@ Nadat code-side en folder-rename klaar zijn:
 
 7. **Codesign + Notarize** (alleen voor distributie aan derden — niet voor jezelf):
    ```bash
-   export APPLE_DEVELOPER_ID="Developer ID Application: Sjuul Studios (TEAMID)"
+   export APPLE_DEVELOPER_ID="Developer ID Application: MONO LABS (TEAMID)"
    export APPLE_NOTARY_PROFILE=omnidj-notary
    ./build_macos.sh sign notarize dmg
    ```
    Voor de notary-profile moet je eerst (eenmalig):
    ```bash
    xcrun notarytool store-credentials omnidj-notary \
-     --apple-id business@sjuulstudios.com \
+     --apple-id omnidj@monohq-labs.com \
      --team-id YOUR_TEAM_ID \
      --password YOUR_APP_SPECIFIC_PASSWORD
    ```
@@ -600,7 +600,7 @@ Nadat code-side en folder-rename klaar zijn:
 
 **Veiligheid:** alleen draaien NA volledige tar.gz-backup en NA git commit van huidige staat.
 
-> **UPDATE 2026-05-28:** Werkdirectory is nu `~/Documents/Claude/Projects/Omni DJ/` (was `Clip Live` in oorspronkelijk plan). Subfolder heet `Omni DJ/` (was `dj-clip-cutter/`). Find-paths en launcher.py-pad zijn hieronder aangepast.
+> **UPDATE 2026-05-28:** Werkdirectory is nu `~/Documents/Claude/Projects/Omni DJ/` (was `Omni DJ` in oorspronkelijk plan). Subfolder heet `Omni DJ/` (was `dj-clip-cutter/`). Find-paths en launcher.py-pad zijn hieronder aangepast.
 
 ```bash
 cd ~/Documents/Claude/Projects/"Omni DJ"
@@ -629,11 +629,11 @@ FIND_CMD='find . -type f \( -name "*.py" -o -name "*.html" -o -name "*.css" -o -
 
 # 3a. Visible product-name varianten → "Omni DJ"
 eval $FIND_CMD | xargs sed -i '' \
-  -e 's/Clipdrop Live/Omni DJ/g' \
-  -e 's/Clip Drop Live/Omni DJ/g' \
-  -e 's/Clip Live/Omni DJ/g' \
-  -e 's/Clipdrop/Omni DJ/g' \
-  -e 's/Clip Drop/Omni DJ/g'
+  -e 's/Omni DJ/Omni DJ/g' \
+  -e 's/Omni DJ/Omni DJ/g' \
+  -e 's/Omni DJ/Omni DJ/g' \
+  -e 's/Omni DJ/Omni DJ/g' \
+  -e 's/Omni DJ/Omni DJ/g'
 
 # 3b. URL/domain varianten
 eval $FIND_CMD | xargs sed -i '' \
@@ -644,36 +644,36 @@ eval $FIND_CMD | xargs sed -i '' \
 # 3c. Bundle ID + env-vars + localStorage keys (LET OP: hoofdletter-gevoelig)
 eval $FIND_CMD | xargs sed -i '' \
   -e 's/com\.sjuulstudios\.cliplive/com.monolabs.omnidj/g' \
-  -e 's/CLIP_LIVE_USER_DATA/OMNI_DJ_USER_DATA/g' \
-  -e 's/CLIP_LIVE_PORT/OMNI_DJ_PORT/g' \
-  -e 's/CLIP_LIVE_BIND/OMNI_DJ_BIND/g' \
-  -e 's/clipLiveRedesignV2/omniDjRedesignV2/g' \
+  -e 's/OMNI_DJ_USER_DATA/OMNI_DJ_USER_DATA/g' \
+  -e 's/OMNI_DJ_PORT/OMNI_DJ_PORT/g' \
+  -e 's/OMNI_DJ_BIND/OMNI_DJ_BIND/g' \
+  -e 's/omniDjRedesignV2/omniDjRedesignV2/g' \
   -e "s/'clipLive\\./'omniDj./g" \
   -e 's/"clipLive\./"omniDj./g' \
   -e 's/cliplive\.brandstack/omniDj.brandstack/g' \
   -e 's/clipLive\.session/omniDj.session/g' \
-  -e 's/cliplive-track-/omnidj-track-/g' \
-  -e 's/cliplive_dmg_settings/omnidj_dmg_settings/g' \
-  -e 's/cliplive_restart/omnidj_restart/g' \
-  -e 's/cliplive-launch/omni-dj-launch/g' \
-  -e 's/cliplive-notary/omnidj-notary/g'
+  -e 's/omnidj-track-/omnidj-track-/g' \
+  -e 's/omnidj_dmg_settings/omnidj_dmg_settings/g' \
+  -e 's/omnidj_restart/omnidj_restart/g' \
+  -e 's/omni-dj-launch/omni-dj-launch/g' \
+  -e 's/omnidj-notary/omnidj-notary/g'
 
-# 3d. ClipLive (PascalCase, alleen in spec/build)
+# 3d. OmniDJ (PascalCase, alleen in spec/build)
 eval $FIND_CMD | xargs sed -i '' \
-  -e 's/ClipLive\.spec/OmniDJ.spec/g' \
-  -e 's/ClipLive/OmniDJ/g'
+  -e 's/OmniDJ\.spec/OmniDJ.spec/g' \
+  -e 's/OmniDJ/OmniDJ/g'
 
-# 3e. Sjuul Studios → MONO LABS in copyright-context
+# 3e. MONO LABS → MONO LABS in copyright-context
 eval $FIND_CMD | xargs sed -i '' \
-  -e 's/© 2026 Sjuul Studios/© 2026 MONO LABS/g' \
-  -e 's/Sjuul Studios/MONO LABS/g'
+  -e 's/© 2026 MONO LABS/© 2026 MONO LABS/g' \
+  -e 's/MONO LABS/MONO LABS/g'
 
 # 3f. Wachtwoord-blacklist (auth.py:418)
 eval $FIND_CMD | xargs sed -i '' \
-  -e "s/'clipdrop1'/'omnidj1'/g" \
-  -e "s/'clipdrop123'/'omnidj123'/g" \
-  -e "s/'djclips01'/'omni1'/g" \
-  -e "s/'djclips123'/'omni123'/g"
+  -e "s/'omnidj1'/'omnidj1'/g" \
+  -e "s/'omnidj123'/'omnidj123'/g" \
+  -e "s/'omni1'/'omni1'/g" \
+  -e "s/'omni123'/'omni123'/g"
 
 # 3g. Email-adressen
 eval $FIND_CMD | xargs sed -i '' \
@@ -683,22 +683,22 @@ eval $FIND_CMD | xargs sed -i '' \
 # 4. macOS user-data folder-naam (in launcher.py)
 #    LET OP: subfolder heet "Omni DJ" (post-sessie 59), niet "dj-clip-cutter".
 sed -i '' \
-  -e 's|"Application Support" / "Clip Live"|"Application Support" / "Omni DJ"|g' \
-  -e 's|APPDATA.*"Clip Live"|APPDATA.*"Omni DJ"|g' \
+  -e 's|"Application Support" / "Omni DJ"|"Application Support" / "Omni DJ"|g' \
+  -e 's|APPDATA.*"Omni DJ"|APPDATA.*"Omni DJ"|g' \
   -e 's|".clip-live"|".omni-dj"|g' \
   "Omni DJ/launcher.py"
 
 # 5. Hernoem spec-file
-mv "Omni DJ/ClipLive.spec" "Omni DJ/OmniDJ.spec"
+mv "Omni DJ/OmniDJ.spec" "Omni DJ/OmniDJ.spec"
 
 # 6. Verifieer dat er geen oude varianten resteren
-eval $FIND_CMD | xargs grep -l -E "Clip Live|cliplive|ClipLive|Clipdrop|djclips|Sjuul Studios" || echo "✓ Alle varianten zijn weg"
+eval $FIND_CMD | xargs grep -l -E "Omni DJ|cliplive|OmniDJ|Omni DJ|djclips|MONO LABS" || echo "✓ Alle varianten zijn weg"
 ```
 
 **Na de sed-run:** handmatig nakijken:
 - `landing/og-image.svg` — bevat brand-text als SVG paths/text, sed werkt meestal wel maar visueel checken
 - Binary files (`.docx`, `.xlsx`) — apart openen en handmatig editen
-- HANDOVER.md — review of context nog klopt (sommige session-summaries verwijzen naar specifieke "Clip Live"-momenten die historisch zijn)
+- HANDOVER.md — review of context nog klopt (sommige session-summaries verwijzen naar specifieke "Omni DJ"-momenten die historisch zijn)
 
 ---
 
@@ -715,7 +715,7 @@ eval $FIND_CMD | xargs grep -l -E "Clip Live|cliplive|ClipLive|Clipdrop|djclips|
 
 # 8b. CLIP DROP DJ-SETS test-folder → OMNI DJ - TEST DJ-SETS
 
-# 8e. Workspace-folder: Clip Live → Omni DJ
+# 8e. Workspace-folder: Omni DJ → Omni DJ
 ```
 
 ### 8.2 Nog uit te voeren in big-bang sessie
@@ -734,7 +734,7 @@ mv business-model-2026/CLIP-LIVE-FINANCIEEL-MODEL.xlsx business-model-2026/OMNI-
 
 # 8f. Git: commit alle rename-changes + sed-replace-changes uit sectie 7
 git add -A
-git commit -m "Rebrand: Clip Live → Omni DJ (sed-replace, Bundle ID, env-vars, mockup-renames)"
+git commit -m "Rebrand: Omni DJ → Omni DJ (sed-replace, Bundle ID, env-vars, mockup-renames)"
 ```
 
 **Belangrijk over git:** `git mv` had handiger geweest voor renames, maar omdat de folder-rename buiten git zelf gebeurt (we hernoemen de root via Finder), zien latere `git status`-runs het als delete+add. Geen probleem voor de werking, alleen voor "view file history". Als blame/history op `app.py` later belangrijk is, gebruik dan `git log --follow app.py`.
@@ -743,9 +743,9 @@ git commit -m "Rebrand: Clip Live → Omni DJ (sed-replace, Bundle ID, env-vars,
 
 ## 9. GitHub repo's
 
-Bestaande repo `sjuulstudios/djclips.nl-by-MONO-LABS` heet nog onder oude naam.
+Bestaande repo `sjuulstudios/omnidj.com-by-MONO-LABS` heet nog onder oude naam.
 
-1. Ga naar https://github.com/sjuulstudios/djclips.nl-by-MONO-LABS
+1. Ga naar https://github.com/sjuulstudios/omnidj.com-by-MONO-LABS
 2. **Settings** → onder **Repository name**: rename naar **`omni-dj-landing`**
 3. GitHub maakt automatisch redirect van oude naam → nieuwe naam
 4. **Lokaal:** update remote-URL:
@@ -776,7 +776,7 @@ Loop dit af **na** de big-bang sessie om zeker te weten dat niks gemist is.
 - [ ] Dashboard rendert clips; existing user-data is verloren (verwacht — folder is gerenamed)
 - [ ] Upload + drop-detectie werkt end-to-end
 - [ ] Caption-export werkt (regressie-test sessie 50/52)
-- [ ] `grep -r "Clip Live\|cliplive\|clipdrop\|djclips" --exclude-dir=.git --exclude-dir=venv --exclude="*.bak" .` returns leeg (of alleen historische log-strings die acceptabel zijn)
+- [ ] `grep -r "Omni DJ\|cliplive\|clipdrop\|djclips" --exclude-dir=.git --exclude-dir=venv --exclude="*.bak" .` returns leeg (of alleen historische log-strings die acceptabel zijn)
 
 ### Externe services
 
@@ -793,12 +793,12 @@ Loop dit af **na** de big-bang sessie om zeker te weten dat niks gemist is.
 
 ### .app bundle
 
-- [ ] Oude `/Applications/Clip Live.app` is weg
+- [ ] Oude `/Applications/Omni DJ.app` is weg
 - [ ] `/Applications/Omni DJ.app` bestaat
 - [ ] App opent zonder Gatekeeper-blokkade (gesigned + notarized)
 - [ ] App-titel in menubar = "Omni DJ"
 - [ ] `~/Library/Application Support/Omni DJ/` wordt aangemaakt bij eerste run
-- [ ] `~/Library/Application Support/Clip Live/` is leeg/weggegooid
+- [ ] `~/Library/Application Support/Omni DJ/` is leeg/weggegooid
 
 ### Docs
 
@@ -819,7 +819,7 @@ Na de uitvoering moet je **deze memory-files updaten** zodat volgende Cowork-ses
 - `project_clip_drop_stripe_overview.md` → renamen, Stripe-context updaten
 - `project_clip_live_paid_architecture.md` → renamen
 - `project_clip_live_security.md` → renamen
-- Alle `project_sessie*` memory-files → mentions van "Clip Live" / paden updaten
+- Alle `project_sessie*` memory-files → mentions van "Omni DJ" / paden updaten
 
 Nieuwe memory:
 - `project_omni_dj_rebrand_2026_05_27.md` — dat de rebrand is uitgevoerd, op welke datum, welke services geraakt
@@ -835,11 +835,11 @@ Memory-index `MEMORY.md` updaten met de renames.
 
 | Risico | Impact | Mitigatie |
 |---|---|---|
-| Sed-regex matched per ongeluk iets verkeerd (bv. "Clip Live" in een externe library-name) | Mid — build-error of runtime-crash | Pre-rebrand git commit (sectie 7 stap 1) → `git diff` review per file vóór commit |
+| Sed-regex matched per ongeluk iets verkeerd (bv. "Omni DJ" in een externe library-name) | Mid — build-error of runtime-crash | Pre-rebrand git commit (sectie 7 stap 1) → `git diff` review per file vóór commit |
 | Folder-rename verbreekt PyInstaller-bundle die nog in dist/ staat | Laag — dist/ wordt opnieuw gegenereerd | Eerst `rm -rf dist/ build/` vóór rebuild |
 | Supabase email-templates verwijzen naar oude URL nadat we ze hebben overgeschreven | Laag — Sjuul checkt visueel | Stap 5.1 stap 2 inclusief visuele verificatie |
 | Cloudflare nameserver-switch duurt 24u → omni.com niet meteen bereikbaar | Laag — TEST-mode Stripe werkt nog op Supabase-URL | Plan stap 5.5 (Pages-deploy) pas uitvoeren ná DNS-propagatie |
-| Apple-cert blijft op naam "Sjuul Studios" terwijl bundle-name "Omni DJ" is | Laag — codesign werkt mits cert geldig is; alleen rare cosmetische mismatch | Sub-task voor later: nieuwe cert onder MONO LABS aanvragen |
+| Apple-cert blijft op naam "MONO LABS" terwijl bundle-name "Omni DJ" is | Laag — codesign werkt mits cert geldig is; alleen rare cosmetische mismatch | Sub-task voor later: nieuwe cert onder MONO LABS aanvragen |
 | `.env` met secrets staat in git (oud probleem) | HOOG — was al een issue vóór rebrand | OUT OF SCOPE deze sessie. Wel noteren als security-task. |
 | Sjuul vergeet Claude desktop-app folder-pointer te updaten | Laag — Sjuul ziet errors over folder-not-found | Stap 4.6 in folder-rename runbook expliciet vermeld |
 
@@ -860,10 +860,10 @@ Als de big-bang halverwege misgaat:
    rm -rf "Omni DJ"   # let op: alles weg
    tar -xzf omni-dj-pre-rebrand-YYYYMMDD.tar.gz
    ```
-   Resultaat: `Omni DJ/Omni DJ/`-folder-structuur terug naar staat vóór de big-bang sessie (= sessie 59 staat = folders al hernoemd, code nog "Clip Live").
+   Resultaat: `Omni DJ/Omni DJ/`-folder-structuur terug naar staat vóór de big-bang sessie (= sessie 59 staat = folders al hernoemd, code nog "Omni DJ").
 
 3. **Externe services rollback:**
-   - Supabase project-naam: ga terug naar dashboard, rename "Omni DJ" → "Clip Drop Live"
+   - Supabase project-naam: ga terug naar dashboard, rename "Omni DJ" → "Omni DJ"
    - Stripe products: rename terug
    - Cloudflare: laat staan (geen kwaad — domein is sowieso nieuw)
 
@@ -873,7 +873,7 @@ Als de big-bang halverwege misgaat:
 
 > ✅ **Reeds gedaan** (sessie 59, 28 mei): folder-renames + live code-paden gepatcht (zie HANDOVER + sectie 4-update). Wat hieronder volgt is wat nog open staat.
 
-1. **Pre-flight checks** (sectie 4.1): tar-backup van `Omni DJ/`, dev-server stoppen, `Clip Live.app` uit `/Applications`, oude `~/Library/Application Support/Clip Live/` weggooien
+1. **Pre-flight checks** (sectie 4.1): tar-backup van `Omni DJ/`, dev-server stoppen, `Omni DJ.app` uit `/Applications`, oude `~/Library/Application Support/Omni DJ/` weggooien
 2. **Code-side sed-run** (sectie 7): in volgorde 3a → 3g + launcher.py-pad + mv spec-file naar `OmniDJ.spec`
 3. **Resterende folder/file-renames** (sectie 8.2): mockup-HTMLs in project-root + business-model docx/xlsx
 4. **Git commit** rebrand-staat
@@ -897,8 +897,8 @@ Deze punten kwamen naar boven tijdens de scan en moet je beslissen vóór de big
 
 1. **Bij welke registrar staat omni.com geregistreerd?** (TransIP / Namecheap / Cloudflare Registrar / anders) — bepaalt sectie 5.3 stap 2.
 2. **Bestaat GitHub-org `monolabs`?** Zo niet: gebruik je `sjuulstudios/omni-dj-landing` of maak je eerst de org? — bepaalt sectie 9.
-3. **Apple Developer-account:** blijf je `business@sjuulstudios.com` gebruiken (en daarmee `Developer ID Application: Sjuul Studios (TEAMID)` als signing identity)? Of wil je dat al meteen naar MONO LABS migreren ($99/jaar nieuwe sub)? Sub-task of in scope?
-4. **Stripe entity:** je Stripe-account staat op naam van "Sjuul Studios" (KvK). Voor verkoop onder "MONO LABS" moet de business-info in Stripe daadwerkelijk MONO LABS noemen — wat juridisch betekent: óf KvK-naam wijzigen van je eenmanszaak, óf nieuwe MONO LABS-entity oprichten + nieuwe Stripe-account. **In de tussentijd:** ik raad aan public-facing "Omni DJ by MONO LABS" maar Stripe-receipts blijven op huidige entity tot juridische rebrand. → Vraag aan jou: hoe wil je dit framen?
+3. **Apple Developer-account:** blijf je `omnidj@monohq-labs.com` gebruiken (en daarmee `Developer ID Application: MONO LABS (TEAMID)` als signing identity)? Of wil je dat al meteen naar MONO LABS migreren ($99/jaar nieuwe sub)? Sub-task of in scope?
+4. **Stripe entity:** je Stripe-account staat op naam van "MONO LABS" (KvK). Voor verkoop onder "MONO LABS" moet de business-info in Stripe daadwerkelijk MONO LABS noemen — wat juridisch betekent: óf KvK-naam wijzigen van je eenmanszaak, óf nieuwe MONO LABS-entity oprichten + nieuwe Stripe-account. **In de tussentijd:** ik raad aan public-facing "Omni DJ by MONO LABS" maar Stripe-receipts blijven op huidige entity tot juridische rebrand. → Vraag aan jou: hoe wil je dit framen?
 5. **`.env` met secrets in git-repo:** is een bestaand probleem (zie audit 2026-05-12). Wil je tijdens de rebrand-sessie ook `.env` uit history scrubben + secrets roteren? Of OUT OF SCOPE?
 6. **Workspace-folder hernoemen via macOS vs git:** Mac Finder rename + `git mv` werken niet samen — wat is je voorkeur?
 7. **Oude `~/Documents/Claude/Projects/clipdrop-landing-deploy/`-folder** (separate landing-deploy git-clone uit HANDOVER-archive) — bestaat die nog? Zo ja: ook rebranden of weggooien?
@@ -914,7 +914,7 @@ Expliciet uit scope (per jouw beslissing of vanwege risico):
 - ❌ Marketing-launch / beta-uitnodiging-mails — [[feedback_beta_flyer_skip]]
 - ❌ Nieuw logo / visual identity-refresh — Sjuul werkt hier nog aan
 - ❌ Apple Developer-account migratie naar MONO LABS — sub-task
-- ❌ Stripe entity wijzigen (Sjuul Studios → MONO LABS KvK) — juridische sub-task
+- ❌ Stripe entity wijzigen (MONO LABS → MONO LABS KvK) — juridische sub-task
 - ❌ `.env`-secrets roteren (Supabase, Stripe) — sub-task of behouden tenzij Sjuul kiest
 - ❌ Git-history rewriten — commits behouden hun oude messages
 - ❌ Backup-bestanden (`.bak`) rebranden — historische snapshots, weggooien optioneel

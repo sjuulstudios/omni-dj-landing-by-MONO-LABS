@@ -1,4 +1,4 @@
-# Clip Live — Project Context
+# Omni DJ — Project Context
 
 ## Wat is dit
 Python/Flask tool die drops en buildups detecteert in DJ-sets en automatisch korte vertikale/landscape videoclips genereert (30–60s). Draait lokaal op Sjuul's machine, uiteindelijk bedoeld als downloadbare .dmg/.exe app.
@@ -8,14 +8,14 @@ Sjuul Smits — niet-technisch op devniveau. Altijd uitleggen wat een commando d
 
 ## App starten
 ```
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 ./start.sh
 ```
 Daarna browser openen op: http://127.0.0.1:5555
 
 ## Projectstructuur
 ```
-Clip Live/
+Omni DJ/
 ├── .claude/CLAUDE.md          ← dit bestand
 ├── INSTALL.md                 ← volledige installatiegids
 ├── QUICK-REFERENCE.md         ← terminal cheatsheet voor Sjuul

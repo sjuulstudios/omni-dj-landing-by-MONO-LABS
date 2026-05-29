@@ -3,7 +3,7 @@
  *
  * Maakt een Stripe Customer Portal-sessie zodat een betalende user zijn
  * abonnement kan beheren (opzeggen, plan wijzigen, kaart updaten,
- * facturen bekijken) — zonder dat Sjuul Studios die UI zelf bouwt.
+ * facturen bekijken) — zonder dat MONO LABS die UI zelf bouwt.
  *
  * Voor dezelfde reden als create-checkout-session: STRIPE_SECRET_KEY mag
  * niet in de gebundelde desktop-app staan, dus dit gaat via een edge

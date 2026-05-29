@@ -1,6 +1,6 @@
-# Supabase migrations — Clip Live / Clip Drop
+# Supabase migrations — Omni DJ / Omni DJ
 
-Deze map bevat de SQL-migrations die de Supabase-staat van Clip Drop
+Deze map bevat de SQL-migrations die de Supabase-staat van Omni DJ
 beschrijven. Tot sessie 32 leefden alle RLS-policies en triggers alleen in
 het Supabase Dashboard. Vanaf nu staat de waarheid hier, in version control.
 
@@ -31,7 +31,7 @@ Geen extra tools nodig, werkt vanuit je browser.
 
 Je hebt al de CLI omdat je `supabase functions deploy` gebruikt:
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 
 Dan:
 

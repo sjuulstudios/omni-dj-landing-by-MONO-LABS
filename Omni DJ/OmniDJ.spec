@@ -1,10 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller-specfile voor Clip Live (macOS).
+PyInstaller-specfile voor Omni DJ (macOS).
 
-Bouw met:    pyinstaller --noconfirm ClipLive.spec
+Bouw met:    pyinstaller --noconfirm OmniDJ.spec
 
-Resultaat:   dist/Clip Live.app   (open met `open dist/Clip\\ Live.app`)
+Resultaat:   dist/Omni DJ.app   (open met `open dist/Clip\\ Live.app`)
 
 Vereiste vooraf:
     pip install pyinstaller dmgbuild
@@ -108,7 +108,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="Clip Live",
+    name="Omni DJ",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -129,28 +129,28 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="Clip Live",
+    name="Omni DJ",
 )
 
 app = BUNDLE(
     coll,
-    name="Clip Live.app",
+    name="Omni DJ.app",
     icon="static/icon.icns" if __import__("os").path.exists("static/icon.icns") else None,
-    bundle_identifier="com.sjuulstudios.cliplive",
+    bundle_identifier="com.monolabs.omnidj",
     version="0.1.0",
     info_plist={
-        "CFBundleName": "Clip Live",
-        "CFBundleDisplayName": "Clip Live",
+        "CFBundleName": "Omni DJ",
+        "CFBundleDisplayName": "Omni DJ",
         "CFBundleShortVersionString": "0.1.0",
         "CFBundleVersion": "0.1.0",
         "NSHighResolutionCapable": "True",
         "LSMinimumSystemVersion": "11.0",
-        "NSHumanReadableCopyright": "© 2026 Sjuul Studios",
+        "NSHumanReadableCopyright": "© 2026 MONO LABS",
         # Toegang die het OS aan de user vraagt bij eerste gebruik:
-        "NSMicrophoneUsageDescription": "Clip Live needs audio access to analyse your DJ sets.",
-        "NSDocumentsFolderUsageDescription": "Clip Live needs access to read your DJ sets.",
-        "NSDesktopFolderUsageDescription": "Clip Live needs access to read your DJ sets.",
-        "NSDownloadsFolderUsageDescription": "Clip Live needs access to read your DJ sets.",
-        "NSAppleEventsUsageDescription": "Clip Live opens your browser to show the app UI.",
+        "NSMicrophoneUsageDescription": "Omni DJ needs audio access to analyse your DJ sets.",
+        "NSDocumentsFolderUsageDescription": "Omni DJ needs access to read your DJ sets.",
+        "NSDesktopFolderUsageDescription": "Omni DJ needs access to read your DJ sets.",
+        "NSDownloadsFolderUsageDescription": "Omni DJ needs access to read your DJ sets.",
+        "NSAppleEventsUsageDescription": "Omni DJ opens your browser to show the app UI.",
     },
 )

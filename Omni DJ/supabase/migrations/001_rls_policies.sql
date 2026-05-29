@@ -1,5 +1,5 @@
 -- ============================================================================
--- Clip Live / Clip Drop — Row Level Security policies voor public.profiles
+-- Omni DJ / Omni DJ — Row Level Security policies voor public.profiles
 -- ============================================================================
 --
 -- Versie:        001

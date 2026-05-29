@@ -450,7 +450,7 @@ def detect_track(video_path: str,
         }
 
     # 1) Extract frames via ffmpeg.
-    with tempfile.TemporaryDirectory(prefix='cliplive-track-') as tmpdir:
+    with tempfile.TemporaryDirectory(prefix='omnidj-track-') as tmpdir:
         frames = _extract_frames(video_path, start, duration, fps, tmpdir)
         total = len(frames)
         if total == 0:

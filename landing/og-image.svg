@@ -18,7 +18,7 @@
     <circle cx="22" cy="22" r="14" fill="none" stroke="#e8b766" stroke-width="2"/>
     <circle cx="22" cy="22" r="3" fill="#f4cf8a"/>
   </g>
-  <text x="142" y="115" fill="#f6efe2" font-family="Inter, -apple-system, sans-serif" font-size="24" font-weight="600">Clipdrop Live</text>
+  <text x="142" y="115" fill="#f6efe2" font-family="Inter, -apple-system, sans-serif" font-size="24" font-weight="600">Omni DJ</text>
 
   <text x="80" y="280" fill="#f6efe2" font-family="Fraunces, Georgia, serif" font-size="78" font-weight="500">Detect drops in DJ sets.</text>
   <text x="80" y="370" fill="#e8b766" font-family="Fraunces, Georgia, serif" font-size="78" font-style="italic" font-weight="500">Create clips for social.</text>

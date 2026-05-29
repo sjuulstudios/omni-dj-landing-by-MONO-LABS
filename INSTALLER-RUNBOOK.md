@@ -1,6 +1,6 @@
-# Clip Live — Installer Runbook
+# Omni DJ — Installer Runbook
 
-Hoe je Clip Live verpakt als downloadbare app voor klanten.
+Hoe je Omni DJ verpakt als downloadbare app voor klanten.
 Geschreven voor Sjuul (niet-technisch). Werk dit van boven naar beneden af.
 Sla niets over zonder mij te vragen.
 
@@ -11,7 +11,7 @@ Sla niets over zonder mij te vragen.
 In de map dj-clip-cutter/ staan vier nieuwe bestanden:
 
 - **launcher.py** — desktop entry point, opent automatisch je browser
-- **ClipLive.spec** — recept voor PyInstaller
+- **OmniDJ.spec** — recept voor PyInstaller
 - **entitlements.plist** — Apple toestemming-bestand voor signing
 - **build_macos.sh** — één commando dat de hele build doet
 
@@ -29,7 +29,7 @@ een Gatekeeper-waarschuwing — niet voor distributie geschikt.
 
 **Stap 1 — Open Terminal en ga naar de juiste map**
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 
 Wat dit doet: zet Terminal in de projectmap.
 
@@ -37,7 +37,7 @@ Wat dit doet: zet Terminal in de projectmap.
 
 source venv/bin/activate
 
-Wat dit doet: schakelt over naar de Python die alle Clip Live dependencies
+Wat dit doet: schakelt over naar de Python die alle Omni DJ dependencies
 heeft. Je prompt krijgt (venv) ervoor.
 
 **Stap 3 — Installeer PyInstaller en dmgbuild**
@@ -51,12 +51,12 @@ maakt later de .dmg.
 
 ./build_macos.sh
 
-Wat dit doet: bouwt dist/Clip Live.app. Duurt 3–8 minuten. Je ziet veel
+Wat dit doet: bouwt dist/Omni DJ.app. Duurt 3–8 minuten. Je ziet veel
 output — dat is normaal. Als het stopt zonder "FOUT" ben je klaar.
 
 **Stap 5 — Test of de app draait**
 
-open "dist/Clip Live.app"
+open "dist/Omni DJ.app"
 
 Wat dit doet: opent je nieuwe app. Browser moet vanzelf openen op
 http://127.0.0.1:5555. Als dat werkt, ga je naar Fase 2.
@@ -76,7 +76,7 @@ de Gatekeeper-blokkade en haken af.
 **Stap 1** — Ga naar https://developer.apple.com/programs/enroll/
 
 **Stap 2** — Meld je aan als Sole Proprietor (eenmanszaak). Apple vraagt:
-- Apple ID (gebruik business@sjuulstudios.com)
+- Apple ID (gebruik omnidj@monohq-labs.com)
 - KVK-nummer (92316476)
 - DUNS-nummer — Apple vraagt het alleen voor bedrijven, voor eenmanszaak
   in NL meestal niet nodig
@@ -94,12 +94,12 @@ Download het .cer bestand en dubbelklik om in je Keychain te zetten.
 security find-identity -v -p codesigning
 
 Wat dit doet: laat alle Developer ID certificaten in je Keychain zien.
-Kopieer de regel die begint met "Developer ID Application: Sjuul Studios".
+Kopieer de regel die begint met "Developer ID Application: MONO LABS".
 
 **Stap 5** — Zet die naam in je shell-profiel zodat je 'm niet steeds
 hoeft te typen:
 
-echo 'export APPLE_DEVELOPER_ID="Developer ID Application: Sjuul Studios (TEAMID)"' >> ~/.zshrc
+echo 'export APPLE_DEVELOPER_ID="Developer ID Application: MONO LABS (TEAMID)"' >> ~/.zshrc
 
 Vervang TEAMID door je echte team ID die in het certificaat staat. Open
 een nieuwe Terminal-tab zodat de variabele actief is.
@@ -114,18 +114,18 @@ een waarschuwing bij de eerste opening.
 
 **Stap 1** — Maak een app-specifiek wachtwoord aan:
 https://appleid.apple.com → Sign In and Security → App-Specific Passwords → +
-Naam: cliplive-notary. Kopieer het wachtwoord — Apple toont het maar één keer.
+Naam: omnidj-notary. Kopieer het wachtwoord — Apple toont het maar één keer.
 
 **Stap 2** — Sla het wachtwoord op in je Keychain:
 
-xcrun notarytool store-credentials cliplive-notary --apple-id business@sjuulstudios.com --team-id TEAMID --password APP-SPECIFIC-PASSWORD
+xcrun notarytool store-credentials omnidj-notary --apple-id omnidj@monohq-labs.com --team-id TEAMID --password APP-SPECIFIC-PASSWORD
 
 Vervang TEAMID en APP-SPECIFIC-PASSWORD door je echte waarden. Dit hoef
 je maar één keer te doen.
 
 **Stap 3** — Zet de profielnaam in je shell-profiel:
 
-echo 'export APPLE_NOTARY_PROFILE=cliplive-notary' >> ~/.zshrc
+echo 'export APPLE_NOTARY_PROFILE=omnidj-notary' >> ~/.zshrc
 
 Nieuwe Terminal-tab openen.
 
@@ -135,14 +135,14 @@ Nieuwe Terminal-tab openen.
 
 Dit is de build die je naar klanten kunt sturen.
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 source venv/bin/activate
 ./build_macos.sh sign notarize dmg
 
 Wat dit doet: bouwt, signt, stuurt op voor notarization (1–15 min wachten
 op Apple), staple't de notarization aan de app, en maakt een .dmg.
 
-Resultaat: dist/Clip Live.dmg — dat is het bestand dat je op clipdroplive.com
+Resultaat: dist/Omni DJ.dmg — dat is het bestand dat je op omnidj.com
 zet als downloadlink.
 
 ---
@@ -160,7 +160,7 @@ brew install supabase/tap/supabase
 
 **Stap 2 — Inloggen op je Supabase project**
 
-cd "/Users/sjuulsmits/Documents/Claude/Projects/Clip Live/dj-clip-cutter"
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/dj-clip-cutter"
 supabase login
 supabase link --project-ref lbabsffxefkrxwzkbzar
 
@@ -222,12 +222,12 @@ fase 2 als macOS-versie loopt.
 
 ---
 
-## Wat KLANTEN doen om Clip Live te installeren
+## Wat KLANTEN doen om Omni DJ te installeren
 
-1. Klik op de Download-knop op clipdroplive.com → Clip Live.dmg downloadt
+1. Klik op de Download-knop op omnidj.com → Omni DJ.dmg downloadt
 2. Dubbelklik de .dmg → er opent een venster met de app en een
    "Applications" pijl
-3. Sleep Clip Live.app naar de Applications-snelkoppeling
+3. Sleep Omni DJ.app naar de Applications-snelkoppeling
 4. Open de app uit Applications
 5. Hun browser opent automatisch op http://127.0.0.1:5555
 
@@ -249,7 +249,7 @@ Loop dit lijstje af voordat je de .dmg op de website zet:
 - [ ] Signing werkt (geen Gatekeeper-blokkade op je Mac)
 - [ ] Notarization slaagt
 - [ ] DMG opent op een tweede Mac (vraag een vriend)
-- [ ] Privacy/terms aanvullingen live op clipdroplive.com
+- [ ] Privacy/terms aanvullingen live op omnidj.com
 - [ ] Download-link op site wijst naar de gestaple'de .dmg
 
 ---

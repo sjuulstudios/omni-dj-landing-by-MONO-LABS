@@ -1,5 +1,5 @@
 """
-Clip Live — runtime configuration
+Omni DJ — runtime configuration
 
 Hardcoded publieke configuratiewaarden die nodig zijn om de gebundelde
 desktop-app te laten werken zonder een .env-bestand naast de bundel.

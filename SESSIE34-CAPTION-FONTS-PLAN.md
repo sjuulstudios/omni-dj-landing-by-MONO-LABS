@@ -82,7 +82,7 @@ Bundle-grootte: ~12 × 50-200 KB = **~1-2 MB extra** in de dmg. Te overzien.
    - `font_id` matcht builtin → resolve naar `static/fonts/<file>.ttf` (absoluut pad)
    - Anders → brand-kit, anders → system
 
-**Risico:** PyInstaller bundle moet `static/fonts/` meenemen. Check `ClipLive.spec` — die heeft al `datas=[('static', 'static')]` (verwachting), dus inclusief.
+**Risico:** PyInstaller bundle moet `static/fonts/` meenemen. Check `OmniDJ.spec` — die heeft al `datas=[('static', 'static')]` (verwachting), dus inclusief.
 
 ### Fase B — Hover-preview in font-dropdown (~2 uur)
 
@@ -238,7 +238,7 @@ Praktisch: doe A+B in één sessie, C+D in een tweede, E aan het eind.
 
 ## Risico's / open einden
 
-- **PyInstaller**: `ClipLive.spec` moet `static/fonts/**` includeren. Verificatie: na build `ls -R "dist/Clip Live.app/Contents/Resources/static/fonts"`.
+- **PyInstaller**: `OmniDJ.spec` moet `static/fonts/**` includeren. Verificatie: na build `ls -R "dist/Omni DJ.app/Contents/Resources/static/fonts"`.
 - **Drawtext-render**: sommige display fonts hebben rare metrics (Bebas Neue heeft hoge x-height). De `size_pct → fontsize` formule kan visueel afwijken tussen fonts. Acceptabel — gebruiker stelt size_pct in op het oog.
 - **Press Start 2P (8-bit)** geeft soms ffmpeg-glyph-warnings als pixels niet exact passen. Niet kritisch — geeft alleen log-noise.
 - **Caveat (script)**: cursive fonts hebben overlappende glyphs in drawtext (geen ligaturen). Resultaat ziet er soms "verkleind" uit. Documenteren.

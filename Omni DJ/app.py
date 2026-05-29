@@ -180,11 +180,11 @@ FULL_BITS_PER_SEC         = 5.0 * 1024 * 1024  # ~5 MB/s — landscape+vertical 
 BASE_DIR      = os.path.dirname(__file__)
 # SESSIE 40 (2026-05-26) — In een gebundelde .app is BASE_DIR Contents/Frameworks
 # en daar mag een unsigned app NIET schrijven (macOS PermissionError errno 1 op
-# os.makedirs). launcher.py zet CLIP_LIVE_USER_DATA naar een schrijfbare locatie
-# (~/Library/Application Support/Clip Live/ op macOS, %APPDATA%\Clip Live\ op
+# os.makedirs). launcher.py zet OMNI_DJ_USER_DATA naar een schrijfbare locatie
+# (~/Library/Application Support/Omni DJ/ op macOS, %APPDATA%\Omni DJ\ op
 # Windows). In dev-server is die env-var NIET gezet → DATA_DIR valt terug op
 # BASE_DIR en alles blijft werken zoals voorheen. Backwards-compatibel.
-DATA_DIR      = os.environ.get("CLIP_LIVE_USER_DATA", BASE_DIR)
+DATA_DIR      = os.environ.get("OMNI_DJ_USER_DATA", BASE_DIR)
 # 2026-05-10 — moved out of tempfile.gettempdir() (which is /var/folders/.../T
 # on macOS and gets aggressively cleaned by the OS, including across reboots).
 # Living in /tmp wiped the source video for any job whose UPLOAD_DIR file was
@@ -1366,7 +1366,7 @@ def api_profile_update():
 @require_role('admin')  # SESSIE 35 — alleen admins (Sjuul) mogen debug-logs downloaden
 def api_debug_logs():
     """Return a ZIP archive containing:
-      - launcher.log (from CLIP_LIVE_USER_DATA or fallback)
+      - launcher.log (from OMNI_DJ_USER_DATA or fallback)
       - tail of system info (platform, python, ffmpeg version)
       - job_history.json (filtered to caller's jobs only)
       - a summary.txt with the caller's user_id, plan, and timestamps
@@ -1391,18 +1391,18 @@ def api_debug_logs():
     fmt = (request.args.get('format') or 'zip').strip().lower()
 
     # Locate the launcher.log written by launcher.py — it lives in the
-    # per-OS user data dir set by CLIP_LIVE_USER_DATA. Falls back to common
+    # per-OS user data dir set by OMNI_DJ_USER_DATA. Falls back to common
     # locations for dev mode (where launcher.py was not the entry point).
     log_candidates = []
-    env_dir = os.environ.get('CLIP_LIVE_USER_DATA')
+    env_dir = os.environ.get('OMNI_DJ_USER_DATA')
     if env_dir:
         log_candidates.append(os.path.join(env_dir, 'launcher.log'))
     home = os.path.expanduser('~')
     if sys.platform == 'darwin':
-        log_candidates.append(os.path.join(home, 'Library', 'Application Support', 'Clip Live', 'launcher.log'))
+        log_candidates.append(os.path.join(home, 'Library', 'Application Support', 'Omni DJ', 'launcher.log'))
     elif sys.platform == 'win32':
         appdata = os.environ.get('APPDATA', home)
-        log_candidates.append(os.path.join(appdata, 'Clip Live', 'launcher.log'))
+        log_candidates.append(os.path.join(appdata, 'Omni DJ', 'launcher.log'))
     else:
         log_candidates.append(os.path.join(home, '.clip-live', 'launcher.log'))
 
@@ -1432,7 +1432,7 @@ def api_debug_logs():
         ffmpeg_version = f'(ffmpeg not found: {e!r})'
 
     summary_lines = [
-        f'Clip Live — diagnostic bundle',
+        f'Omni DJ — diagnostic bundle',
         f'Generated: {datetime.now(timezone.utc).isoformat()}',
         f'',
         f'User:     {user_info.get("user_id", "?")}',
@@ -2212,7 +2212,7 @@ def save_watch_folder():
                 if os.path.samefile(raw_path, forbidden):
                     return jsonify({
                         'ok': False,
-                        'error': "Pick a different folder — that's where Clip Live writes its own output.",
+                        'error': "Pick a different folder — that's where Omni DJ writes its own output.",
                     }), 400
             except OSError:
                 pass
@@ -6770,9 +6770,9 @@ def api_pick_file():
 # ---------------------------------------------------------------------------
 if __name__ == '__main__':
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 5555
-    # Bind to loopback by default. Set CLIP_LIVE_BIND=0.0.0.0 to allow LAN
+    # Bind to loopback by default. Set OMNI_DJ_BIND=0.0.0.0 to allow LAN
     # (don't do this without adding authentication).
-    bind_host = os.environ.get('CLIP_LIVE_BIND', '127.0.0.1')
+    bind_host = os.environ.get('OMNI_DJ_BIND', '127.0.0.1')
 
     _purge_old_uploads()
     _rehydrate_jobs_from_history()
@@ -6802,7 +6802,7 @@ if __name__ == '__main__':
         log.warning("Watch-folder daemon failed to start: %s", e)
 
     print(f"\n{'='*52}")
-    print(f"  Clip Live — DJ Set Clip Cutter")
+    print(f"  Omni DJ — DJ Set Clip Cutter")
     print(f"  Open: http://{bind_host}:{port}")
     print(f"  Demucs AI : {'Available ✓' if HAS_DEMUCS else 'Not installed (pip install torch demucs)'}")
     print(f"  Audio out : 44.1 kHz AAC 320k — full 20 Hz–20 kHz spectrum ✓")
