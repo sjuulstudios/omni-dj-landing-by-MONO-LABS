@@ -4,7 +4,46 @@
 
 ---
 
-## 🏷️ START HIER — sessie 63 (2026-05-30) — CODE-SIDE REBRAND UITGEVOERD ✅
+## START HIER — sessie 64 (2026-05-30) — EDITOR-CLEANUP + ICOON + RUNBOOK
+
+> **Status:** code-side klaar en gepusht (commit `9f76839` op `main`). De .app-rebuild en de externe services (Supabase/Stripe/Cloudflare) staan nog open — die moet Sjuul zelf doen. Volledige stap-voor-stap in **`SESSIE64-REBUILD+SERVICES-RUNBOOK.md`**.
+
+**Wat is gedaan deze sessie (allemaal gepusht in `9f76839`):**
+
+1. **Git rebrand (stap 1) bevestigd klaar** — commit `f1211ff` "Rebrand: Clip Live -> Omni DJ" stond al op `main`, branch ge-merged, working tree schoon. Geverifieerd, niets meer te doen.
+
+2. **Rebuild + services runbook opgeleverd** — `SESSIE64-REBUILD+SERVICES-RUNBOOK.md` met letterlijke terminal-stappen voor stap 2 (.app rebuild via `./build_macos.sh dmg`) en stap 3 (Supabase/Stripe/Cloudflare rebrand naar omnidj.com). Registrar = **TransIP** (bevestigd door Sjuul).
+
+3. **App-icoon** — zwarte bolletjes op witte afgeronde achtergrond (uit Sjuul's `omni-dj_black.svg`). Assets in `Omni DJ/static/`: `icon.svg`, `icon_1024.png`, `Omni DJ.iconset/` (10 maten), `make_icns.sh`. **De `.icns` moet Sjuul nog 1× maken** op zijn Mac: `cd "Omni DJ/static" && ./make_icns.sh` (iconutil is Mac-only). OmniDJ.spec pikt `static/icon.icns` automatisch op bij de build.
+
+4. **Editor-cleanup (FEATURE-CLEANUP plan)** in `Omni DJ/static/index.html`:
+   - ITEM 4 — Edit/Style/Brand tabs weg uit editor-header.
+   - ITEM 5 — "Cue points" header weg; `#ed-cue-meta` (cues · BPM) verplaatst naar de filter-row.
+   - ITEM 2 — Drops-filter weg uit het dashboard (All toont toch alles).
+   - ITEM 7 — "Sorted by energy score" tekst weg uit subtitel + set-meta.
+
+5. **Twee gele lekken in V2 gefixt** (echte CSS-bugs):
+   - **Cue/drops-lijst links:** de v2-overrides matchten `.cue-row`, maar de code rendert `.cue`. Daardoor viel de hele lijst terug op de oude AMBER (gele) styling. Nu dekken de overrides beide classes; cue-time/fav/select volgen de oranje `--v2-accent`.
+   - **Export-`<`-knop:** open-state toggelt een `.is-open` class, maar v2 luisterde alleen naar `[aria-expanded]`; de caret-pijl was hardcoded amber. Beide nu `--v2-accent`.
+   - Bevinding: de rest van de V2-editor was al volledig oranje; dashboard-chips/ratio zijn neutraal grijs (geen geel).
+
+6. **Landing-fix** — mega-menu item "ClipDrop" → "Drop detection" in `omnidj.com/lib/content/megamenu.ts`. Actieve site verder schoon (domeinen + meta op omnidj.com).
+
+**⏭️ Eerste taken volgende sessie (Sjuul's kant):**
+
+1. **Editor live checken** — dev-server draait al op je Mac (`http://127.0.0.1:5555`). Refresh en bevestig dat de gele randjes in de cue-lijst + export-knop weg zijn.
+2. **Icoon afmaken** — `cd "Omni DJ/static" && ./make_icns.sh` → maakt `icon.icns`.
+3. **.app rebuild** — runbook stap 2: `./build_macos.sh dmg`. (pyinstaller zit nog NIET in venv → eerst `pip install pyinstaller dmgbuild`; ffmpeg via brew.)
+4. **Externe services** — runbook stap 3: Supabase/Stripe/Cloudflare rebrand. Open vraag: welke admin-emails moeten unlimited in Supabase (nu default `omnidj@`/`sjuul@monohq-labs.com`).
+
+**Bewust NIET gedaan (wacht op OK):**
+- FEATURE-CLEANUP **ITEM 6** — Library ratio-filter uitbreiden van 2 (9:16/16:9) naar 4 (+1:1, +4:5). Verandert filter-gedrag; aparte beslissing.
+
+**Sandbox-beperkingen die terugkomen:** committen/pushen kan NIET vanuit de tool-sandbox (git-lock-cleanup geblokkeerd + geen GitHub-token). Sjuul plakt het commando zelf in Terminal. Dev-server draait ook niet in de sandbox (venv is macOS-build).
+
+---
+
+## sessie 63 (2026-05-30) — CODE-SIDE REBRAND UITGEVOERD ✅
 
 > **Status:** de volledige code-side rebrand Clip Live → Omni DJ is uitgevoerd en geverifieerd. Externe services (Supabase/Stripe/Cloudflare/Workspace) en de .app-rebuild staan nog open — die moet Sjuul zelf doen (dashboards + lokale build). Domein gekozen = **omnidj.com** (niet omni.com uit het oude plan).
 
