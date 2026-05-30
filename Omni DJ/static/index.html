@@ -5350,6 +5350,66 @@
   }
 
   /* ===========================================================
+     SESSIE 65 - signup-wizard gold -> orange (--v2-accent).
+     De base-CSS gebruikt rgba(232,183,102)/--amber-2 voor de echte
+     markup-classes (.wiz-bubble, .wiz-progress-seg, .wiz-success-mark,
+     .wiz-req, .wiz-back). De bestaande V2-overrides hierboven mikten op
+     niet-bestaande classes (.wiz-option/.wiz-tile/.wiz-dot/.wiz-next),
+     dus het goud lekte door. Hieronder de echte selectors -> oranje.
+     Raakt NIET de --amber/--gold palette-tokens (Brand/captions/thumbnails).
+     =========================================================== */
+  /* Voortgangsbalk-segmenten */
+  body.redesign-v2 .auth-wizard .wiz-progress-seg::after {
+    background: var(--v2-accent) !important;
+  }
+  /* Back-knop hover */
+  body.redesign-v2 .auth-wizard .wiz-back:hover {
+    color: var(--v2-text-primary) !important;
+    border-color: var(--v2-accent) !important;
+  }
+  /* Scrollbar viewport */
+  body.redesign-v2 .auth-wizard .wiz-viewport {
+    scrollbar-color: var(--v2-accent) transparent;
+  }
+  body.redesign-v2 .auth-wizard .wiz-viewport::-webkit-scrollbar-thumb {
+    background: var(--v2-accent) !important;
+  }
+  /* Bubble hover */
+  body.redesign-v2 .auth-wizard .wiz-bubble:hover {
+    border-color: var(--v2-accent-border) !important;
+    background: var(--v2-accent-muted) !important;
+  }
+  /* Bubble geselecteerd */
+  body.redesign-v2 .auth-wizard .wiz-bubble.on {
+    background: var(--v2-accent-muted) !important;
+    border-color: var(--v2-accent) !important;
+    color: var(--v2-accent) !important;
+    box-shadow: 0 0 0 1px var(--v2-accent-border) inset !important;
+  }
+  /* Multi-select check-indicator (rondje + vinkje) */
+  body.redesign-v2 .auth-wizard .wiz-bubbles[data-mode="multi"] .wiz-bubble.on::after {
+    border-color: var(--v2-accent) !important;
+    background-color: var(--v2-accent) !important;
+  }
+  /* "Other"-veld label + focus */
+  body.redesign-v2 .auth-wizard .wiz-other label {
+    color: var(--v2-accent) !important;
+  }
+  body.redesign-v2 .auth-wizard .wiz-other input:focus {
+    border-color: var(--v2-accent) !important;
+  }
+  /* Verplicht-asterisk */
+  body.redesign-v2 .auth-wizard .wiz-req {
+    color: var(--v2-accent) !important;
+  }
+  /* Succes-checkmark aan het einde van de flow */
+  body.redesign-v2 .auth-wizard .wiz-success-mark {
+    background: var(--v2-accent) !important;
+    color: #0E0E0F !important;
+    box-shadow: 0 0 30px var(--v2-accent-muted) !important;
+  }
+
+  /* ===========================================================
      FORGOT MODAL  (wachtwoord vergeten)
      =========================================================== */
   body.redesign-v2 .forgot-modal .forgot-modal-card,

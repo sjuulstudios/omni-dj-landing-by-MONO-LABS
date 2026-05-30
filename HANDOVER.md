@@ -4,7 +4,92 @@
 
 ---
 
-## START HIER — sessie 64 (2026-05-30) — EDITOR-CLEANUP + ICOON + RUNBOOK
+## START HIER — sessie 65 (2026-05-30) — ICOON GEMAAKT · .APP HERBOUWD · WIZARD ORANJE · ELECTRON-PLAN
+
+> **Status:** vier dingen deze sessie. (1) App-icoon `.icns` gemaakt. (2) Sjuul heeft de
+> `.app` succesvol herbouwd + getest op zijn Mac. (3) Signup-wizard van goud naar oranje
+> (CSS-only, dev-server geverifieerd). (4) Beslissing genomen om de app native te maken via
+> **Electron (Tier 3)** — plan klaar, implementatie start VOLGENDE sessie.
+
+**Wat is gedaan deze sessie:**
+
+1. **App-icoon `.icns` gemaakt** — `Omni DJ/static/icon.icns` (volledige modern icon-set
+   16→1024px incl. @2x Retina), gebouwd uit `icon_1024.png` met Pillow in de sandbox
+   (iconutil is Mac-only, dus niet via Terminal). `OmniDJ.spec` pikt 'm automatisch op
+   (regels 121 + 138). `make_icns.sh` is NIET meer nodig.
+
+2. **.app herbouwd + getest (door Sjuul, op zijn Mac)** — `./build_macos.sh dmg` gelukt:
+   `dist/Omni DJ.app` + `dist/Omni DJ.dmg` met het nieuwe icoon. Build-output groen
+   (`Build complete!`, secret-scan + ffmpeg-bundle + dmg ok). LET OP: deze build is van
+   VÓÓR de wizard-oranje-fix (zie punt 3) — die fix zit pas in de VOLGENDE rebuild.
+
+3. **Signup-wizard goud → oranje** (`Omni DJ/static/index.html`) — zelfde bug-patroon als
+   sessie 64's cue-lijst: de bestaande `body.redesign-v2 .auth-wizard`-overrides mikten op
+   niet-bestaande classes (`.wiz-option/.wiz-tile/.wiz-dot/.wiz-next`), terwijl de echte
+   markup `.wiz-bubble`, `.wiz-progress-seg`, `.wiz-success-mark`, `.wiz-req`, `.wiz-back`
+   gebruikt. Daardoor lekte het goud (`rgba(232,183,102)`/`--amber-2`) door. Nieuw
+   override-blok (CSS-only, V2-only, +2.501 bytes) zet alles op `--v2-accent` (#D97742):
+   geselecteerde bubbles, multi-select-vinkje, voortgangsbalk, succes-checkmark aan het
+   einde, verplicht-asterisk, back-hover, scrollbar. **Live geverifieerd via Chrome MCP**
+   op de dev-server: alle accenten computen `rgb(217,119,66)`, geen goud meer.
+   - NIET aangeraakt: de `--amber`/`--gold`/`--copper` palette-tokens — die blijven goud in
+     Brand-panel, caption/font-kleuren en thumbnails (expliciet zo gewenst door Sjuul).
+   - Backup: `static/index.html.pre-wizard-orange.bak`.
+
+4. **Supabase admin-SQL gecorrigeerd** — het oude runbook-commando (`is_admin=true`,
+   `plan='unlimited'`) klopte NIET met het echte schema. `profiles` heeft GEEN `is_admin`
+   (het is `role='admin'`) en GEEN `unlimited`-plan (`studio` = onbeperkt). Gecorrigeerde
+   SQL (`role='admin'`, `plan='studio'`) gedraaid via de Supabase-MCP op beide
+   monohq-emails → 0 rijen (accounts bestaan nog niet). Correcte versie staat in
+   `SESSIE65-SERVICES-CHECKLIST.md` om te draaien NÁ signup. Bestaande echte admin =
+   `business@sjuulstudios.com` (role=admin, plan=pro).
+
+5. **Externe-services-checklist** opgeleverd: `SESSIE65-SERVICES-CHECKLIST.md` — vervangt
+   sectie 3 van SESSIE64-runbook (Supabase rename/templates/URL-config + Stripe + Cloudflare
+   naar omnidj.com), met de schema-fix erin. Dashboard-werk vereist Sjuul's login.
+
+6. **NATIVE-APP-BESLISSING (Electron, Tier 3)** — na uitgebreid overleg: de app opent nu als
+   Chrome-tab (Flask serveert lokaal, `launcher.py` geeft URL aan default browser). Dat wordt
+   een echte native app. Gekozen: **Electron rond de bestaande PyInstaller-Python-backend
+   (sidecar)** — Python NIET herschrijven, analyse blijft 100% lokaal. Plan:
+   **`PLAN-NATIVE-WINDOW-ELECTRON-2026-05-30.md`** (gefaseerd: Fase 0 prototype → polish →
+   packaging → signing → Windows). Het lichtere pywebview-plan
+   (`PLAN-NATIVE-WINDOW-2026-05-30.md`) is bewust AFGEVALLEN ten gunste van Electron.
+
+**⏭️ EERSTE TAKEN VOLGENDE SESSIE (Sjuul's prioriteit):**
+
+1. **Electron Fase 0 starten** — minimale `electron/main.js` die de bestaande backend op een
+   vrije poort start, wacht, en de UI in een Electron-venster laadt. Doel: bewijzen dat
+   UI + analyse + export werken in een Chromium-venster, vóór packaging/signing. Zie
+   PLAN-NATIVE-WINDOW-ELECTRON Fase 0.
+2. **Apple Developer vervolgstappen geven** — Sjuul HEEFT NU een Apple Developer-account
+   aangemaakt. Volgende sessie: stap-voor-stap richting Developer ID Application-certificaat
+   + notarization-setup (haakt op PLAN-APPLE-DEVELOPER-2026-05-28.md; met Electron neemt
+   electron-builder het signen/notarizen over i.p.v. build_macos.sh).
+3. **.app opnieuw bouwen** zodat de wizard-oranje-fix (punt 3) in de bundle komt — OF
+   overslaan en direct naar de Electron-build toewerken (Sjuul beslist; de huidige .app mist
+   alleen de wizard-kleurfix, verder compleet).
+4. **Externe services** (3A/3B/3C uit SESSIE65-SERVICES-CHECKLIST) — Sjuul's dashboard-werk,
+   kan parallel.
+
+**Bewust NIET gedaan (wacht op OK):** FEATURE-CLEANUP ITEM 6 (Library ratio-filter 2→4);
+Electron-implementatie (volgende sessie); externe-services dashboard-werk (Sjuul's login).
+
+**Sandbox-beperkingen die terugkomen:** git committen/pushen kan NIET vanuit de sandbox
+(Sjuul plakt zelf); dev-server + PyInstaller draaien op Sjuul's Mac, niet in de sandbox;
+iconutil/Terminal-typen geblokkeerd (daarom .icns via Pillow gebouwd).
+
+> **Git:** wizard-oranje-fix + nieuwe plannen/checklists zijn nog NIET gecommit door Claude
+> (sandbox). Sjuul committed + pusht zelf:
+> ```
+> cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ"
+> git add -A && git commit -m "Sessie 65: icoon, wizard oranje, services-checklist, Electron-plan"
+> git push origin main
+> ```
+
+---
+
+## sessie 64 (2026-05-30) — EDITOR-CLEANUP + ICOON + RUNBOOK
 
 > **Status:** code-side klaar en gepusht (commit `9f76839` op `main`). De .app-rebuild en de externe services (Supabase/Stripe/Cloudflare) staan nog open — die moet Sjuul zelf doen. Volledige stap-voor-stap in **`SESSIE64-REBUILD+SERVICES-RUNBOOK.md`**.
 
