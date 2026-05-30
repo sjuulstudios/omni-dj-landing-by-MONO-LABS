@@ -25,7 +25,9 @@
 
 ---
 
-## ITEM 2 — Drops-filter verwijderen
+## ITEM 2 — Drops-filter verwijderen  ✅ GEDAAN (sessie 64, 2026-05-30)
+> Drops-chip uit `#dash-filters` verwijderd. All == Drops want sets bevatten alleen
+> drops. De `drops`-tak in de cue-filter-JS is ongemoeid gelaten (dode code, geen UI-trigger meer).
 
 **Wens:** Drops-filter mag eruit, want All toont toch alle drops.
 
@@ -41,7 +43,7 @@ Apart blok onderaan: zie ITEM 14.
 
 ---
 
-## ITEM 4 — Edit/Style/Brand-knoppen weghalen uit editor-header
+## ITEM 4 — Edit/Style/Brand-knoppen weghalen uit editor-header  ✅ GEDAAN (sessie 64, 2026-05-30)
 
 **Wens:** rechtsboven in editor zie je nu `Edit · Style · Brand` toggle. Allemaal weg:
 - Edit: redundant (je bent al in edit)
@@ -52,7 +54,10 @@ Apart blok onderaan: zie ITEM 14.
 
 ---
 
-## ITEM 5 — Cue points header + 23 cues + divider weg
+## ITEM 5 — Cue points header + 23 cues + divider weg  ✅ GEDAAN (sessie 64, 2026-05-30)
+> Uitvoering: `panel-h` "Cue points"-header verwijderd; `#ed-cue-meta` (cues · BPM)
+> verplaatst naar het einde van de filter-row zodat de info behouden blijft en de
+> filters bovenaan de rail staan. JS (`updateEditorCueMeta`) is null-safe, blijft werken.
 
 **Wens:** in editor links de "Cue points 23 cues · —" header weg + de smalle divider eronder. De filters (All 23 / Favourites / Renamed) schuiven omhoog naar de top van de linker-rail.
 
@@ -70,7 +75,9 @@ Apart blok onderaan: zie ITEM 14.
 
 ---
 
-## ITEM 7 — "Sorted by energy score" tekst weghalen
+## ITEM 7 — "Sorted by energy score" tekst weghalen  ✅ GEDAAN (sessie 64, 2026-05-30)
+> Verwijderd uit `#dash-sub` subtitel + uit de set-meta builder (`parts.push`).
+> Alleen code-comments noemen het oude format nog (geen UI-impact).
 
 **Wens:** weg.
 

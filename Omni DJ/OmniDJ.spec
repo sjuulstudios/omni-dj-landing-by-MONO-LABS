@@ -4,7 +4,7 @@ PyInstaller-specfile voor Omni DJ (macOS).
 
 Bouw met:    pyinstaller --noconfirm OmniDJ.spec
 
-Resultaat:   dist/Omni DJ.app   (open met `open dist/Clip\\ Live.app`)
+Resultaat:   dist/Omni DJ.app   (open met `open dist/Omni\\ DJ.app`)
 
 Vereiste vooraf:
     pip install pyinstaller dmgbuild

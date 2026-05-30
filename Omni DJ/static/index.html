@@ -4502,22 +4502,39 @@
     padding: 8px;
     gap: 6px;
   }
-  body.redesign-v2 #view-editor .cue-list .cue-row {
+  /* SESSIE 64 — de cue-rijen renderen met class ".cue" (zie renderEditorCueList),
+     niet ".cue-row". De oude v2-overrides matchten daardoor niet en de lijst viel
+     terug op de legacy AMBER (gele) styling. Hieronder beide classes gedekt zodat
+     de drops-lijst links volledig de oranje v2-accent volgt. */
+  body.redesign-v2 #view-editor .cue-list .cue-row,
+  body.redesign-v2 #view-editor .cue-list .cue {
     background: var(--v2-bg-elevated-2);
     border: 1px solid var(--v2-border-subtle);
     border-radius: 10px;
     transition: background .15s ease, border-color .15s ease;
   }
-  body.redesign-v2 #view-editor .cue-list .cue-row:hover {
+  body.redesign-v2 #view-editor .cue-list .cue-row:hover,
+  body.redesign-v2 #view-editor .cue-list .cue:hover {
     background: var(--v2-bg-hover);
     border-color: var(--v2-border-strong);
   }
   body.redesign-v2 #view-editor .cue-list .cue-row.is-active,
   body.redesign-v2 #view-editor .cue-list .cue-row.on,
-  body.redesign-v2 #view-editor .cue-list .cue-row.active {
+  body.redesign-v2 #view-editor .cue-list .cue-row.active,
+  body.redesign-v2 #view-editor .cue-list .cue.active {
     background: var(--v2-accent-muted);
     border-color: var(--v2-accent);
   }
+  /* Amber-gekleurde onderdelen binnen een cue-rij → oranje v2-accent */
+  body.redesign-v2 #view-editor .cue-list .cue.active .cue-time { color: var(--v2-accent); }
+  body.redesign-v2 #view-editor .cue-list .cue-fav.on,
+  body.redesign-v2 #view-editor .cue-list .cue-fav:hover { color: var(--v2-accent); }
+  body.redesign-v2 #view-editor .cue-list .cue-select.on {
+    border-color: var(--v2-accent);
+    background: var(--v2-accent);
+    color: var(--v2-text-inverse);
+  }
+  body.redesign-v2 #view-editor .cue-list .cue-select:hover { border-color: var(--v2-accent); }
 
   /* -- CENTER: preview area -- */
   body.redesign-v2 #view-editor .ed-canvas {
@@ -4613,11 +4630,17 @@
     background: var(--v2-bg-hover);
     border-color: var(--v2-border-strong);
   }
-  body.redesign-v2 #view-editor .ed-export-btn[aria-expanded="true"] {
+  body.redesign-v2 #view-editor .ed-export-btn[aria-expanded="true"],
+  body.redesign-v2 #view-editor .ed-export-btn.is-open {
     background: var(--v2-accent-muted);
     border-color: var(--v2-accent);
     color: var(--v2-accent);
   }
+  /* SESSIE 64 — de legacy caret is hardcoded amber (geel). In v2 moet de
+     chevron de oranje accent volgen, zowel rust- als open-state. */
+  body.redesign-v2 #view-editor .ed-export-btn .caret { color: var(--v2-accent); }
+  body.redesign-v2 #view-editor .ed-export-btn.is-open .caret,
+  body.redesign-v2 #view-editor .ed-export-btn[aria-expanded="true"] .caret { color: var(--v2-accent); }
   body.redesign-v2 #view-editor .ed-export-menu {
     background: var(--v2-bg-elevated);
     border: 1px solid var(--v2-border-subtle);
@@ -9596,7 +9619,7 @@
         <div>
           <div class="eyebrow">Clip picker</div>
           <h1 id="dash-title">Pick the <em>keepers.</em></h1>
-          <p class="sub" id="dash-sub">Vertical 9:16 with the drop framed dead-center. Sort by energy score, favourite what you want to ship, open the editor to trim.</p>
+          <p class="sub" id="dash-sub">Vertical 9:16 with the drop framed dead-center. Favourite what you want to ship, open the editor to trim.</p>
         </div>
         <div class="actions">
           <button class="btn ghost" onclick="switchView('upload')">+ New set</button>
@@ -9634,8 +9657,9 @@
               <p id="dash-set-meta"></p>
             </div>
             <div class="filter-row" id="dash-filters">
+              <!-- SESSIE 64 — "Drops"-filter verwijderd (FEATURE-CLEANUP ITEM 2):
+                   de sets bevatten alleen drops, dus All == Drops. -->
               <button class="chip on" data-filter="all">All</button>
-              <button class="chip" data-filter="drops">Drops</button>
               <button class="chip" data-filter="fav">Favourites</button>
               <button class="chip" data-filter="renamed">Renamed</button>
             </div>
@@ -9677,9 +9701,9 @@
               <b id="ed-clip-name"> - </b>
             </div>
             <div class="ed-tools">
-              <button class="t on">Edit</button>
-              <button class="t" onclick="switchView('style')">Style</button>
-              <button class="t" onclick="switchView('settings')">Brand</button>
+              <!-- SESSIE 64 — Edit/Style/Brand tabs verwijderd (FEATURE-CLEANUP ITEM 4):
+                   Edit was redundant, Style zit in de Text-rail, Brand in de sidebar.
+                   Spacer blijft zodat de export-knoppen rechts blijven plakken. -->
               <span style="flex:1"></span>
               <button class="t" id="ed-export-selected" type="button"
                       onclick="exportSelected()" disabled
@@ -9697,14 +9721,15 @@
           <div class="ed-body">
             <!-- LEFT: cue points -->
             <div class="ed-left">
-              <div class="panel-h">
-                <div class="ti">Cue points</div>
-                <div class="ct" id="ed-cue-meta"> - BPM</div>
-              </div>
+              <!-- SESSIE 64 — "Cue points" header + divider verwijderd
+                   (FEATURE-CLEANUP ITEM 5). #ed-cue-meta verplaatst naar de
+                   filter-row zodat de BPM-info niet verloren gaat en de filters
+                   naar de top van de rail schuiven. -->
               <div class="filter-row" id="ed-cue-filters">
                 <button class="chip on" data-filter="all" type="button">All</button>
                 <button class="chip"    data-filter="fav" type="button">★ Favourites</button>
                 <button class="chip"    data-filter="renamed" type="button">Renamed</button>
+                <span class="ct" id="ed-cue-meta"> - BPM</span>
               </div>
               <div class="ed-left-scroll">
                 <div class="cue-list" id="ed-cue-list"></div>

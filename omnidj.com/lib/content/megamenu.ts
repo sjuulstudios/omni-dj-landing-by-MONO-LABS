@@ -17,7 +17,7 @@ export const featuresMega: { columns: MegaGroup[] } = {
       title: 'Analyse & cut',
       items: [
         {
-          title: 'ClipDrop',
+          title: 'Drop detection',
           body: 'Drop detection, BPM and key, full energy map across the whole set.',
           href: '/features#analyse',
           icon: 'wave'
