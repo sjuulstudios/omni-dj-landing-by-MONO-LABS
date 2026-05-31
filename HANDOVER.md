@@ -4,7 +4,80 @@
 
 ---
 
-## START HIER — sessie 65 (2026-05-30) — ICOON GEMAAKT · .APP HERBOUWD · WIZARD ORANJE · ELECTRON-PLAN
+## START HIER — sessie 66 (2026-05-31) — CODE-SIGNING + NOTARIZATION GELUKT ✅
+
+> **Status:** de PyInstaller `.app` + `.dmg` zijn nu volledig **gesigned + genotariseerd**
+> door Apple (`status: Accepted`, ticket gestapeld). Beta-testers krijgen geen
+> "unidentified developer"-popup meer. Gedaan op Sjuul's Mac, Individual Apple-account.
+
+**Apple-gegevens (vastleggen, herbruikbaar):**
+- **Apple ID voor Developer + notary:** `sjuulsmits@gmail.com` (persoonlijk, NIET het
+  brand-adres uit PLAN-APPLE-DEVELOPER — dat gaf een 401 bij `store-credentials`).
+- **Team ID:** `PTLV7AY4UL`
+- **Certificaat:** `Developer ID Application: Sjuul Smits (PTLV7AY4UL)` (Individual).
+- **Notary keychain-profiel:** `omnidj-notary` (opgeslagen via `notarytool store-credentials`).
+- **App-specific password:** label `notarytool-omnidj` op appleid.apple.com (niet terug te
+  zien; bij verlies nieuwe genereren).
+
+**Wat is gewijzigd deze sessie (code-side, NOG NIET gecommit — sandbox):**
+
+1. **`entitlements.plist`** — DOCTYPE-typo gefixt (`//Apple//DTD/PropertyList` →
+   `//Apple//DTDs/PropertyList`). Rest ongemoeid; entitlements waren al compleet.
+
+2. **`build_macos.sh` sign-blok robuust gemaakt** (was `--deep` zonder timestamp, wat Apple
+   afkeurt). Nieuwe volgorde van binnen naar buiten, elk met `--options runtime --timestamp`:
+   - alle `*.dylib` / `*.so`
+   - **alle `*.framework` bundles** (Python.framework e.d. — het binary heet `Python` zonder
+     extensie en zat NIET in de dylib/so-zoekstap → was de notarization-fail)
+   - gebundelde `ffmpeg` / `ffprobe`
+   - het hernoemde `Contents/MacOS/Omni DJ.bin` (met entitlements — de launcher-wrapper-truc
+     hernoemt het PyInstaller-binary, waardoor de oude signature ongeldig werd)
+   - de `.app` als geheel (met entitlements)
+
+3. **DMG-blok uitgebreid met sign + notarize + staple** — na `dmgbuild` signt het script nu
+   ook de DMG-verpakking zelf, notariseert hem en stapelt het ticket (alleen als
+   sign+notarize aan staan). Zonder dit gaf `spctl` op de `.dmg` "no usable signature"
+   (de app erbinnen was wel al genotariseerd, dus niet kritiek — maar nu volledig groen).
+
+**EINDRESULTAAT geverifieerd (beide `accepted`):**
+- `spctl -a -t exec -vv "dist/Omni DJ.app"` → `accepted / source=Notarized Developer ID`
+- `spctl -a -t open --context context:primary-signature -vv "dist/Omni DJ.dmg"` →
+  `accepted / source=Notarized Developer ID`
+
+**Twee notarization-fails die we onderweg opgelost hebben (voor de volgende keer):**
+- `invalid Info.plist ... Omni DJ.bin` → kwam doordat het hernoemde launcher-binary niet
+  was her-signed. Fix = expliciet `Omni DJ.bin` signen.
+- `Python.framework/.../Python: not signed with valid Developer ID + no secure timestamp`
+  → framework-binary werd overgeslagen. Fix = `*.framework`-zoekstap toegevoegd.
+
+**Build-commando (werkt nu end-to-end):**
+```
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ"
+source venv/bin/activate
+export APPLE_DEVELOPER_ID="Developer ID Application: Sjuul Smits (PTLV7AY4UL)"
+export APPLE_NOTARY_PROFILE="omnidj-notary"
+./build_macos.sh sign notarize dmg
+```
+(De twee `export`-regels gelden per Terminal-venster; opnieuw zetten na sluiten.)
+
+**Output:** `dist/Omni DJ.app` + `dist/Omni DJ.dmg`, beide notarized. Notarize-wachttijd
+bij Apple was deze keer ~enkele minuten ("Current status: In Progress" is normaal, niet
+afbreken).
+
+**⏭️ Open / volgende stappen:**
+1. **Git committen** (sandbox kan niet): Sjuul commit+pusht `entitlements.plist` +
+   `build_macos.sh` zelf.
+2. **DMG uploaden** naar `downloads.omnidj.com` (Cloudflare R2) — zie
+   `PLAN-DNS-TRANSIP-CLOUDFLARE` Stap 7.
+3. **Smoke-test op tweede Mac / vers user-account** — DMG downloaden, openen, geen
+   Gatekeeper-popup, app start, login werkt (PLAN-APPLE-DEVELOPER sectie 10).
+4. **Let op:** deze signed build is de PyInstaller-app (Chrome-tab-launcher). De Electron-
+   route (sessie 65) staat hier los van; met Electron neemt electron-builder het
+   signen/notarizen later over.
+
+---
+
+## sessie 65 (2026-05-30) — ICOON GEMAAKT · .APP HERBOUWD · WIZARD ORANJE · ELECTRON-PLAN
 
 > **Status:** vier dingen deze sessie. (1) App-icoon `.icns` gemaakt. (2) Sjuul heeft de
 > `.app` succesvol herbouwd + getest op zijn Mac. (3) Signup-wizard van goud naar oranje

@@ -149,10 +149,67 @@ if [[ "$MODE_SIGN" == "yes" ]]; then
         exit 1
     fi
     echo "→ Signen met identiteit: $APPLE_DEVELOPER_ID"
-    codesign --force --deep --options runtime \
+
+    # Apple raadt --deep af voor notarization. We signen daarom van binnen
+    # naar buiten: eerst alle ingebedde dylibs/.so's (elk met een secure
+    # --timestamp), daarna de gebundelde ffmpeg/ffprobe, en als laatste de
+    # .app zelf. Zonder --timestamp weigert notarization ("signature does
+    # not include a secure timestamp").
+    echo "  • embedded .dylib / .so files signen..."
+    find "$APP_PATH" \( -name "*.dylib" -o -name "*.so" \) -print0 \
+        | while IFS= read -r -d '' lib; do
+            codesign --force --options runtime --timestamp \
+                --sign "$APPLE_DEVELOPER_ID" "$lib"
+        done
+
+    # Ingebedde frameworks (bv. Python.framework) bevatten een uitvoerbaar
+    # binary zónder .dylib/.so-extensie (bv. .../Python.framework/Versions/
+    # 3.14/Python). Die werd door de zoekstap hierboven overgeslagen en hield
+    # zijn ongeldige, timestamp-loze handtekening — precies wat Apple's
+    # notarization afkeurde. We signen elk .framework hier expliciet (het
+    # versie-binnenste eerst, dan het framework als geheel).
+    echo "  • embedded .framework bundles signen..."
+    find "$APP_PATH" -name "*.framework" -type d -print0 \
+        | while IFS= read -r -d '' fw; do
+            # Sign het binary in elke Versions/<x>/ map (het echte
+            # uitvoerbare bestand binnen het framework).
+            find "$fw/Versions" -maxdepth 2 -type f -perm -u+x 2>/dev/null \
+                | while IFS= read -r fwbin; do
+                    codesign --force --options runtime --timestamp \
+                        --sign "$APPLE_DEVELOPER_ID" "$fwbin" || true
+                done
+            # Sign het framework als geheel.
+            codesign --force --options runtime --timestamp \
+                --sign "$APPLE_DEVELOPER_ID" "$fw"
+        done
+
+    echo "  • gebundelde ffmpeg / ffprobe signen..."
+    for bin in "$RESOURCES/bin/ffmpeg" "$RESOURCES/bin/ffprobe"; do
+        [[ -f "$bin" ]] && codesign --force --options runtime --timestamp \
+            --sign "$APPLE_DEVELOPER_ID" "$bin"
+    done
+
+    # De launcher-wrapper-stap hierboven hernoemde het echte PyInstaller-
+    # binary naar "Omni DJ.bin" en zette er een bash-launcher voor in de
+    # plaats. Door dat verplaatsen werd de PyInstaller-signature van .bin
+    # ongeldig. We her-signen het hier expliciet (met entitlements, want het
+    # is de daadwerkelijke Python-executable die JIT/dyld nodig heeft),
+    # vóór we de .app-bundle als geheel signen.
+    echo "  • hernoemd PyInstaller-binary (Omni DJ.bin) her-signen..."
+    if [[ -f "$APP_PATH/Contents/MacOS/Omni DJ.bin" ]]; then
+        codesign --force --options runtime --timestamp \
+            --entitlements entitlements.plist \
+            --sign "$APPLE_DEVELOPER_ID" \
+            "$APP_PATH/Contents/MacOS/Omni DJ.bin"
+    fi
+
+    echo "  • hoofd-app signen (met entitlements)..."
+    codesign --force --options runtime --timestamp \
         --entitlements entitlements.plist \
         --sign "$APPLE_DEVELOPER_ID" \
         "$APP_PATH"
+
+    echo "  • signing verifiëren..."
     codesign --verify --strict --verbose=2 "$APP_PATH"
 fi
 
@@ -205,6 +262,26 @@ text_size = 16
 EOF
     dmgbuild -s /tmp/omnidj_dmg_settings.py "Omni DJ" "dist/Omni DJ.dmg"
     rm -f /tmp/omnidj_dmg_settings.py
+
+    # De app in de DMG is al genotariseerd, maar de DMG-verpakking zelf is
+    # nog ongesigned (spctl op de .dmg geeft anders "no usable signature").
+    # Als we ook signen+notarizen, dan geeft Gatekeeper geen enkele melding,
+    # ook niet bij het openen van de DMG. Alleen zinvol als sign+notarize aan.
+    if [[ "$MODE_SIGN" == "yes" && "$MODE_NOTARIZE" == "yes" ]]; then
+        DMG_PATH="dist/Omni DJ.dmg"
+        echo "→ DMG signen..."
+        codesign --force --timestamp \
+            --sign "$APPLE_DEVELOPER_ID" "$DMG_PATH"
+
+        echo "→ DMG notarizen (kan 1–15 min duren)..."
+        xcrun notarytool submit "$DMG_PATH" \
+            --keychain-profile "$APPLE_NOTARY_PROFILE" \
+            --wait
+
+        echo "→ DMG staplen..."
+        xcrun stapler staple "$DMG_PATH"
+        xcrun stapler validate "$DMG_PATH"
+    fi
 fi
 
 echo ""
