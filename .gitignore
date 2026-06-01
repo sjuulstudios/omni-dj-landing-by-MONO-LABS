@@ -26,6 +26,11 @@ build/
 dist/
 *.spec.bak
 
+# ----- Vendored static ffmpeg/ffprobe (sessie 66) -----
+# Groot (~80-100 MB elk) en >100 MB-grens van GitHub. Niet in git; één keer
+# downloaden per build-machine. Zie PLAN-FFMPEG-BUNDLE-FIX-2026-05-31.md.
+Omni DJ/vendor/ffmpeg/
+
 # ----- PyInstaller tijdelijke output -----
 *.toc
 *.pkg

@@ -22,6 +22,16 @@ import shutil
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
+# SESSIE 66 — centrale resolver voor de gebundelde ffmpeg/ffprobe binaries.
+# Kale 'ffmpeg'/'ffprobe' faalden in de gesignde .app (PATH-afhankelijk +
+# Homebrew-dylibs die de hardened runtime weigert). media_tools.resolve()
+# werkt ook in de ProcessPoolExecutor-workers omdat het op sys.frozen /
+# sys.executable steunt, die PyInstaller in child-processen correct zet.
+import media_tools
+
+FFMPEG = media_tools.ffmpeg()
+FFPROBE = media_tools.ffprobe()
+
 
 # ---------------------------------------------------------------------------
 # Hardware encoder detection (called once in main process, passed to workers)
@@ -39,7 +49,7 @@ def detect_hw_encoder():
         # macOS: VideoToolbox (Apple Silicon / Intel GPU)
         try:
             result = subprocess.run(
-                ['ffmpeg', '-hide_banner', '-encoders'],
+                [FFMPEG, '-hide_banner', '-encoders'],
                 capture_output=True, text=True, timeout=5
             )
             if 'h264_videotoolbox' in result.stdout:
@@ -52,7 +62,7 @@ def detect_hw_encoder():
         # Linux: NVENC (NVIDIA GPU)
         try:
             result = subprocess.run(
-                ['ffmpeg', '-hide_banner', '-encoders'],
+                [FFMPEG, '-hide_banner', '-encoders'],
                 capture_output=True, text=True, timeout=5
             )
             if 'h264_nvenc' in result.stdout:
@@ -114,7 +124,7 @@ def extract_audio(video_path, output_path):
     """
     print(f"  Extracting audio from video (analysis-only at 11025 Hz)...")
     cmd = [
-        'ffmpeg', '-y',
+        FFMPEG, '-y',
         '-i', video_path,
         '-vn', '-acodec', 'pcm_s16le', '-ar', '11025', '-ac', '1',
         output_path
@@ -133,7 +143,7 @@ def extract_audio(video_path, output_path):
 def get_video_info(video_path):
     """Get video dimensions and codec info."""
     cmd = [
-        'ffprobe', '-v', 'quiet', '-print_format', 'json',
+        FFPROBE, '-v', 'quiet', '-print_format', 'json',
         '-show_streams', '-show_format', video_path
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -238,9 +248,15 @@ def _ffmpeg_has_drawtext():
     if _HAS_DRAWTEXT is not None:
         return _HAS_DRAWTEXT
     try:
-        r = subprocess.run(['ffmpeg', '-hide_banner', '-filters'],
+        r = subprocess.run([FFMPEG, '-hide_banner', '-filters'],
                            capture_output=True, text=True, timeout=5)
-        _HAS_DRAWTEXT = (' drawtext ' in r.stdout) or ('\ndrawtext ' in r.stdout) or ('T..  drawtext' in r.stdout)
+        # SESSIE 67 — robuuste detectie. `ffmpeg -filters` zet voor elke filter
+        # een flag-kolom (bv. "T.." of "TSC"), gevolgd door variabele spaties en
+        # dan de naam. De oude check zocht naar exact "T..  drawtext" (dubbele
+        # spatie) en miste daardoor de Martin-Riedl static build (die "T. drawtext"
+        # met één spatie print) → captions werden stil overgeslagen. We matchen nu
+        # op de filternaam "drawtext" als los woord, ongeacht de flag-kolom.
+        _HAS_DRAWTEXT = re.search(r'(?m)^\s*\S+\s+drawtext\b', r.stdout) is not None
         if not _HAS_DRAWTEXT:
             sys.stderr.write(
                 "[cutter] WARNING: ffmpeg is built without libfreetype → drawtext filter missing. "
@@ -1036,7 +1052,7 @@ def _build_landscape_cmd(video_path, start, duration, output_path,
     afilter_str = _build_audio_filter(normalize_audio, fade_duration, duration)
 
     cmd = [
-        'ffmpeg', '-y',
+        FFMPEG, '-y',
         '-ss', str(start),        # Fast keyframe seek BEFORE input
         '-i', video_path,
         '-t', str(duration),
@@ -1144,7 +1160,7 @@ def _build_vertical_cmd(video_path, start, duration, output_path,
     afilter_str = _build_audio_filter(normalize_audio, fade_duration, duration)
 
     cmd = [
-        'ffmpeg', '-y',
+        FFMPEG, '-y',
         '-ss', str(start),        # Fast keyframe seek BEFORE input
         '-i', video_path,
         '-t', str(duration),
@@ -1184,7 +1200,7 @@ def _build_proxy_cmd(video_path, start, duration, output_path,
         vfilters.append(f"fade=t=out:st={fade_out_st}:d={fade_duration}")
     afilter_str = _build_audio_filter(normalize_audio, fade_duration, duration)
     return [
-        'ffmpeg', '-y',
+        FFMPEG, '-y',
         '-ss', str(start),        # Fast keyframe seek BEFORE input
         '-i', video_path,
         '-t', str(duration),
@@ -1206,7 +1222,7 @@ def build_keyframe_index(video_path, max_seconds=None):
     set whose duration > 30 minutes; cached on the job. None if probe fails.
     """
     cmd = [
-        'ffprobe', '-v', 'error',
+        FFPROBE, '-v', 'error',
         '-skip_frame', 'nokey',
         '-select_streams', 'v:0',
         '-show_entries', 'frame=pts_time,key_frame',
@@ -1301,7 +1317,7 @@ def _build_thumbnail_cmd(video_path, timestamp, output_path, width=1080):
     retina cards render crisply. `-q:v 2` keeps each JPG <120KB.
     """
     return [
-        'ffmpeg', '-y',
+        FFMPEG, '-y',
         '-ss', str(timestamp),    # Fast keyframe seek
         '-i', video_path,
         '-frames:v', '1',
@@ -2003,7 +2019,7 @@ def export_with_preset(source_clip, preset, output_path):
         raise ValueError(f"Unknown preset: {preset}")
 
     cmd = [
-        'ffmpeg', '-y',
+        FFMPEG, '-y',
         '-i', source_clip,
         '-vf', vf,
         '-af', 'aresample=44100',
@@ -2040,7 +2056,7 @@ def extract_clip_filmstrip(clip_path, output_dir, clip_index, num_frames=40):
         fpath = os.path.join(output_dir, fname)
         if not os.path.exists(fpath):
             cmd = [
-                'ffmpeg', '-y',
+                FFMPEG, '-y',
                 '-ss', str(t),
                 '-i', clip_path,
                 '-frames:v', '1',
@@ -2074,7 +2090,7 @@ def split_clip_at(source_clip, split_at, output_dir, clip_index, clip_type):
         (path_b, ['-ss', str(split_at)]),
     ]:
         cmd = [
-            'ffmpeg', '-y',
+            FFMPEG, '-y',
             '-i', source_clip,
             *extra_args,
             '-c:v', encoder, *quality_args,
@@ -2149,7 +2165,7 @@ def export_clip_with_settings(source_clip, output_dir, clip_index,
     out_path = os.path.join(exports_dir, out_name)
 
     # Build ffmpeg command
-    cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'warning', '-i', source_clip]
+    cmd = [FFMPEG, '-y', '-hide_banner', '-loglevel', 'warning', '-i', source_clip]
 
     if encoder is None:
         # Stream copy: no re-encode. Note: -r and -s have no effect with -c copy,
@@ -2204,7 +2220,7 @@ def export_clip_with_settings(source_clip, output_dir, clip_index,
     duration_s = 0.0
     try:
         probe = subprocess.run(
-            ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+            [FFPROBE, '-v', 'error', '-show_entries', 'format=duration',
              '-of', 'default=noprint_wrappers=1:nokey=1', out_path],
             capture_output=True, text=True, timeout=10
         )

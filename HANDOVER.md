@@ -4,11 +4,140 @@
 
 ---
 
-## START HIER — sessie 66 (2026-05-31) — CODE-SIGNING + NOTARIZATION GELUKT ✅
+## START HIER — sessie 67 (2026-05-31) — DRAWTEXT-FIX + SECURITY S1-S4 UITGEVOERD
 
+> Diagnose + details: `PLAN-SESSIE67-DIAGNOSE-FIX-SECURITY-2026-05-31.md`.
+> De "login-blocker" was GEEN bug: Sjuul had het verkeerde wachtwoord ingetypt voor
+> `business@sjuulstudios.com`. DEEL 2 (drawtext) + DEEL 3 (security S1-S4) zijn UITGEVOERD.
+
+### ⚠️ EERST DOEN VOLGENDE SESSIE — afronden + uitrollen
+1. **HANDMATIG (dashboard):** Supabase → Auth → **leaked-password-protection AANZETTEN**.
+   Dit is de enige resterende advisor-warning; kan niet via SQL. Daarna advisors herrun.
+2. **git commit** (sandbox kan het niet): `Omni DJ/cutter.py`, `Omni DJ/app.py`,
+   `Omni DJ/supabase/migrations/004_sessie67_security_definer_hardening.sql`.
+3. **Rebuild:** `./build_macos.sh sign notarize dmg` → nieuwe DMG → **vervang op
+   `downloads.omnidj.com`** (zelfde naam `Omni-DJ-1.0.0.dmg`).
+4. **Smoke-test 2e Mac:** login, upload van een set BINNEN de home-map (moet werken),
+   set BUITEN home (moet 403 geven), export MET captions (moet nu tekst tonen).
+
+### ✅ DEEL 2 — drawtext-fix (cutter.py ~regel 253) — DONE, code-side
+`_ffmpeg_has_drawtext()` gebruikt nu regex `(?m)^\s*\S+\s+drawtext\b` i.p.v. de te strakke
+`'T..  drawtext'`. Herkent de Martin-Riedl static build (`T. drawtext`, 1 spatie). Getest tegen
+beide ffmpeg-formats + negatieve cases. Captions worden niet meer stil overgeslagen.
+
+### ✅ DEEL 3 — security S1-S4 — DONE
+- **S1+S4 (app.py, na rate-limiter-blok):** `@app.before_request _security_gate` = Host-header
+  allowlist (127.0.0.1/localhost:5555 → blokkeert DNS-rebinding, 421) + CSRF-check op
+  POST/PUT/PATCH/DELETE via Sec-Fetch-Site met Origin-fallback (cross-site → 403). Uit bij
+  `OMNI_DJ_BIND=0.0.0.0`. `@app.after_request _security_headers` = nosniff, X-Frame-Options DENY,
+  Referrer-Policy, CSP, Permissions-Policy, COOP, en **HSTS alleen over https/X-Forwarded-Proto**.
+  CSP laat 'unsafe-inline' toe (SPA = 1 inline bestand) + Google Fonts + Supabase + Stripe
+  form-action. Getest via Flask test_client: alle 6 scenario's groen.
+- **S2 (app.py):** helper `_path_within_home()` (realpath home-whitelist). Toegepast op
+  `/api/upload-local` (input-pad, 403 buiten home) én `/api/upload-local/scan` (geen mapinhoud-
+  leak buiten home).
+- **S3 (Supabase, AL LIVE + migration 004):** REVOKE EXECUTE op `handle_new_user()` +
+  `rls_auto_enable()` voor anon/authenticated/public; `search_path=''` op `handle_updated_at()`.
+  Advisors herrun → 3 warnings weg, alleen leaked-password (stap 1) blijft. Triggers nog intact,
+  signup-flow ongebroken.
+
+### ✅ Install-check (sessie 67): beta-tester heeft NIETS extra nodig
+- ffmpeg/ffprobe (static arm64) + Python + libs in de .app. Publieke keys in `runtime_config.py`.
+  Geen Homebrew/download/pip. Vereiste: **Apple Silicon (arm64), macOS 11+**. Intel werkt NIET.
+
+### ✅ Security-audit-conclusie: de 4 grote vibecode-killers waren al AFWEZIG
+- Geen secrets in git (`.env` nooit gecommit) of in de bundle. RLS aan + correct (user kan eigen
+  `plan`/`role`/`stripe_*` NIET wijzigen). Geen shell-injection, geen path-traversal, `debug=False`,
+  loopback-bind, export-map home-whitelist. S1-S4 waren hardening, geen kritieke gaten.
+
+> Sessie 66 detail (code-signing, DNS, R2, ffmpeg static-binary fix, logout-knop) staat
+> hieronder ongewijzigd.
+
+### ✅ ffmpeg-bundeling gefixt (sessie 66) — code-side klaar, zit nog NIET in een nieuwe build-rebuild voor login
+> Oorzaak van de oude "ffprobe failed": build kopieerde Homebrew-ffmpeg zonder dylibs →
+> hardened runtime weigerde ze (different Team IDs). Opgelost met **static binaries**.
+- **Static arm64 ffmpeg+ffprobe** (Martin-Riedl) staan in `Omni DJ/vendor/ffmpeg/` (gitignored,
+  ~63 MB elk). Geverifieerd: `otool -L` toont geen /opt/homebrew; drawtext aanwezig; draait op
+  testbestand zonder dyld-crash.
+- **Code (commit nog te doen):**
+  - nieuw `media_tools.py` — resolvet ffmpeg/ffprobe naar bundle-pad (Resources/bin) met
+    PATH-fallback; werkt ook in ProcessPoolExecutor-workers.
+  - `app.py` + `cutter.py` — alle kale `'ffmpeg'`/`'ffprobe'` vervangen door `media_tools`.
+  - `build_macos.sh` — gebruikt nu `vendor/ffmpeg/` static binaries + vangrail die de build
+    faalt als er tóch externe dylibs in zitten. DMG-blok kreeg sign+notarize+staple.
+  - `.gitignore` — `Omni DJ/vendor/ffmpeg/` uitgesloten.
+- **Rebuild gedaan deze sessie**: `./build_macos.sh sign notarize dmg` → Accepted. De draaiende
+  app (`dist/Omni DJ.app`) gebruikt nu de static ffmpeg (`/api/capabilities` toont path =
+  Resources/bin/ffmpeg, version 8.1.1 martin-riedl). Oude `/Applications`-versie vervangen door
+  nieuwe build.
+- **Bekende kleine bug (nog te fixen):** `cutter.py` `_ffmpeg_has_drawtext()` (regel ~253)
+  herkent de Martin-Riedl drawtext-regel niet (zoekt `'T..  drawtext'`, echt = `'T. drawtext'`)
+  → app rapporteert `drawtext:false` terwijl het filter er wél is. Captions zouden hierdoor
+  overgeslagen worden. 1-regel-fix: matchpatroon verruimen.
+
+### ✅ Logout-knop toegevoegd (sessie 66, code-side — nog niet in build)
+- v2-redesign verborg het oude `.sidebar-account`-blok (met `#ac-logout`) → geen zichtbare
+  uitlog-knop meer. Toegevoegd: `#settings-logout`-knop in Settings → Profile-sectie
+  (`static/index.html` ~regel 10671) + handler (~regel 25005) die `clearSession()` +
+  `showAuthOverlay('login')` aanroept. Zit nog NIET in de gebundelde app → komt mee bij
+  volgende rebuild.
+
+### Te committen + rebuilden (sessie 67):
+1. Eerst login-blocker oplossen (juist account).
+2. `_ffmpeg_has_drawtext` drawtext-patroon fixen.
+3. git commit: media_tools.py, app.py, cutter.py, build_macos.sh, .gitignore, static/index.html.
+4. `./build_macos.sh sign notarize dmg` → nieuwe DMG → vervang op `downloads.omnidj.com`.
+5. Smoke-test op 2e Mac.
+
+---
+
+### Eerdere sessie-66-mijlpalen (code-signing + DNS + R2)
+
+> **Status:** (1) PyInstaller `.app` + `.dmg` volledig **gesigned + genotariseerd** door Apple
+> (gepusht, commit a59a31b). (2) **DNS-migratie omnidj.com TransIP → Cloudflare** — Active. (3)
+> R2 download-hosting LIVE.
+
+### DNS-migratie omnidj.com (sessie 66, via Chrome MCP)
+- Cloudflare-account = `Business@sjuulstudios.com` (account-id `eef55e1e27b6c2f10eca8de344a9795e`).
+  Bevat al `clipdroplive.com` (rood waarschuwingsicoon) + Pages-project `djclips-nl-by-mono-labs`.
+- `omnidj.com` toegevoegd via **Connect a domain** (geen registratie-transfer), **Free**-plan,
+  0 bestaande DNS-records (klopt — was nergens aan gekoppeld).
+- **Cloudflare wees deze 2 nameservers toe** (in TransIP gezet door Sjuul):
+  - `jaime.ns.cloudflare.com`
+  - `marlowe.ns.cloudflare.com`
+  - LET OP voor later: Cloudflare toonde óók `konnor`/`mary` als "delete your other nameservers"
+    voorbeeld — dat is NIET de toewijzing. Sjuul had ze eerst per ongeluk ingevuld; gecorrigeerd
+    naar jaime/marlowe vóór opslaan.
+- Nameservers opgeslagen bij TransIP. **Propagatie loopt** — check met `dig +short NS omnidj.com`
+  (verwacht jaime/marlowe). Cloudflare mailt + zet domein op "Active" zodra gedetecteerd.
+- **Propagatie was binnen minuten klaar** (`dig` toont jaime/marlowe; Cloudflare-mail "now
+  boosting omnidj.com"). Domein **Active**.
+
+### R2 download-hosting LIVE (sessie 66)
+- R2 geactiveerd op het account (Free-tier: 10GB storage, 1M Class A, 10M Class B per maand;
+  zero egress). Voor DMG-hosting blijft Sjuul bij 100/1.000/10.000 users ruim binnen gratis.
+- Bucket **`omnidj-downloads`** aangemaakt (Standard, WEUR/Western Europe).
+- Custom domain **`downloads.omnidj.com`** gekoppeld aan de bucket (Cloudflare maakte de CNAME
+  + SSL automatisch; Public Access = Enabled).
+- DMG geüpload door Sjuul met nette naam **`Omni-DJ-1.0.0.dmg`** (203.808.957 bytes).
+- **Download-URL geverifieerd LIVE:** `https://downloads.omnidj.com/Omni-DJ-1.0.0.dmg`
+  → HEAD geeft 200 / application/octet-stream / 203808957 bytes; echte download in Chrome
+  voltooide ("Done", 194 MB).
+- **ENIGE open eindstap:** smoke-test op een 2e Mac (download via de URL, openen, bevestig
+  geen Gatekeeper-popup) — kan alleen Sjuul, want zijn eigen Mac vertrouwt zijn cert sowieso.
+
+### Cloudflare-account referentie
+- Account = `Business@sjuulstudios.com`, account-id `eef55e1e27b6c2f10eca8de344a9795e`.
+- Bevat ook `clipdroplive.com` (rood waarschuwingsicoon) + Pages-project `djclips-nl-by-mono-labs`.
+- DNS-records uit PLAN-DNS Stap 4 (apex/www/app → Pages, email-routing, DMARC) zijn nog NIET
+  aangemaakt — alleen het `downloads`-CNAME staat (auto via R2). Landingspagina-hosting +
+  email-routing zijn aparte vervolgstappen.
+
+### Code-signing (sessie 66)
 > **Status:** de PyInstaller `.app` + `.dmg` zijn nu volledig **gesigned + genotariseerd**
 > door Apple (`status: Accepted`, ticket gestapeld). Beta-testers krijgen geen
 > "unidentified developer"-popup meer. Gedaan op Sjuul's Mac, Individual Apple-account.
+> Commit a59a31b gepusht naar GitHub (origin/main).
 
 **Apple-gegevens (vastleggen, herbruikbaar):**
 - **Apple ID voor Developer + notary:** `sjuulsmits@gmail.com` (persoonlijk, NIET het

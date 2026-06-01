@@ -117,9 +117,40 @@ fi
 echo "→ ffmpeg + ffprobe in de bundle kopiëren..."
 RESOURCES="$APP_PATH/Contents/Resources"
 mkdir -p "$RESOURCES/bin"
-cp "$(command -v ffmpeg)"  "$RESOURCES/bin/ffmpeg"
-cp "$(command -v ffprobe)" "$RESOURCES/bin/ffprobe"
+
+# SESSIE 66 — we gebruiken VENDORED STATIC binaries i.p.v. de Homebrew-ffmpeg.
+# Reden: Homebrew-ffmpeg laadt zijn dylibs uit /opt/homebrew/Cellar/... Onder
+# de hardened runtime (vereist voor notarization) weigert macOS die dylibs
+# (different Team IDs) → ffprobe abort → elke upload faalt in de gesignde .app,
+# en faalt sowieso bij testers zonder Homebrew. Static binaries hebben geen
+# externe dylibs en werken overal. Leg ze in vendor/ffmpeg/ (zie
+# PLAN-FFMPEG-BUNDLE-FIX-2026-05-31.md voor download-bron).
+VENDOR_FFMPEG="vendor/ffmpeg/ffmpeg"
+VENDOR_FFPROBE="vendor/ffmpeg/ffprobe"
+
+if [[ ! -f "$VENDOR_FFMPEG" || ! -f "$VENDOR_FFPROBE" ]]; then
+    echo "FOUT: static ffmpeg/ffprobe niet gevonden in vendor/ffmpeg/."
+    echo "Download arm64 static builds (bv. https://ffmpeg.martin-riedl.de/) en"
+    echo "plaats ze als vendor/ffmpeg/ffmpeg en vendor/ffmpeg/ffprobe."
+    echo "Zie PLAN-FFMPEG-BUNDLE-FIX-2026-05-31.md."
+    exit 1
+fi
+
+cp "$VENDOR_FFMPEG"  "$RESOURCES/bin/ffmpeg"
+cp "$VENDOR_FFPROBE" "$RESOURCES/bin/ffprobe"
 chmod +x "$RESOURCES/bin/ffmpeg" "$RESOURCES/bin/ffprobe"
+
+# Vangrail: faal de build als de binaries tóch externe (Homebrew/Cellar)
+# dylibs nodig hebben — dat is precies wat notarization later zou breken.
+for b in "$RESOURCES/bin/ffmpeg" "$RESOURCES/bin/ffprobe"; do
+    if otool -L "$b" 2>/dev/null | grep -qE "/opt/homebrew|/usr/local/Cellar|@rpath"; then
+        echo "FOUT: $b heeft externe dylib-afhankelijkheden (geen static build):"
+        otool -L "$b" | grep -E "/opt/homebrew|/usr/local/Cellar|@rpath"
+        echo "Gebruik een écht static binary. Zie PLAN-FFMPEG-BUNDLE-FIX-2026-05-31.md."
+        exit 1
+    fi
+done
+echo "  • static ffmpeg/ffprobe geverifieerd (geen externe dylibs)"
 
 # Belangrijk: in app.py / cutter.py wordt ffmpeg via PATH gezocht. Een
 # kleine launcher-wrapper zet PATH zodat de gebundelde binaries gevonden

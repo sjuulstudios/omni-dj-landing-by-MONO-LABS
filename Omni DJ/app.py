@@ -46,6 +46,9 @@ from cutter import (
     slice_clip,
 )
 from uploader import get_platform_status, upload_to_youtube, upload_to_tiktok, upload_to_instagram, upload_to_facebook
+# SESSIE 66 — centrale resolver voor de gebundelde ffmpeg/ffprobe binaries.
+# Voorkomt "ffprobe failed" in de gesignde .app (kale naam → PATH-afhankelijk).
+import media_tools
 
 from auth import (
     health_check as auth_health_check,
@@ -154,6 +157,131 @@ except ImportError:
 
     def _rate_limit_key():
         return 'noop'
+
+# ---------------------------------------------------------------------------
+# SESSIE 67 — Lokale-server hardening (S1 + S4)
+# ---------------------------------------------------------------------------
+# De app draait op 127.0.0.1:5555. Dat is bereikbaar vanuit de browser, dus
+# een kwaadaardige website die je open hebt staan kan in theorie requests naar
+# de loopback-poort sturen (CSRF), of via DNS-rebinding een eigen hostname laten
+# resolven naar 127.0.0.1 en zo de same-origin-policy omzeilen.
+#
+# Twee verdedigingslagen:
+#   S1a Host-header check  — blokkeert DNS-rebinding. Een rebinding-aanval komt
+#       binnen met de hostname van de aanvaller in de Host-header; wij accepteren
+#       alleen localhost/127.0.0.1. (De browser kan de Host-header niet vervalsen.)
+#   S1b Origin/Sec-Fetch check op state-changing requests — blokkeert cross-site
+#       POST/PUT/DELETE (CSRF). Same-origin en directe navigatie blijven werken.
+#   S4  Security headers op elke response (nosniff, X-Frame-Options, CSP, etc.).
+#
+# Bewust GEEN CSRF-token-systeem: de echte API-acties vereisen al een Bearer
+# token in de Authorization-header, en een cross-site pagina kan dat token niet
+# uit onze localStorage lezen (same-origin policy). De Host+Origin-checks dekken
+# de resterende vector af zonder de single-page-app te breken.
+
+# Toegestane Host-waarden. OMNI_DJ_PORT laat een afwijkende poort toe.
+_ALLOWED_PORT = os.environ.get('OMNI_DJ_PORT', '5555')
+_ALLOWED_HOSTS = {
+    f'127.0.0.1:{_ALLOWED_PORT}', f'localhost:{_ALLOWED_PORT}',
+    '127.0.0.1', 'localhost',
+}
+# Als de gebruiker bewust op het LAN bindt (OMNI_DJ_BIND=0.0.0.0) zetten we de
+# Host-check uit — dan weet hij wat hij doet en bepaalt zijn eigen netwerk wie
+# erbij kan. Loopback (default) blijft streng.
+_HOST_CHECK_ON = os.environ.get('OMNI_DJ_BIND', '127.0.0.1') in ('127.0.0.1', 'localhost')
+
+# Methodes die state veranderen → Origin moet kloppen (of afwezig zijn bij een
+# directe, niet-cross-site request).
+_STATE_CHANGING = {'POST', 'PUT', 'PATCH', 'DELETE'}
+
+
+@app.before_request
+def _security_gate():
+    """S1 — weer DNS-rebinding en cross-site state-changing requests af."""
+    # S1a — Host-header allowlist (alleen bij loopback-bind).
+    if _HOST_CHECK_ON:
+        host = (request.host or '').lower()
+        if host and host not in _ALLOWED_HOSTS:
+            log.warning('Geweigerd: onverwachte Host-header %r', host)
+            return jsonify({'ok': False, 'error': 'Invalid host'}), 421
+
+    # S1b — CSRF: cross-site state-changing requests blokkeren. We leunen op
+    # Sec-Fetch-Site (moderne browsers) met een Origin-fallback. 'same-origin'
+    # en 'none' (directe navigatie / adresbalk) zijn oké; 'cross-site' niet.
+    if request.method in _STATE_CHANGING:
+        sec_site = request.headers.get('Sec-Fetch-Site')
+        if sec_site is not None:
+            if sec_site not in ('same-origin', 'none'):
+                log.warning('Geweigerd: cross-site %s (Sec-Fetch-Site=%s)',
+                            request.method, sec_site)
+                return jsonify({'ok': False, 'error': 'Cross-site request geweigerd'}), 403
+        else:
+            # Oudere browser zonder Sec-Fetch-Site: val terug op Origin-header.
+            origin = request.headers.get('Origin')
+            if origin:
+                allowed_origins = {f'http://{h}' for h in _ALLOWED_HOSTS} | \
+                                  {f'https://{h}' for h in _ALLOWED_HOSTS}
+                if origin.lower() not in allowed_origins:
+                    log.warning('Geweigerd: cross-site Origin %r', origin)
+                    return jsonify({'ok': False, 'error': 'Cross-site request geweigerd'}), 403
+            # Geen Origin én geen Sec-Fetch-Site: same-origin form-post of een
+            # niet-browser-client (curl). Doorlaten — de Bearer-token-gate op de
+            # API-routes is dan de feitelijke bescherming.
+    return None
+
+
+# S4 — Content Security Policy. 'self' + de externe origins die de SPA echt
+# gebruikt (Google Fonts). Inline script/style zijn nodig omdat de hele app
+# één groot inline-bestand is; 'unsafe-inline' is hier acceptabel want alle
+# content is door ons gegenereerd en wordt lokaal geserveerd (geen user-HTML).
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com data:; "
+    "img-src 'self' data: blob:; "
+    "media-src 'self' blob: data:; "
+    "connect-src 'self' https://lbabsffxefkrxwzkbzar.supabase.co; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self' https://checkout.stripe.com https://billing.stripe.com"
+)
+
+
+@app.after_request
+def _security_headers(resp):
+    """S4 — defensieve HTTP-headers op elke response."""
+    resp.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    resp.headers.setdefault('X-Frame-Options', 'DENY')
+    resp.headers.setdefault('Referrer-Policy', 'no-referrer')
+    resp.headers.setdefault('Content-Security-Policy', _CSP)
+    resp.headers.setdefault(
+        'Permissions-Policy',
+        'geolocation=(), camera=(), microphone=(), payment=()',
+    )
+    resp.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
+    # HSTS: alleen zinvol/geldig over HTTPS. De lokale app draait over http op
+    # loopback, dus we zetten 'm alleen als de request echt over TLS binnenkwam
+    # (bv. achter een reverse proxy op omnidj.com). Op http://127.0.0.1 negeren
+    # browsers HSTS toch, maar we sturen 'm dan ook niet mee.
+    if request.is_secure or request.headers.get('X-Forwarded-Proto') == 'https':
+        resp.headers.setdefault(
+            'Strict-Transport-Security',
+            'max-age=31536000; includeSubDomains',
+        )
+    return resp
+
+
+def _path_within_home(path):
+    """SESSIE 67 (S2) — True als `path` binnen de home-map van de gebruiker valt.
+    realpath'd zodat symlinks geen uitweg buiten home bieden. Gebruikt door de
+    input-pad-validatie van /api/upload-local (zelfde regel als de export-map)."""
+    try:
+        real_target = os.path.realpath(os.path.expanduser(path))
+        real_home = os.path.realpath(os.path.expanduser('~'))
+        return real_target == real_home or real_target.startswith(real_home + os.sep)
+    except OSError:
+        return False
 
 # ---------------------------------------------------------------------------
 # Bucket-D2 large-file pipeline flag (2026-04-26)
@@ -617,7 +745,7 @@ def _validate_video_file(path):
     show a frame counter without an extra ffprobe call.
     """
     cmd = [
-        'ffprobe', '-v', 'quiet', '-print_format', 'json',
+        media_tools.ffprobe(), '-v', 'quiet', '-print_format', 'json',
         '-show_streams', '-show_format', path
     ]
     try:
@@ -733,7 +861,7 @@ def _generate_filmstrip_lazy(video_path, output_dir, num_frames=60, height=80,
         if os.path.exists(fpath):
             return (i, t, fname, True)
         cmd = [
-            'ffmpeg', '-y',
+            media_tools.ffmpeg(), '-y',
             '-ss', str(t),
             '-i', video_path,
             '-frames:v', '1',
@@ -1425,7 +1553,7 @@ def api_debug_logs():
     # System info — no PII, just versions.
     try:
         ffmpeg_version = subprocess.run(
-            ['ffmpeg', '-version'],
+            [media_tools.ffmpeg(), '-version'],
             capture_output=True, text=True, timeout=5
         ).stdout.splitlines()[0] if subprocess else 'subprocess not available'
     except Exception as e:
@@ -3505,7 +3633,11 @@ def capabilities():
     platforms = get_platform_status()
 
     # ffmpeg presence + version + videotoolbox encoder probe
-    ffmpeg_path = shutil.which('ffmpeg')
+    # SESSIE 66 — via media_tools zodat het rapport de daadwerkelijk gebruikte
+    # (gebundelde) binary toont, niet alleen de PATH-versie.
+    ffmpeg_path = media_tools.ffmpeg()
+    if not os.path.isabs(ffmpeg_path):
+        ffmpeg_path = shutil.which(ffmpeg_path)
     ffmpeg_version = None
     has_videotoolbox = False
     if ffmpeg_path:
@@ -3850,6 +3982,11 @@ def upload_local_scan():
         return jsonify({'error': 'Path does not exist'}), 404
     if not os.path.isdir(raw):
         return jsonify({'error': 'Path is not a folder'}), 400
+    # SESSIE 67 (S2) — zelfde home-whitelist als upload-local. Voorkomt dat dit
+    # endpoint mapinhoud buiten de gebruikersmap lekt (info-disclosure).
+    if not _path_within_home(raw):
+        return jsonify({'error': 'Map moet binnen je gebruikersmap liggen.',
+                        'reason': 'scan_path_outside_home'}), 403
     files = _scan_folder_for_videos(raw)
     return jsonify({'folder': raw, 'count': len(files),
                     'files': files,
@@ -3913,6 +4050,19 @@ def upload_local():
 
     if not os.path.isfile(raw_path):
         return jsonify({'error': f'Path is not a file: {raw_path}'}), 400
+
+    # SESSIE 67 (S2) — home-whitelist. De export-map was al beperkt tot de
+    # gebruikersmap; we doen hetzelfde voor het INPUT-pad. Voorkomt dat (via een
+    # CSRF/DNS-rebinding-poging, of een rogue client) een willekeurig systeembestand
+    # buiten de home-map als "DJ-set" geregistreerd en geserveerd wordt
+    # (bv. /etc/passwd, ~/.ssh/...). realpath dekt symlink-uitwegen af.
+    if not _path_within_home(raw_path):
+        return jsonify({
+            'error': 'Voor de veiligheid mag het bronbestand alleen binnen je '
+                     'gebruikersmap liggen (~/Desktop, ~/Documents, ~/Downloads, '
+                     '~/Movies of subfolders daarvan).',
+            'reason': 'input_path_outside_home',
+        }), 403
 
     # Reject extensions we can't actually read with ffmpeg
     ext = os.path.splitext(raw_path)[1].lower()
@@ -4724,7 +4874,7 @@ def _derive_with_tracking(job_id, target, ratio, source_video_path, tracking_pat
     out_path = os.path.join(job_output_dir, out_name)
 
     cmd = [
-        'ffmpeg', '-y',
+        media_tools.ffmpeg(), '-y',
         '-ss', str(start),
         '-i', source_video_path,
         '-t', str(duration),
@@ -4878,9 +5028,9 @@ def api_derive_ratio(job_id):
         out_w, out_h = 1080, 1350
 
     cmd = [
-        'ffmpeg', '-y', '-i', src,
+        media_tools.ffmpeg(), '-y', '-i', src,
         '-vf', crop_filter,
-        '-c:v', 'h264_videotoolbox' if shutil.which('ffmpeg') else 'libx264',
+        '-c:v', 'h264_videotoolbox' if sys.platform == 'darwin' else 'libx264',
         '-b:v', '8M', '-c:a', 'aac', '-b:a', '192k',
         '-movflags', '+faststart',
         out_path,

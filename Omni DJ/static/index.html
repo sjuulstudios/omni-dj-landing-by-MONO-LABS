@@ -10668,6 +10668,13 @@
               <small style="font-size:10.5px;color:var(--mute);display:block;margin-top:3px">Contact support to change your email.</small>
             </div>
             <div id="settings-profile-status" style="font-size:11.5px;color:var(--paper-dim);min-height:14px;margin-top:4px"></div>
+            <!-- SESSIE 66 — Log out knop in Settings. De v2-redesign verborg het
+                 oude .sidebar-account-blok (met #ac-logout), waardoor er geen
+                 zichtbare uitlog-optie meer was. Deze knop hergebruikt dezelfde
+                 clearSession()-flow. -->
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+              <button class="btn ghost" id="settings-logout" type="button" style="font-size:12px;padding:7px 12px">Log out</button>
+            </div>
           </div>
 
           <!-- SESSIE 54 — Fase 5: Workspace + Artists card. Multi-artist is
@@ -24999,6 +25006,11 @@ function bindAuthOverlay(){
   });
   document.getElementById('auth-form')?.addEventListener('submit', handleAuthSubmit);
   document.getElementById('ac-logout')?.addEventListener('click', () => {
+    clearSession();
+    showAuthOverlay('login');
+  });
+  // SESSIE 66 — Log out knop in Settings (v2 verborg de oude sidebar-knop).
+  document.getElementById('settings-logout')?.addEventListener('click', () => {
     clearSession();
     showAuthOverlay('login');
   });
