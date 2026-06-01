@@ -1222,10 +1222,17 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
 
     except Exception as e:
         log.exception("Error processing job %s", job_id)
+        # SESSIE 68 — capture the full traceback into job state. In the packaged
+        # .app stdout is swallowed (runw), so log.exception is invisible; storing
+        # the traceback here lets /api/status surface the real failing line for
+        # debugging (e.g. the zlib "incorrect header check" analysis crash).
+        import traceback as _tb
+        tb_text = _tb.format_exc()
         with jobs_lock:
             if job_id in jobs:
                 jobs[job_id]['status'] = 'error'
                 jobs[job_id]['message'] = str(e)
+                jobs[job_id]['traceback'] = tb_text
                 jobs[job_id].setdefault('progress', {})['stage'] = 'error'
 
     finally:
@@ -4355,6 +4362,9 @@ def job_status(job_id):
         'recut_blocked_reason': None if recut_capable else (
             'video_path_missing' if not vp else 'source_file_gone'
         ),
+        # SESSIE 68 — surface the captured traceback on error jobs so the real
+        # failing line is visible even in the stdout-swallowed packaged app.
+        'traceback': snap.get('traceback'),
     })
 
 
@@ -5647,23 +5657,68 @@ def _resolve_export_source(clip):
     return files.get('landscape') or files.get('vertical')
 
 
-def _resolve_export_sources(clip, aspects=None):
+def _resolve_export_sources(clip, aspects=None, job_id=None, job_output_dir=None):
     """Return every available format source for this clip as a list of
     (aspect_key, path) tuples. Used by the export worker so a single
     queued item can produce 16:9, 9:16, or both output files.
     `aspects` is an optional whitelist (e.g. ['vertical']) — when omitted
-    or empty, every available format is returned."""
+    or empty, every available format is returned.
+
+    SESSIE 68 (Fix B1) — sinds Trim nog maar één formaat rendert kan een
+    gevraagd export-formaat ontbreken in clip['files'] (bv. user trimde alleen
+    vertical maar exporteert nu ook landscape). In dat geval snijden we het
+    ontbrekende formaat hier alsnog uit de bron, met de huidige clip-grenzen,
+    zodat de export compleet is. Vereist job_id + job_output_dir; zonder die
+    context valt de functie terug op het oude gedrag (alleen bestaande files)."""
     files = clip.get('files') or {}
     if aspects:
         wanted = [a for a in aspects if a in ('landscape', 'vertical')]
     else:
         wanted = ['landscape', 'vertical']
     out = []
+    missing = []
     # Order matters — landscape first so it's picked as the "primary" path.
     for key in wanted:
         src = files.get(key)
         if src and os.path.exists(src):
             out.append((key, src))
+        else:
+            missing.append(key)
+
+    # On-demand cut for any wanted-but-missing format.
+    if missing and job_id and job_output_dir:
+        start = clip.get('start')
+        end = clip.get('end')
+        clip_index = clip.get('index')
+        clip_type = clip.get('type') or clip.get('kind') or 'drop'
+        if start is not None and end is not None and clip_index is not None and end > start:
+            # Source video uit de in-memory job of snapshot.
+            with jobs_lock:
+                j = jobs.get(job_id) or {}
+                video_path_job = j.get('video_path')
+            if not (video_path_job and os.path.exists(video_path_job)):
+                snap = _load_job_snapshot(job_id)
+                if snap:
+                    video_path_job = snap.get('video_path')
+            if video_path_job and os.path.exists(video_path_job):
+                try:
+                    cut = slice_clip(
+                        video_path_job, float(start), float(end),
+                        job_output_dir, int(clip_index), str(clip_type),
+                        formats=list(missing),
+                    )
+                    for key in missing:
+                        p = (cut or {}).get(key)
+                        if p and os.path.exists(p):
+                            out.append((key, p))
+                            files[key] = p   # cache zodat een volgende export 'm vindt
+                except Exception as e:
+                    log.warning("export: on-demand cut of %s failed for clip %s: %s",
+                                missing, clip_index, e)
+
+    # Re-sort so landscape stays first (primary path) regardless of cut order.
+    order = {'landscape': 0, 'vertical': 1}
+    out.sort(key=lambda kv: order.get(kv[0], 9))
     return out
 
 
@@ -6039,7 +6094,10 @@ def _run_export_job(job_id, cfg):
         # wat de editor liet zien.
         needs_prebake = want_captions or want_watermark or want_logo or layer_info['has_tracking']
 
-        sources = _resolve_export_sources(clip, aspects=aspect_filter)
+        sources = _resolve_export_sources(
+            clip, aspects=aspect_filter,
+            job_id=job_id, job_output_dir=job_output_dir,
+        )
         if needs_prebake:
             _set_item(idx, status='running', pct=15)
             baked = _prebake_clip_for_export(

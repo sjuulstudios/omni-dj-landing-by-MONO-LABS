@@ -18428,8 +18428,36 @@ async function renderEditor(){
         loadEditorVariant(variant);
         return;
       }
-      // Vertical / landscape are produced eagerly; if missing, nothing to derive.
+      // SESSIE 68 (Fix B1) — vertical/landscape worden niet meer altijd allebei
+      // gerenderd (Trim doet alleen het zichtbare formaat). Switch je naar een
+      // formaat dat nog niet (vers) bestaat, render het dan on-demand via
+      // /api/slice met de huidige clip-grenzen — zodat het de actuele trim
+      // reflecteert, niet een oude cut of een fallback naar het andere formaat.
       if (variant === 'vertical' || variant === 'landscape') {
+        try {
+          showStageNotice('Rendering ' + b.dataset.ratio + '…');
+          const backendClipIndex = (clip.index != null) ? clip.index : (STATE.selectedClipIdx + 1);
+          const cStart = Number(clip.start || clip.start_time || 0);
+          const cEnd   = Number(clip.end != null ? clip.end : (cStart + (Number(clip.duration) || 0)));
+          if (cEnd - cStart > 0.4) {
+            const resp = await api(`/api/slice/${STATE.jobId}`, { method: 'POST', body: {
+              clip_index: backendClipIndex,
+              start: Math.max(0, cStart),
+              end:   cEnd,
+              clip_type: clip.type || clip.kind || 'drop',
+              formats: [variant],
+            }});
+            if (resp && resp.files) {
+              clip.files = clip.files || {};
+              Object.entries(resp.files).forEach(([k, val]) => { clip.files[k] = val; });
+            }
+            window._editorCacheBust = Date.now();
+          }
+          clearStageNotice();
+        } catch (err) {
+          clearStageNotice();
+          toast('Could not render ' + b.dataset.ratio + ': ' + err.message, 'bad');
+        }
         loadEditorVariant(variant);
         return;
       }
@@ -19095,8 +19123,23 @@ function bindEditorLoopHandler(){
     if (!v.duration || !Number.isFinite(v.duration)) return;
     const t = STATE.trim;
     if (!t || !Number.isFinite(t.inSec) || !Number.isFinite(t.outSec)) return;
-    const inSec  = Math.max(0, Math.min(v.duration, t.inSec));
-    const outSec = Math.max(inSec + 0.05, Math.min(v.duration, t.outSec));
+    // SESSIE 68 (Fix A) — bron-bewust. Als de <video> de hele set toont
+    // (/api/source/<job>, gebruikt zodra je een handle de stretch-zone in
+    // sleept), zijn inSec/outSec clip-relatief maar v.currentTime absoluut
+    // set-tijd. Reken de grenzen dan om naar set-tijd zodat de spatiebalk-
+    // preview óók de uitgerekte selectie afspeelt en netjes op het out-punt
+    // stopt. In clip-modus blijft het gedrag exact als voorheen.
+    const isSourceMode = ((v.src || v.currentSrc || '').indexOf('/api/source/') >= 0);
+    const clip = (STATE.clips || [])[STATE.selectedClipIdx] || {};
+    const clipStart = Number(clip.start || clip.start_time || 0);
+    let inSec, outSec;
+    if (isSourceMode) {
+      inSec  = Math.max(0, Math.min(v.duration, clipStart + t.inSec));
+      outSec = Math.max(inSec + 0.05, Math.min(v.duration, clipStart + t.outSec));
+    } else {
+      inSec  = Math.max(0, Math.min(v.duration, t.inSec));
+      outSec = Math.max(inSec + 0.05, Math.min(v.duration, t.outSec));
+    }
     if (v.currentTime >= outSec - 0.01) {
       if (STATE.loopEnabled) {
         v.currentTime = inSec;
@@ -19500,20 +19543,34 @@ async function editorTrimAtPlayhead(){
         toast('Selectie te kort - sleep de handles verder uit elkaar', 'bad');
         return;
       }
+      // SESSIE 68 (Fix B1) — Trim rendert alleen het formaat dat je NU in de
+      // editor bekijkt, niet allebei. Dat halveert de trim-tijd. Het tweede
+      // formaat wordt vanzelf gerenderd zodra je het in de editor opent
+      // (loadEditorVariant valt terug op een recut) of bij Export. De editor-
+      // ratio's 9:16 / 1:1 / 4:5 zijn allemaal portret-crops van de vertical
+      // bron, dus die mappen op 'vertical'; alleen 16:9 = 'landscape'.
+      const trimFormat = (STATE.editorRatio === '16:9') ? 'landscape' : 'vertical';
       const sliceResp = await api(`/api/slice/${STATE.jobId}`, { method: 'POST', body: {
         clip_index: backendClipIndex,
         start: Math.max(0, newStart),
         end:   newEnd,
         clip_type: clip.type || clip.kind || 'drop',
+        formats: [trimFormat],
       }});
       // SESSIE 32d — direct na slice de in-memory clip.files updaten
       // met de fresh paden uit de response. Voorkomt dat renderEditor
       // straks de oude src probeert (waar de browser nog de oude file
       // cached, of waar de file letterlijk net is herschreven en de
       // browser de update mist). Cache-buster timestamp via STATE.
+      //
+      // SESSIE 68 (Fix B1) — Trim rendert nu maar één formaat. De backend
+      // VERVANGT clip.files met alleen dat formaat, dus het andere (niet-
+      // hergesneden) formaat-pad is nu STALE (wijst naar de oude in/out).
+      // We spiegelen dat hier: clip.files = exact de response, zodat een
+      // switch naar het andere formaat het "missing → recut"-pad neemt en
+      // een verse cut maakt i.p.v. de oude file te tonen.
       if (sliceResp && sliceResp.files) {
-        clip.files = clip.files || {};
-        Object.entries(sliceResp.files).forEach(([k, v]) => { clip.files[k] = v; });
+        clip.files = Object.assign({}, sliceResp.files);
       }
       window._editorCacheBust = Date.now();
       const newDur = newEnd - newStart;

@@ -4,21 +4,98 @@
 
 ---
 
-## START HIER — sessie 67 (2026-05-31) — DRAWTEXT-FIX + SECURITY S1-S4 UITGEVOERD
+## START HIER — sessie 68 (2026-06-01) — TRIM SNELLER + SPATIEBALK-PREVIEW + UPLOAD-DIAGNOSE
+
+> Doel van de sessie: twee editor-endpoints fixen vóór eindgebruikers (trim te traag +
+> geen hoorbare preview vóór de knip). Plus: Sjuuls melding "upload blijft hangen op
+> Bestand registreren" gediagnosticeerd.
+
+### Wat is gedaan (code-side, live geverifieerd op dev-server)
+1. **Fix B2 — smart-cut landscape (`cutter.py`).** Nieuwe `cut_clip_landscape_fast()`:
+   re-encodet alleen de head-GOP [start, eerste keyframe], stream-copyt de tail, concat
+   via demuxer + faststart. Exacte in-punt behouden, ~5x sneller (live gemeten: landscape
+   958ms vs vertical re-encode 4908ms op dezelfde clip). `slice_clip` probeert dit eerst
+   voor landscape, valt terug op volledige re-encode als niet veilig (of `normalize_audio`).
+   Ook `build_keyframe_index()` portability-fix: `best_effort_timestamp_time` i.p.v.
+   `pts_time` (gaf op sommige ffmpeg-builds 0 keyframes → keyframe-snap stond stil uit).
+   MP4-output structureel geverifieerd (ftyp/moov-faststart/mdat correct).
+2. **Fix B1 — trim rendert alleen het zichtbare formaat (`index.html` + `app.py`).**
+   `editorTrimAtPlayhead` stuurt `formats:[trimFormat]` (16:9=landscape, anders vertical).
+   Ratio-switch in editor rendert ontbrekend formaat on-demand via /api/slice.
+   `_resolve_export_sources()` snijdt een ontbrekend export-formaat alsnog uit de bron,
+   zodat export nooit een formaat mist. Slice-merge spiegelt nu de backend (clip.files =
+   response → geen stale paden). Live geverifieerd: single-format slice + on-demand re-cut.
+3. **Fix A — spatiebalk-preview ook bij stretch (`index.html`).** `bindEditorLoopHandler`
+   timeupdate is nu bron-bewust: in source-mode (/api/source, tijdens stretch) rekent hij
+   in absolute set-tijd (clipStart+inSec/outSec) zodat ook uitgerekte selecties afspelen en
+   op het out-punt stoppen. Code geverifieerd; audio-preview NIET visueel getest want het
+   achtergrond-MCP-tab kon geen video decoderen (gold ook voor de ongewijzigde vertical-clip
+   → tab-quirk, geen fix-probleem). **Sjuul: even met je oren bevestigen in de echte editor.**
+
+### Upload-"hang" — GEEN bug (stale process)
+- `/api/upload-local` hangt niet: registreert job in ~900ms. De echte fout zat in de
+  achtergrond-analyse: `detect_bpm`/librosa crashte met **"Error -3 while decompressing
+  data: incorrect header check"** (zlib) op 9%.
+- **Alleen in de OUDE, lang-draaiende bundle-instance.** Na een verse Terminal-launch van de
+  .app verwerkten BEIDE testsets perfect (Lisa Korver 55min → 30 clips compleet; Housy 30min,
+  exact de file die eerder crashte → 23 clips). Dev-server vanuit source: idem perfect.
+- Conclusie: éénmalige stale-process-state (waarschijnlijk numba-JIT/first-run of langlopend
+  proces-geheugen). Code + bundle zijn OK. **Advies aan eindgebruiker/Sjuul: bij hang de app
+  herstarten.** Geen code/spec-fix nodig.
+- Diagnose-hook toegevoegd (`app.py`): `_process_job` slaat nu de volledige traceback op in
+  job-state; `/api/status` geeft `traceback` terug. In de bundle wordt stdout geslikt (runw),
+  dus dit maakt een toekomstige analyse-fout direct zichtbaar i.p.v. een vage hang.
+
+### NOG TE DOEN (Sjuul, op de Mac)
+1. **git commit + push** — bestanden: `Omni DJ/cutter.py`, `Omni DJ/app.py`,
+   `Omni DJ/static/index.html`, `HANDOVER.md`. (system_fonts_cache.json = runtime-cache,
+   NIET committen.) Zie commando's onderaan deze sectie.
+2. **Stop de dev-server** (Ctrl+C) vóór de rebuild — poort 5555 moet vrij.
+3. **Rebuild gesigned+genotariseerd:** `./build_macos.sh sign notarize dmg` → vervang
+   `/Applications`-versie + DMG op `downloads.omnidj.com`.
+4. **Smoke-test in de nieuwe build:** upload een set (mag binnen home), open clip in editor,
+   sleep trim-handle → spatiebalk speelt selectie af tot out-punt; druk Trim → merkbaar
+   sneller; switch 16:9↔9:16 → ander formaat rendert vers.
+
+### Losse observatie (apart spoor, niet deze sessie opgelost)
+- Oude job `936548ee` in history geeft 500 op `/api/status` (waarschijnlijk stale snapshot
+  van oudere code-versie). Niet kritiek; los van deze fixes. Apart oppakken indien gewenst.
+
+### Commit-commando's (plak in Terminal, dev-server mag nog draaien voor de commit):
+```
+cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ"
+git add "Omni DJ/cutter.py" "Omni DJ/app.py" "Omni DJ/static/index.html" HANDOVER.md
+git commit -m "Sessie 68: trim sneller (smart-cut landscape + 1 formaat) + bron-bewuste spatiebalk-preview + upload-crash diagnose-hook"
+git push origin main
+```
+
+---
+
+## sessie 67 (2026-05-31) — DRAWTEXT-FIX + SECURITY S1-S4 UITGEVOERD
 
 > Diagnose + details: `PLAN-SESSIE67-DIAGNOSE-FIX-SECURITY-2026-05-31.md`.
 > De "login-blocker" was GEEN bug: Sjuul had het verkeerde wachtwoord ingetypt voor
 > `business@sjuulstudios.com`. DEEL 2 (drawtext) + DEEL 3 (security S1-S4) zijn UITGEVOERD.
 
-### ⚠️ EERST DOEN VOLGENDE SESSIE — afronden + uitrollen
-1. **HANDMATIG (dashboard):** Supabase → Auth → **leaked-password-protection AANZETTEN**.
-   Dit is de enige resterende advisor-warning; kan niet via SQL. Daarna advisors herrun.
-2. **git commit** (sandbox kan het niet): `Omni DJ/cutter.py`, `Omni DJ/app.py`,
-   `Omni DJ/supabase/migrations/004_sessie67_security_definer_hardening.sql`.
-3. **Rebuild:** `./build_macos.sh sign notarize dmg` → nieuwe DMG → **vervang op
-   `downloads.omnidj.com`** (zelfde naam `Omni-DJ-1.0.0.dmg`).
-4. **Smoke-test 2e Mac:** login, upload van een set BINNEN de home-map (moet werken),
-   set BUITEN home (moet 403 geven), export MET captions (moet nu tekst tonen).
+### ✅ AFGEROND deze sessie (commit + rebuild + upload allemaal gedaan)
+1. **git commit + push** — commit `92bc770` op `origin/main` (cutter.py, app.py, build_macos.sh,
+   media_tools.py, static/index.html, .gitignore, migration 004, HANDOVER + 2 plan-docs).
+2. **Rebuild gesigned+genotariseerd** — `.app` + `.dmg` beide Accepted; `/Applications` vervangen.
+3. **DMG live op R2** — `downloads.omnidj.com/Omni-DJ-1.0.0.dmg` overschreven met de nieuwe build
+   (objectlijst toont **257.49 MB**, modified 01-06-2026 11:16; oude was 203.81 MB). Bucket-Size-
+   teller in de header (203.81 MB) is gecachet en niet leidend — de objectregel klopt.
+
+### ⏸️ GEPARKEERD (niet kritiek) — leaked-password-protection
+- Supabase's "Prevent use of leaked passwords" (HaveIBeenPwned) is **alleen beschikbaar op het
+  Pro-plan**; dit project staat op **Free** → toggle staat uit en kan nu niet aan. Geverifieerd
+  in de UI (sessie 67). **Geen kritiek gat**: de app weert de meest voorkomende zwakke
+  wachtwoorden al via `_COMMON_PASSWORDS` (auth.py) + minimumlengte 8. **Aanzetten zodra je
+  toch naar Pro upgradet** (bv. bij publieke launch). Dit is de enige resterende advisor-warning.
+
+### ⏭️ NOG TE DOEN VOLGENDE SESSIE
+- **Smoke-test 2e Mac:** download via `downloads.omnidj.com/Omni-DJ-1.0.0.dmg`, openen (geen
+  Gatekeeper-popup), login, upload van een set BINNEN de home-map (werkt), set BUITEN home
+  (moet 403 geven — S2), export MET captions (moet nu tekst tonen — DEEL 2).
 
 ### ✅ DEEL 2 — drawtext-fix (cutter.py ~regel 253) — DONE, code-side
 `_ffmpeg_has_drawtext()` gebruikt nu regex `(?m)^\s*\S+\s+drawtext\b` i.p.v. de te strakke
