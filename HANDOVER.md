@@ -22,7 +22,7 @@
   - Google Workspace domein-verificatie voor `monohq-labs.com` nog niet afgerond
 - **Oude landing:** `landing-omnidj/` map is de vorige simpele 1-page versie, niet meer actief
 
-> **GECOMMIT + GEPUSHT (2026-06-04):** commit `9176c8a` op `main` bevat sessie 69+71+72+73+74 (22 bestanden). De "NIET gecommit"-vermeldingen verderop zijn historisch. NOG OPEN voor Sjuul: clips-metadata (007, bewust uitgesteld), migratie 010 (review), test-infra (pytest/Playwright), gesignde rebuild + DMG->R2. (E2E-export-check fase 2b: GEDAAN in sessie 75 + logo-export-bug gefixt, zie direct hieronder. Sessie-75-fix nog NIET gecommit.)
+> **GECOMMIT + GEPUSHT (2026-06-04):** commit `9176c8a` op `main` bevat sessie 69+71+72+73+74 (22 bestanden). De "NIET gecommit"-vermeldingen verderop zijn historisch. NOG OPEN voor Sjuul: clips-metadata (007, bewust uitgesteld), migratie 010 (review), test-infra (pytest/Playwright), gesignde rebuild + DMG->R2. (E2E-export-check fase 2b: GEDAAN in sessie 75 + logo-export-bug gefixt, zie direct hieronder. Sessie 75 nu GECOMMIT + GEPUSHT: commit `302c4d7` op `main` (origin/main), DMG->R2 live.)
 
 ---
 
@@ -63,7 +63,7 @@
   app + dmg spctl `accepted / Notarized Developer ID` (DMG ~258 MB), en in `/Applications` gezet (ditto).
   De bundle bevat nu ALLES van sessie 75: logo-fix + picker-fix + export-feature (per-ratio naam + echte
   1:1/4:5 crops + Downloads-default). NOG: picker-smoketest in de bundle (set inladen EN KIES MAP), dan
-  pas DMG->R2 (`Omni-DJ-1.0.0.dmg`). Commit nog open (zie hierboven).
+  pas DMG->R2 (`Omni-DJ-1.0.0.dmg`). (Commit + DMG->R2 later GEDAAN, zie onderaan dit blok.)
 - **SMOKETEST bundle #2 (Sjuul, 2026-06-04) -> 3 fixes in broncode (NIET in bundle, vereist rebuild #3):**
   (1) Picker-crash WEG (analyse lukt), maar "Drop a set" opent Finder pas bij 2e klik en KIES MAP toont
   niks. Diagnose: backend, NSOpenPanel hangt af van de Flask-main-thread run-loop -> paneel verschijnt
@@ -76,7 +76,7 @@
   py_compile groen, dev (:5599) laadt zonder console-fouten. Backups pre-sessie75-ratios.bak dekken app.py.
 - **REBUILD #3 GEDAAN + in /Applications (2026-06-04):** app + dmg `accepted / Notarized Developer ID`.
   Bundle bevat nu ook de 3 smoketest-fixes. NOG door Sjuul: smoketest (1-klik Drop a set + KIES MAP openen
-  direct? geen .json in doelmap? RESET-toast?). DAARNA pas DMG->R2. Commit nog open.
+  direct? geen .json in doelmap? RESET-toast?). DAARNA pas DMG->R2. (Commit + DMG->R2 GEDAAN, zie onder.)
 - **SMOKETEST #3 GROEN (Sjuul, 2026-06-04):** picker opent nu in EEN klik (osascript-first werkt in de
   bundle), geen .json in de doelmap, RESET geeft toast. WEL twee normale macOS-bijverschijnselen:
   (a) een generiek wit Dock-icoon stuitert terwijl het kies-venster open is (dat is het osascript-helper-
@@ -88,8 +88,8 @@
   non-interactief -> `script -q /dev/null wrangler ... --remote` gaf een pty -> OAuth re-auth (Sjuul
   goedgekeurd) -> upload. Wrangler zit op nvm-pad `/Users/sjuulsmits/.nvm/versions/node/v20.19.5/bin`,
   draaien vanuit $HOME (anders `/.wrangler/cache`-fout). GEVERIFIEERD: `https://downloads.omnidj.com/Omni-DJ-1.0.0.dmg`
-  HTTP 200, content-length 258137270 = de verse build (cf-cache MISS). **NOG OPEN: git commit van alle
-  sessie 75-wijzigingen (zie TE COMMITTEN).**
+  HTTP 200, content-length 258137270 = de verse build (cf-cache MISS). **GECOMMIT + GEPUSHT: commit
+  `302c4d7` op `main` (origin/main), alle sessie 75-wijzigingen. Sessie 75 volledig afgerond.**
 
 Detail: memory `project_sessie75_logo_export_fix`.
 
