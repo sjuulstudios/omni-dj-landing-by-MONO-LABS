@@ -8,6 +8,22 @@
 
 ## 0. VOLGENDE SESSIE - START HIER
 
+### Website status (2026-06-04) - LIVE
+- **omnidj.com** is LIVE met de nieuwe Next.js site (`omnidj.com/` map in de repo).
+- **Cloudflare Pages project:** `omni-dj-landing-by-mono-labs`
+- **GitHub repo:** `sjuulstudios/omni-dj-landing-by-MONO-LABS`, branch `main`, commit `34ed96b`
+- **Build settings:** root dir = `omnidj.com`, build = `npm run build`, output = `out`
+- **Custom domains:** `omnidj.com` + `www.omnidj.com` (beide gekoppeld, www kan nog 48u propageren)
+- **Fix toegepast:** `remotion/` uitgesloten van `omnidj.com/tsconfig.json` om build-fout op te lossen
+- **Cloudflare Pages deploys automatisch** bij elke push naar `main`
+- **Nog open (website):**
+  - `REPLACE_ME` in de landing = Formspree endpoint voor het beta-formulier (gratis via formspree.io)
+  - `REPLACE_DMG_URL` = R2-link naar de DMG (`https://downloads.omnidj.com/Omni-DJ-1.0.0.dmg`)
+  - Google Workspace domein-verificatie voor `monohq-labs.com` nog niet afgerond
+- **Oude landing:** `landing-omnidj/` map is de vorige simpele 1-page versie, niet meer actief
+
+> **GECOMMIT + GEPUSHT (2026-06-04):** commit `9176c8a` op `main` bevat sessie 69+71+72+73+74 (22 bestanden). De "NIET gecommit"-vermeldingen verderop zijn historisch. NOG OPEN voor Sjuul: E2E-export-check fase 2b (nu met per-workspace logo), clips-metadata (007, bewust uitgesteld), migratie 010 (review), test-infra (pytest/Playwright), gesignde rebuild + DMG->R2.
+
 **Sessie 74 (2026-06-03) - A1 afmaken gestart. Stappenplan opgeleverd + Slice 1 (workspace-header activeren) GEBOUWD en LIVE GEVERIFIEERD op :5599. Frontend-only, NIET gecommit/herbouwd.**
 
 ### Wat sessie 74 deed

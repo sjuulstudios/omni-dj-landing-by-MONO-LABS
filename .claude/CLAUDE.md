@@ -17,19 +17,31 @@ Daarna browser openen op: http://127.0.0.1:5555
 ```
 Omni DJ/
 ├── .claude/CLAUDE.md          ← dit bestand
+├── HANDOVER.md                ← altijd als eerste lezen
 ├── INSTALL.md                 ← volledige installatiegids
 ├── QUICK-REFERENCE.md         ← terminal cheatsheet voor Sjuul
-├── clip-live-redesign.html    ← UI mockup (OpusClip-stijl)
-└── dj-clip-cutter/
+├── omnidj.com/                ← Next.js website (LIVE op omnidj.com)
+│   ├── app/                   ← pagina-routes (Next.js App Router)
+│   ├── components/            ← React componenten
+│   ├── public/                ← statische assets
+│   ├── next.config.mjs        ← output: 'export' (statische site)
+│   └── tsconfig.json          ← remotion/ uitgesloten van build
+├── landing-omnidj/            ← OUDE simpele landing (niet meer actief)
+└── Omni DJ/                   ← app-code (Flask + frontend)
     ├── app.py                 ← Flask entry point
     ├── analyzer.py            ← drop-detectie algoritme (librosa)
-    ← cutter.py                ← video snijden (ffmpeg)
-    ├── uploader.py            ← toekomstige TikTok/Instagram upload
+    ├── cutter.py              ← video snijden (ffmpeg)
+    ├── static/index.html      ← frontend (SPA)
     ├── start.sh               ← start script (venv + flask)
-    ├── requirements.txt       ← Python dependencies
-    ├── config.json            ← app instellingen
-    └── static/                ← frontend bestanden
+    └── requirements.txt       ← Python dependencies
 ```
+
+## Website (omnidj.com)
+- LIVE via Cloudflare Pages (`omni-dj-landing-by-mono-labs`)
+- Repo: `sjuulstudios/omni-dj-landing-by-MONO-LABS`, branch `main`
+- Build: `npm run build` in `omnidj.com/`, output naar `out/`
+- Auto-deploy bij push naar main
+- Nog open: Formspree-endpoint (`REPLACE_ME`) + DMG-URL (`REPLACE_DMG_URL`)
 
 ## Tech stack
 - **Backend:** Python 3, Flask 3.0
