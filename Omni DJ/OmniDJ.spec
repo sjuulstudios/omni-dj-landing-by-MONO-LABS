@@ -55,7 +55,16 @@ hiddenimports += [
     "auth",
     "billing",
     "runtime_config", # publieke keys-fallback voor de bundle
+    # SESSIE 69 — PyObjC voor de in-process NSOpenPanel file-picker.
+    # Zonder deze hidden-imports laat PyInstaller AppKit/objc weg en valt de
+    # picker in de bundle terug op de (geblokkeerde) osascript-route.
+    "objc",
+    "AppKit",
+    "Foundation",
+    "Cocoa",
 ]
+# PyObjC submodules expliciet meenemen (lazy-loaded via objc-bridge).
+hiddenimports += collect_submodules("objc")
 
 # --------------------------------------------------------------------------- #
 # Data files — meegelift in de bundle.

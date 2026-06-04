@@ -32,7 +32,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-from flask import Flask, request, jsonify, send_from_directory, send_file, Response, stream_with_context
+from flask import Flask, request, jsonify, send_from_directory, send_file, Response, stream_with_context, g
 
 from analyzer import analyze_dj_set, get_waveform_data, detect_bpm, create_manual_clip
 from cutter import (
@@ -1127,6 +1127,11 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
                     progress['percent'] = int(58 + cutting_pct)
                     jobs[job_id]['message'] = f'Cut {clips_done} of {total_clips} clips...'
 
+        # SESSIE 74 - fase 2b: zet de per-workspace brand in de job-map zodat de
+        # cutter (die output_dir eerst leest) de juiste brand bakt. No-op zonder
+        # workspace/cache -> globale fallback (geen regressie).
+        _materialize_job_brand(job_id, job_output_dir)
+
         if long_set:
             # Two-tier — fast 720p proxies for every clip; landscape/vertical
             # full-quality cuts are produced on-demand via /api/render-clip.
@@ -1877,6 +1882,37 @@ def _quota_block_response(snap):
 # Flask only initiates redirects; Stripe and the edge function do the rest.
 # ---------------------------------------------------------------------------
 
+# SESSIE 72 — TTL-cache op token-validatie. /api/status wordt elke ~1.5s
+# gepolld tijdens analyse; zonder cache deed elke poll een Supabase
+# auth/v1/user round-trip (netwerk-chatter + latency die met de CPU-zware
+# analyse-thread concurreert). Met een 30s-cache valideren we 1x per 30s
+# i.p.v. ~20x. Veilig voor een lokaal single-user tool: het token heeft een
+# eigen exp (~1u) en revocatie binnen 30s is verwaarloosbaar. Per-token
+# gekeyd, dus geen cross-user lek. Alleen geldige validaties worden gecachet.
+_TOKEN_USER_CACHE = {}            # token -> (user_info_base, expiry_ts)
+_TOKEN_USER_CACHE_TTL = 30.0
+_TOKEN_USER_CACHE_LOCK = threading.Lock()
+
+
+def _cached_auth_user(token):
+    """Wrap auth_get_user_from_token met een korte TTL-cache (zie boven)."""
+    now = time.time()
+    with _TOKEN_USER_CACHE_LOCK:
+        hit = _TOKEN_USER_CACHE.get(token)
+        if hit and hit[1] > now:
+            return dict(hit[0])
+    info = auth_get_user_from_token(token)
+    if info:
+        with _TOKEN_USER_CACHE_LOCK:
+            if len(_TOKEN_USER_CACHE) > 256:
+                stale = [k for k, (_v, exp) in list(_TOKEN_USER_CACHE.items()) if exp <= now]
+                for k in stale[:200]:
+                    _TOKEN_USER_CACHE.pop(k, None)
+            _TOKEN_USER_CACHE[token] = (dict(info), now + _TOKEN_USER_CACHE_TTL)
+        return dict(info)
+    return None
+
+
 def _require_authed_user(allow_query_token=False):
     """Helper: extract Bearer token, validate, return user_info dict.
     On failure returns (None, (json_response, status_code)).
@@ -1899,7 +1935,7 @@ def _require_authed_user(allow_query_token=False):
         token = (request.args.get('token') or '').strip()
     if not token:
         return None, (jsonify({'ok': False, 'error': 'Geen Authorization header'}), 401)
-    user_info = auth_get_user_from_token(token)
+    user_info = _cached_auth_user(token)
     if not user_info:
         return None, (jsonify({'ok': False, 'error': 'Ongeldig of verlopen token'}), 401)
     # SESSIE 30 - keep the raw access token on the user_info so quota
@@ -1907,6 +1943,119 @@ def _require_authed_user(allow_query_token=False):
     # service_role key is configured (i.e. the bundled .app).
     user_info['access_token'] = token
     return user_info, None
+
+
+# ---------------------------------------------------------------------------
+# SESSIE 73 - A1 multi-tenant backend (Spoor A, PLAN-COMBINED v1.3 Correctie 6)
+#
+# De backend draait vandaag alle DB-queries via supabase_admin (service_role),
+# wat RLS VOLLEDIG omzeilt. Voor de nieuwe content-tabellen (workspaces,
+# workspace_members, clips, dj_profiles, dj_templates, scheduled_posts) is dat
+# onveilig: dan is RLS decoratief en kan data tussen artists lekken. Daarom een
+# aparte anon-client die de USER-JWT meedraagt, zodat PostgREST queries als rol
+# 'authenticated' draaien en auth.uid() klopt -> RLS is de echte isolatie-grens.
+#
+# supabase_admin BLIJFT voor profiel/role/billing/audit (vertrouwde server-acties
+# die juist boven RLS moeten staan). Deze helpers zijn ADDITIEF: geen bestaand
+# endpoint (analyse/export/auth) verandert; alleen nieuwe content-routes (vanaf
+# /api/workspaces) gebruiken ze.
+# ---------------------------------------------------------------------------
+def _user_supabase(access_token):
+    """Anon Supabase client gebonden aan de end-user-JWT (RLS-scoped).
+
+    Maakt een VERSE client per call zodat er geen gedeelde, muteerbare
+    auth-state tussen requests/threads ontstaat (postgrest.auth muteert de
+    client). Retourneert None als Supabase niet is geconfigureerd of de JWT
+    ontbreekt -> additieve callers kunnen dan netjes no-op'en.
+    """
+    if not access_token:
+        return None
+    try:
+        from auth import SUPABASE_URL as _URL, SUPABASE_ANON_KEY as _ANON
+    except Exception:
+        return None
+    if not _URL or not _ANON:
+        return None
+    try:
+        from supabase import create_client
+        ClientOptions = None
+        try:
+            from supabase import ClientOptions as _CO
+            ClientOptions = _CO
+        except Exception:
+            try:
+                from supabase.lib.client_options import ClientOptions as _CO2
+                ClientOptions = _CO2
+            except Exception:
+                ClientOptions = None
+        if ClientOptions is not None:
+            client = create_client(_URL, _ANON, options=ClientOptions(
+                auto_refresh_token=False,
+                persist_session=False,
+                headers={'Authorization': f'Bearer {access_token}'},
+            ))
+        else:
+            client = create_client(_URL, _ANON)
+        # Belt + suspenders: zet de PostgREST-bearer expliciet zodat table()-
+        # calls de user-JWT sturen ongeacht client-interne details.
+        try:
+            client.postgrest.auth(access_token)
+        except Exception:
+            pass
+        return client
+    except Exception as e:
+        log.warning("_user_supabase init mislukt: %s", e)
+        return None
+
+
+def current_workspace_id(user_info, required=False):
+    """Resolve de actieve workspace voor dit request, RLS-scoped.
+
+    Leest de 'X-Omni-Workspace' header. Is die aanwezig, dan een expliciete
+    membership-check via de user-client (defence-in-depth BOVENOP RLS: RLS
+    blokkeert reads/writes al, dit faalt alleen sneller met een nette 403 bij
+    een niet-lid). Ontbreekt de header, dan de primaire workspace van de caller
+    (eerste membership).
+
+    Returnt (workspace_id, None) bij succes of (None, (resp, code)) bij een
+    fout. Met required=False en geen oplosbare workspace -> (None, None) zodat
+    additieve callers kunnen no-op'en.
+    """
+    token = (user_info or {}).get('access_token')
+    uid = (user_info or {}).get('user_id')
+    sb = _user_supabase(token)
+    if sb is None or not uid:
+        if required:
+            return None, (jsonify({'ok': False, 'error': 'Supabase niet geconfigureerd'}), 503)
+        return None, None
+    hdr = (request.headers.get('X-Omni-Workspace') or '').strip()
+    try:
+        if hdr:
+            res = (sb.table('workspace_members')
+                     .select('workspace_id')
+                     .eq('workspace_id', hdr)
+                     .eq('user_id', uid)
+                     .limit(1).execute())
+            rows = getattr(res, 'data', None) or []
+            if not rows:
+                return None, (jsonify({'ok': False, 'error': 'Geen lid van deze workspace'}), 403)
+            return hdr, None
+        # Geen header -> primaire (eerste) membership van de caller.
+        res = (sb.table('workspace_members')
+                 .select('workspace_id')
+                 .eq('user_id', uid)
+                 .limit(1).execute())
+        rows = getattr(res, 'data', None) or []
+        if rows:
+            return rows[0].get('workspace_id'), None
+    except Exception as e:
+        log.warning("current_workspace_id mislukt: %s", e)
+        if required:
+            return None, (jsonify({'ok': False, 'error': 'workspace-resolutie mislukt'}), 500)
+        return None, None
+    if required:
+        return None, (jsonify({'ok': False, 'error': 'Geen workspace'}), 404)
+    return None, None
 
 
 def _audit(action, user_id=None, metadata=None):
@@ -1959,6 +2108,39 @@ def _require_job_access(job_id, allow_query_token=False):
         # Don't reveal existence to other users.
         return None, None, (jsonify({'ok': False, 'error': 'Job not found'}), 404)
     return user_info, job, None
+
+
+@app.route('/api/workspaces', methods=['GET'])
+def api_list_workspaces():
+    """SESSIE 73 - A1: lijst de workspaces (artists) van de caller, RLS-scoped.
+
+    Read-only. Loopt via de anon+JWT-client zodat RLS de isolatie-grens is
+    (NIET service_role). Returnt [] als Supabase niet is geconfigureerd zodat
+    de frontend netjes degradeert. Eerste echte consument van _user_supabase();
+    content-writes komen met A2/A3. ADDITIEF: raakt analyse/export/auth niet.
+    """
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    if sb is None:
+        return jsonify({'ok': True, 'workspaces': []})
+    try:
+        res = (sb.table('workspaces')
+                 .select('id,name,slug,artist_name,avatar_url,owner_id,created_at')
+                 .order('created_at')
+                 .execute())
+        rows = getattr(res, 'data', None) or []
+    except Exception as e:
+        log.warning("api_list_workspaces mislukt: %s", e)
+        return jsonify({'ok': False, 'error': 'Kon workspaces niet laden'}), 502
+    uid = user_info.get('user_id')
+    for w in rows:
+        try:
+            w['is_owner'] = (w.get('owner_id') == uid)
+        except Exception:
+            pass
+    return jsonify({'ok': True, 'workspaces': rows})
 
 
 @app.route('/api/billing/health', methods=['GET'])
@@ -2449,9 +2631,72 @@ def _brand_kit_defaults():
     }
 
 
+# ---------------------------------------------------------------------------
+# SESSIE 74 - Slice 2 FASE 4: brand-kit + assets per workspace.
+# `_active_brand_ws()` bepaalt (per-request gecached) de actieve workspace voor
+# de huidige brand-request; daarmee laden/schrijven de brand-kit-endpoints een
+# per-workspace bestand i.p.v. het globale. Logo/watermark gaan naar per-workspace
+# mappen (lost de vaste-bestandsnaam-clobber op). Zonder workspace -> globaal
+# gedrag (geen regressie). De cutter blijft globaal/job-map lezen (fase 2b).
+# ---------------------------------------------------------------------------
+def _active_brand_ws():
+    """De actieve workspace voor de huidige brand-request (per-request gecached op
+    flask.g). None bij geen auth/workspace/Supabase -> globale fallback. Faalt stil."""
+    try:
+        if getattr(g, '_brand_ws_resolved', False):
+            return getattr(g, '_brand_ws_id', None)
+    except Exception:
+        return None
+    ws = None
+    try:
+        user_info, err = _require_authed_user()
+        if not err and user_info:
+            sb = _user_supabase(user_info.get('access_token'))
+            if sb is not None:
+                ws, _w = current_workspace_id(user_info, required=False)
+    except Exception:
+        ws = None
+    try:
+        g._brand_ws_resolved = True
+        g._brand_ws_id = ws
+    except Exception:
+        pass
+    return ws
+
+
+def _ws_brand_kit_path(ws):
+    return os.path.join(DATA_DIR, 'workspaces', str(ws), 'brand_kit.json') if ws else BRAND_KIT_PATH
+
+
+def _brand_asset_dirs(ws):
+    """Dict met logo/fonts/watermark-mappen voor deze workspace (of globaal als ws
+    None). Maakt de mappen aan. NB: fonts blijven praktisch globaal-compatibel via
+    uuid-namen; logo/watermark zijn juist per-workspace om clobber te voorkomen."""
+    if ws:
+        base = os.path.join(DATA_DIR, 'workspaces', str(ws), 'brand_kit')
+        d = {'logo': os.path.join(base, 'logo'),
+             'fonts': os.path.join(base, 'fonts'),
+             'watermark': os.path.join(base, 'watermark')}
+    else:
+        d = {'logo': BRAND_LOGO_DIR, 'fonts': BRAND_FONTS_DIR, 'watermark': BRAND_WATERMARK_DIR}
+    for p in d.values():
+        try:
+            os.makedirs(p, exist_ok=True)
+        except Exception:
+            pass
+    return d
+
+
 def _load_brand_kit():
-    """Read + back-fill defaults so callers can rely on the schema."""
-    kit = _load_json_blob(BRAND_KIT_PATH, {})
+    """Read + back-fill defaults so callers can rely on the schema. SESSIE 74 fase 4:
+    per-workspace wanneer de brand-request een workspace heeft (eigen cache, eenmalig
+    geseed uit het globale bestand); anders globaal (geen regressie)."""
+    ws = _active_brand_ws()
+    path = _ws_brand_kit_path(ws)
+    if ws and not os.path.exists(path):
+        kit = _load_json_blob(BRAND_KIT_PATH, {})   # seed uit globaal
+    else:
+        kit = _load_json_blob(path, {})
     base = _brand_kit_defaults()
     for k, v in base.items():
         if k not in kit:
@@ -2461,6 +2706,23 @@ def _load_brand_kit():
 
 @app.route('/api/brand-kit', methods=['GET'])
 def get_brand_kit():
+    # SESSIE 74 - Slice 2 fase 2a: geef de per-workspace brand-kit uit dj_profiles
+    # terug als die er is; anders het globale bestand (backward compatible voor
+    # unauth/boot-callers). De cutter blijft het globale bestand lezen (fase 2b).
+    sb, ws_id = _brand_ws_ctx()
+    if sb is not None and ws_id:
+        try:
+            res = (sb.table('dj_profiles').select('profile')
+                     .eq('workspace_id', ws_id).limit(1).execute())
+            rows = getattr(res, 'data', None) or []
+            bk = ((rows[0].get('profile') if rows else None) or {}).get('brand_kit')
+            if isinstance(bk, dict) and bk:
+                base = _brand_kit_defaults()
+                for k, v in base.items():
+                    bk.setdefault(k, v)
+                return jsonify(bk)
+        except Exception as e:
+            log.warning("get_brand_kit workspace-read mislukt: %s", e)
     return jsonify(_load_brand_kit())
 
 
@@ -2471,9 +2733,412 @@ def save_brand_kit():
     kit = _load_brand_kit()
     kit.update({k: v for k, v in data.items() if v is not None})
     kit['updated'] = time.time()
-    _save_json_blob(BRAND_KIT_PATH, kit)
+    _save_brand_kit(kit)
     log.info("Brand kit updated: keys=%s", list(data.keys()))
     return jsonify({'success': True, **kit})
+
+
+# ---------------------------------------------------------------------------
+# SESSIE 74 - Slice 2 (Brand bron-migratie), FASE 1: per-workspace brand-profiel.
+# Additief en niet-destructief: nieuwe routes NAAST de bestaande /api/brand-kit*.
+# dj_profiles (Supabase) wordt de bron van waarheid per workspace, gelezen/
+# geschreven via de anon+user-JWT-client (_user_supabase) zodat RLS de grens is.
+# brand_kit.json + alle /api/brand-kit* blijven in fase 1 ONGEMOEID. Het canonieke
+# profiel embed het bestaande brand_kit-blok onder de sleutel 'brand_kit' zodat de
+# render-shape verliesvrij meegaat naar fase 2. Zie PLAN-SLICE2-BRAND-MIGRATION.
+# ---------------------------------------------------------------------------
+_BRAND_PROFILE_SCHEMA_VERSION = 1
+
+
+def _brand_profile_defaults():
+    """Lege canonieke profiel-structuur (moat-schema + ingebed brand_kit)."""
+    return {
+        'schema_version': _BRAND_PROFILE_SCHEMA_VERSION,
+        'artist_name': '',
+        'alias': '',
+        'visual': {
+            'logo': None, 'logo_position': 'bottom_right', 'logo_size': '8%',
+            'primary_color': '', 'secondary_color': '', 'accent_color': '',
+        },
+        'typography': {'title_font': '', 'caption_font': '', 'caption_style': 'two_word_punch'},
+        'lower_third': {'enabled': False, 'template': 'name_below_logo', 'duration': 3.0},
+        'cta': {'style': 'out_now', 'spotify_link': '', 'beatport_link': '', 'show_in_last_seconds': 2.5},
+        'hashtags': {'tiktok': [], 'instagram': [], 'youtube_shorts': []},
+        'caption_voice': {'tone': 'hyped', 'use_emojis': True, 'max_length_chars': 80},
+        'brand_kit': {},
+    }
+
+
+def _seed_brand_profile_from_kit():
+    """Bouw een canoniek profiel uit het bestaande globale brand_kit.json.
+    Best-effort mapping van overlappende velden; het volledige brand_kit-blok gaat
+    verliesvrij onder 'brand_kit'. Nul-impact als er nog geen kit is."""
+    prof = _brand_profile_defaults()
+    try:
+        kit = _load_brand_kit() or {}
+    except Exception:
+        kit = {}
+    prof['brand_kit'] = kit
+    try:
+        if kit.get('handle'):
+            prof['alias'] = kit.get('handle') or ''
+        pal = kit.get('palette') or []
+        if len(pal) >= 1 and (pal[0] or {}).get('hex'):
+            prof['visual']['primary_color'] = pal[0]['hex']
+        if len(pal) >= 2 and (pal[1] or {}).get('hex'):
+            prof['visual']['secondary_color'] = pal[1]['hex']
+        if len(pal) >= 3 and (pal[2] or {}).get('hex'):
+            prof['visual']['accent_color'] = pal[2]['hex']
+        logo = kit.get('logo')
+        if isinstance(logo, dict):
+            prof['visual']['logo'] = logo.get('path')
+        elif logo:
+            prof['visual']['logo'] = logo
+        fonts = kit.get('fonts') or []
+        if fonts and fonts[0].get('family'):
+            prof['typography']['title_font'] = fonts[0]['family']
+            prof['typography']['caption_font'] = fonts[0]['family']
+    except Exception:
+        pass
+    return prof
+
+
+def _merge_brand_profile(base, incoming):
+    """Merge incoming op base. Bekende sub-objecten worden 1 niveau diep gemerged;
+    None-waarden worden genegeerd zodat partiele saves niets wegvegen."""
+    out = dict(base or {})
+    for k, v in (incoming or {}).items():
+        if v is None:
+            continue
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            merged = dict(out[k])
+            merged.update({kk: vv for kk, vv in v.items() if vv is not None})
+            out[k] = merged
+        else:
+            out[k] = v
+    out['schema_version'] = _BRAND_PROFILE_SCHEMA_VERSION
+    return out
+
+
+@app.route('/api/brand/profile', methods=['GET'])
+def get_brand_profile():
+    """Lees het brand-profiel van de actieve workspace (RLS-scoped). Bestaat er nog
+    geen dj_profiles-rij, dan eenmalig SEEDEN uit het globale brand_kit.json en
+    upserten. Degradeert (legacy) naar het globale brand_kit als er geen workspace/
+    Supabase is, zodat de frontend altijd iets bruikbaars krijgt."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    ws_id, _werr = current_workspace_id(user_info, required=False)
+    if sb is None or not ws_id:
+        prof = _seed_brand_profile_from_kit()
+        return jsonify({'ok': True, 'workspace_id': ws_id, 'source': 'legacy', 'profile': prof})
+    try:
+        res = (sb.table('dj_profiles').select('id,profile,updated_at')
+                 .eq('workspace_id', ws_id).limit(1).execute())
+        rows = getattr(res, 'data', None) or []
+        if rows:
+            prof = rows[0].get('profile') or _brand_profile_defaults()
+            return jsonify({'ok': True, 'workspace_id': ws_id, 'source': 'supabase', 'profile': prof})
+        seeded = _seed_brand_profile_from_kit()
+        try:
+            sb.table('dj_profiles').upsert(
+                {'workspace_id': ws_id, 'profile': seeded},
+                on_conflict='workspace_id').execute()
+        except Exception as e:
+            log.warning("brand-profile seed-upsert mislukt: %s", e)
+        return jsonify({'ok': True, 'workspace_id': ws_id, 'source': 'seeded', 'profile': seeded})
+    except Exception as e:
+        log.warning("get_brand_profile mislukt: %s", e)
+        return jsonify({'ok': False, 'error': 'Kon brand-profiel niet laden'}), 502
+
+
+@app.route('/api/brand/profile', methods=['PUT'])
+def put_brand_profile():
+    """Schrijf (merge) het brand-profiel van de actieve workspace via de user-JWT
+    (RLS is de grens). Niet-destructief t.o.v. brand_kit.json in fase 1."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    ws_id, werr = current_workspace_id(user_info, required=True)
+    if werr:
+        return werr
+    if sb is None:
+        return jsonify({'ok': False, 'error': 'Supabase niet geconfigureerd'}), 503
+    body = request.get_json(silent=True) or {}
+    incoming = body.get('profile')
+    if not isinstance(incoming, dict):
+        return jsonify({'ok': False, 'error': 'profile-object ontbreekt'}), 400
+    try:
+        res = (sb.table('dj_profiles').select('profile')
+                 .eq('workspace_id', ws_id).limit(1).execute())
+        rows = getattr(res, 'data', None) or []
+        base = (rows[0].get('profile') if rows else None) or _seed_brand_profile_from_kit()
+    except Exception:
+        base = _seed_brand_profile_from_kit()
+    merged = _merge_brand_profile(base, incoming)
+    try:
+        sb.table('dj_profiles').upsert(
+            {'workspace_id': ws_id, 'profile': merged},
+            on_conflict='workspace_id').execute()
+    except Exception as e:
+        log.warning("put_brand_profile upsert mislukt: %s", e)
+        return jsonify({'ok': False, 'error': 'Kon brand-profiel niet opslaan'}), 502
+    return jsonify({'ok': True, 'workspace_id': ws_id, 'profile': merged})
+
+
+# ---------------------------------------------------------------------------
+# SESSIE 74 - Slice 2 FASE 2a: brand-kit metadata per workspace (mirror).
+# De cutter (cutter.py `_load_brand_assets_for_job`) leest het GLOBALE
+# brand_kit.json ZELF van schijf. Daarom blijft dat bestand in fase 2a exact
+# zoals het is (nul export-regressie). Wat fase 2a wel doet: elke brand-kit-save
+# mirrort de metadata naar `dj_profiles.profile.brand_kit` van de actieve
+# workspace, en GET /api/brand-kit geeft die per-workspace versie terug als die
+# bestaat. Het per-workspace LOKALE cache-bestand + de cutter workspace-bewust
+# maken horen bij elkaar en schuiven naar fase 2b (raakt de render). Zie
+# PLAN-SLICE2-BRAND-MIGRATION.
+# ---------------------------------------------------------------------------
+def _brand_ws_ctx():
+    """(sb, ws_id) voor de huidige brand-request, of (None, None) als er geen
+    auth/workspace/Supabase is. Soft: faalt nooit, degradeert naar het globale
+    gedrag zodat unauth-callers (boot vóór login) blijven werken."""
+    try:
+        user_info, err = _require_authed_user()
+        if err or not user_info:
+            return None, None
+        sb = _user_supabase(user_info.get('access_token'))
+        ws_id, _werr = current_workspace_id(user_info, required=False)
+        if sb is None or not ws_id:
+            return None, None
+        return sb, ws_id
+    except Exception:
+        return None, None
+
+
+def _mirror_kit_to_workspace(kit):
+    """Best-effort: schrijf de brand-kit metadata naar dj_profiles.profile.brand_kit
+    van de actieve workspace (RLS via user-JWT). Raakt het globale bestand niet."""
+    sb, ws_id = _brand_ws_ctx()
+    if sb is None or not ws_id:
+        return
+    # SESSIE 74 - fase 2b: schrijf ook een lokale per-workspace cache zodat de
+    # render-thread (geen auth/JWT) de juiste brand kan materialiseren in de
+    # job-map. Onafhankelijk van de Supabase-mirror.
+    try:
+        cp = _workspace_brand_cache_path(ws_id)
+        if cp:
+            os.makedirs(os.path.dirname(cp), exist_ok=True)
+            _save_json_blob(cp, kit)
+    except Exception as e:
+        log.warning("brand-kit lokale workspace-cache schrijven mislukt: %s", e)
+    try:
+        res = (sb.table('dj_profiles').select('profile')
+                 .eq('workspace_id', ws_id).limit(1).execute())
+        rows = getattr(res, 'data', None) or []
+        prof = (rows[0].get('profile') if rows else None) or _seed_brand_profile_from_kit()
+        prof = dict(prof)
+        prof['brand_kit'] = kit
+        sb.table('dj_profiles').upsert(
+            {'workspace_id': ws_id, 'profile': prof},
+            on_conflict='workspace_id').execute()
+    except Exception as e:
+        log.warning("brand-kit mirror naar workspace mislukt: %s", e)
+
+
+def _save_brand_kit(kit):
+    """Sla de brand-kit op. SESSIE 74 fase 4: met actieve workspace schrijven we
+    ALLEEN de per-workspace cache + Supabase-mirror (via _mirror_kit_to_workspace);
+    het globale bestand blijft een stabiele default/fallback voor de cutter (oude/
+    ongetagde jobs). Zonder workspace schrijven we het globale bestand."""
+    if not _active_brand_ws():
+        _save_json_blob(BRAND_KIT_PATH, kit)
+    _mirror_kit_to_workspace(kit)
+
+
+# SESSIE 74 - Slice 2 fase 2b: per-workspace brand in de render.
+def _workspace_brand_cache_path(ws_id):
+    """Lokaal per-workspace brand_kit cache-pad (door de render-thread leesbaar
+    zonder Supabase/JWT). None als ws_id leeg."""
+    if not ws_id:
+        return None
+    return os.path.join(DATA_DIR, 'workspaces', str(ws_id), 'brand_kit.json')
+
+
+def _materialize_job_brand(job_id, target_dir):
+    """Kopieer de per-workspace brand-cache van de job naar target_dir/brand_kit.json
+    zodat de cutter (die output_dir eerst leest) de juiste brand bakt. Best-effort
+    en no-op zonder workspace/cache -> de cutter valt terug op het globale bestand
+    (geen regressie)."""
+    try:
+        if not target_dir:
+            return
+        job = None
+        with jobs_lock:
+            job = jobs.get(job_id)
+        if job is None:
+            job = _load_job_snapshot(job_id)
+        ws_id = (job or {}).get('workspace_id')
+        src = _workspace_brand_cache_path(ws_id)
+        if not src or not os.path.exists(src):
+            return
+        os.makedirs(target_dir, exist_ok=True)
+        shutil.copy2(src, os.path.join(target_dir, 'brand_kit.json'))
+    except Exception as e:
+        log.warning("job-brand materialiseren mislukt voor %s: %s", job_id, e)
+
+
+# ---------------------------------------------------------------------------
+# SESSIE 74 - Slice 4 (Content Calendar / A3), FASE 4a: scheduled_posts per
+# workspace via _user_supabase + current_workspace_id (RLS is de grens).
+# Draft-store: publisht NIETS (status blijft draft/scheduled tot de latere
+# Postiz-fase, buiten dit plan). Additief; raakt analyse/export/brand niet.
+# ---------------------------------------------------------------------------
+_CAL_STATUS = {'draft', 'scheduled', 'published', 'failed'}
+_CAL_COLS = 'id,clip_id,caption,platforms,scheduled_for,status,created_at,updated_at'
+_UUID_RE = re.compile(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+
+
+def _cal_clean_platforms(v):
+    """Witte-lijst-vrije maar veilige normalisatie: strings, getrimd, gecapt."""
+    if not isinstance(v, list):
+        return []
+    out = []
+    for p in v:
+        if isinstance(p, str) and p.strip():
+            out.append(p.strip()[:32])
+    return out[:10]
+
+
+@app.route('/api/calendar/list', methods=['GET'])
+def api_calendar_list():
+    """Lijst geplande posts van de actieve workspace, RLS-scoped. Optioneel
+    filteren op ?from=ISO&to=ISO (op scheduled_for)."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    ws_id, werr = current_workspace_id(user_info, required=True)
+    if werr:
+        return werr
+    if sb is None:
+        return jsonify({'ok': True, 'posts': []})
+    try:
+        q = sb.table('scheduled_posts').select(_CAL_COLS).eq('workspace_id', ws_id)
+        frm = (request.args.get('from') or '').strip()
+        to = (request.args.get('to') or '').strip()
+        if frm:
+            q = q.gte('scheduled_for', frm)
+        if to:
+            q = q.lte('scheduled_for', to)
+        res = q.order('scheduled_for').execute()
+        rows = getattr(res, 'data', None) or []
+    except Exception as e:
+        log.warning("api_calendar_list mislukt: %s", e)
+        return jsonify({'ok': False, 'error': 'Kon calendar niet laden'}), 502
+    return jsonify({'ok': True, 'workspace_id': ws_id, 'posts': rows})
+
+
+@app.route('/api/calendar/schedule', methods=['POST'])
+def api_calendar_schedule():
+    """Maak een geplande post (draft) voor de actieve workspace via RLS."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    ws_id, werr = current_workspace_id(user_info, required=True)
+    if werr:
+        return werr
+    if sb is None:
+        return jsonify({'ok': False, 'error': 'Supabase niet geconfigureerd'}), 503
+    body = request.get_json(silent=True) or {}
+    scheduled_for = (body.get('scheduled_for') or '').strip()
+    if not scheduled_for:
+        return jsonify({'ok': False, 'error': 'scheduled_for ontbreekt'}), 400
+    status = body.get('status') if body.get('status') in _CAL_STATUS else 'draft'
+    row = {
+        'workspace_id': ws_id,
+        'caption': ((body.get('caption') or '')[:2000] or None),
+        'platforms': _cal_clean_platforms(body.get('platforms')),
+        'scheduled_for': scheduled_for,
+        'status': status,
+        'created_by': user_info.get('user_id'),
+    }
+    cid = body.get('clip_id')
+    if isinstance(cid, str) and _UUID_RE.match(cid):
+        row['clip_id'] = cid   # clips-tabel is nog leeg; meestal afwezig
+    try:
+        res = sb.table('scheduled_posts').insert(row).execute()
+        rows = getattr(res, 'data', None) or []
+    except Exception as e:
+        log.warning("api_calendar_schedule mislukt: %s", e)
+        return jsonify({'ok': False, 'error': 'Kon post niet plannen'}), 502
+    return jsonify({'ok': True, 'post': (rows[0] if rows else None)})
+
+
+@app.route('/api/calendar/update', methods=['PUT', 'POST'])
+def api_calendar_update():
+    """Wijzig een geplande post (caption/platforms/scheduled_for/status). RLS +
+    expliciete workspace-filter zodat een vreemde id netjes 404 geeft."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    ws_id, werr = current_workspace_id(user_info, required=True)
+    if werr:
+        return werr
+    if sb is None:
+        return jsonify({'ok': False, 'error': 'Supabase niet geconfigureerd'}), 503
+    body = request.get_json(silent=True) or {}
+    pid = (body.get('id') or '').strip()
+    if not pid:
+        return jsonify({'ok': False, 'error': 'id ontbreekt'}), 400
+    patch = {}
+    if 'caption' in body:
+        patch['caption'] = ((body.get('caption') or '')[:2000] or None)
+    if 'platforms' in body:
+        patch['platforms'] = _cal_clean_platforms(body.get('platforms'))
+    if body.get('scheduled_for'):
+        patch['scheduled_for'] = str(body.get('scheduled_for')).strip()
+    if body.get('status') in _CAL_STATUS:
+        patch['status'] = body.get('status')
+    if not patch:
+        return jsonify({'ok': False, 'error': 'niets te wijzigen'}), 400
+    try:
+        res = (sb.table('scheduled_posts').update(patch)
+                 .eq('id', pid).eq('workspace_id', ws_id).execute())
+        rows = getattr(res, 'data', None) or []
+    except Exception as e:
+        log.warning("api_calendar_update mislukt: %s", e)
+        return jsonify({'ok': False, 'error': 'Kon post niet bijwerken'}), 502
+    if not rows:
+        return jsonify({'ok': False, 'error': 'Post niet gevonden'}), 404
+    return jsonify({'ok': True, 'post': rows[0]})
+
+
+@app.route('/api/calendar/delete', methods=['POST', 'DELETE'])
+def api_calendar_delete():
+    """Verwijder een geplande post (RLS + workspace-filter)."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    ws_id, werr = current_workspace_id(user_info, required=True)
+    if werr:
+        return werr
+    if sb is None:
+        return jsonify({'ok': False, 'error': 'Supabase niet geconfigureerd'}), 503
+    body = request.get_json(silent=True) or {}
+    pid = (body.get('id') or '').strip()
+    if not pid:
+        return jsonify({'ok': False, 'error': 'id ontbreekt'}), 400
+    try:
+        sb.table('scheduled_posts').delete().eq('id', pid).eq('workspace_id', ws_id).execute()
+    except Exception as e:
+        log.warning("api_calendar_delete mislukt: %s", e)
+        return jsonify({'ok': False, 'error': 'Kon post niet verwijderen'}), 502
+    return jsonify({'ok': True})
 
 
 # --- Font upload + serving --------------------------------------------------
@@ -2603,7 +3268,7 @@ def upload_brand_font():
     }
     kit.setdefault('fonts', []).append(entry)
     kit['updated'] = time.time()
-    _save_json_blob(BRAND_KIT_PATH, kit)
+    _save_brand_kit(kit)
     log.info("Brand font uploaded: %s (%s, %d bytes)", family, final_ext, entry['bytes'])
     return jsonify({'success': True, 'font': entry, 'fonts': kit['fonts']})
 
@@ -2643,7 +3308,7 @@ def delete_brand_font(font_id):
         if p.get('font_id') == font_id:
             p['font_id'] = None
     kit['updated'] = time.time()
-    _save_json_blob(BRAND_KIT_PATH, kit)
+    _save_brand_kit(kit)
     return jsonify({'success': True, 'fonts': kit['fonts']})
 
 
@@ -2879,12 +3544,14 @@ def upload_brand_logo():
     if ext == '.svg' and not (head.lstrip().startswith(b'<?xml') or head.lstrip().startswith(b'<svg')):
         return jsonify({'error': 'SVG does not start with <?xml or <svg'}), 400
 
+    # SESSIE 74 fase 4: per-workspace logo-map (lost vaste-bestandsnaam-clobber op).
+    _logo_dir = _brand_asset_dirs(_active_brand_ws())['logo']
     # Wipe any previous logo files so we don't accumulate.
-    for old in os.listdir(BRAND_LOGO_DIR):
-        try: os.remove(os.path.join(BRAND_LOGO_DIR, old))
+    for old in os.listdir(_logo_dir):
+        try: os.remove(os.path.join(_logo_dir, old))
         except Exception: pass
 
-    final_path = os.path.join(BRAND_LOGO_DIR, 'logo' + ext)
+    final_path = os.path.join(_logo_dir, 'logo' + ext)
     written = 0
     with open(final_path, 'wb') as out:
         while True:
@@ -2910,7 +3577,7 @@ def upload_brand_logo():
         'bytes': written,
     }
     kit['updated'] = time.time()
-    _save_json_blob(BRAND_KIT_PATH, kit)
+    _save_brand_kit(kit)
     log.info("Brand logo uploaded: %s (%d bytes)", filename, written)
     return jsonify({'success': True, 'logo': kit['logo']})
 
@@ -2938,7 +3605,7 @@ def delete_brand_logo():
         log.warning("Could not remove logo file %s: %s", p, e)
     kit['logo'] = None
     kit['updated'] = time.time()
-    _save_json_blob(BRAND_KIT_PATH, kit)
+    _save_brand_kit(kit)
     return jsonify({'success': True})
 
 
@@ -2990,13 +3657,15 @@ def upload_brand_watermark():
         if ext in ('.jpg', '.jpeg') and head[:3] != b'\xff\xd8\xff':
             return jsonify({'error': 'JPG magic bytes mismatch'}), 400
 
+        # SESSIE 74 fase 4: per-workspace watermark-map (clobber-fix).
+        _wm_dir = _brand_asset_dirs(_active_brand_ws())['watermark']
         # Wipe previous watermark files so the folder doesn't accumulate.
-        for old in os.listdir(BRAND_WATERMARK_DIR):
-            try: os.remove(os.path.join(BRAND_WATERMARK_DIR, old))
+        for old in os.listdir(_wm_dir):
+            try: os.remove(os.path.join(_wm_dir, old))
             except Exception: pass
 
         save_ext = ext if ext != '.jpeg' else '.jpg'
-        final_path = os.path.join(BRAND_WATERMARK_DIR, 'watermark' + save_ext)
+        final_path = os.path.join(_wm_dir, 'watermark' + save_ext)
         try:
             shutil.copy2(src_path, final_path)
         except (OSError, shutil.Error) as e:
@@ -3016,7 +3685,7 @@ def upload_brand_watermark():
             'file': os.path.basename(final_path),
         }
         kit['updated'] = time.time()
-        _save_json_blob(BRAND_KIT_PATH, kit)
+        _save_brand_kit(kit)
         log.info("Brand watermark imported from %s (%d bytes)", src_path, file_size)
         return jsonify({
             'success': True,
@@ -3039,13 +3708,15 @@ def upload_brand_watermark():
     if ext in ('.jpg', '.jpeg') and head[:3] != b'\xff\xd8\xff':
         return jsonify({'error': 'JPG magic bytes mismatch'}), 400
 
+    # SESSIE 74 fase 4: per-workspace watermark-map (clobber-fix).
+    _wm_dir = _brand_asset_dirs(_active_brand_ws())['watermark']
     # Wipe previous watermark files so the folder doesn't accumulate.
-    for old in os.listdir(BRAND_WATERMARK_DIR):
-        try: os.remove(os.path.join(BRAND_WATERMARK_DIR, old))
+    for old in os.listdir(_wm_dir):
+        try: os.remove(os.path.join(_wm_dir, old))
         except Exception: pass
 
     save_ext = ext if ext != '.jpeg' else '.jpg'
-    final_path = os.path.join(BRAND_WATERMARK_DIR, 'watermark' + save_ext)
+    final_path = os.path.join(_wm_dir, 'watermark' + save_ext)
     written = 0
     with open(final_path, 'wb') as out:
         while True:
@@ -3074,7 +3745,7 @@ def upload_brand_watermark():
         'file': os.path.basename(final_path),
     }
     kit['updated'] = time.time()
-    _save_json_blob(BRAND_KIT_PATH, kit)
+    _save_brand_kit(kit)
     log.info("Brand watermark uploaded: %s (%d bytes)", filename, written)
     return jsonify({'success': True, 'watermark': kit['watermark']})
 
@@ -3103,7 +3774,7 @@ def delete_brand_watermark():
         log.warning("Could not remove watermark file %s: %s", p, e)
     kit['watermark'] = None
     kit['updated'] = time.time()
-    _save_json_blob(BRAND_KIT_PATH, kit)
+    _save_brand_kit(kit)
     return jsonify({'success': True})
 
 
@@ -3130,7 +3801,7 @@ def update_brand_watermark_settings():
         wm['enabled'] = bool(body['enabled'])
     kit['watermark'] = wm
     kit['updated'] = time.time()
-    _save_json_blob(BRAND_KIT_PATH, kit)
+    _save_brand_kit(kit)
     return jsonify({'success': True, 'watermark': wm})
 
 
@@ -3614,7 +4285,7 @@ def save_brand_preset():
     }
     kit.setdefault('caption_presets', []).append(preset)
     kit['updated'] = time.time()
-    _save_json_blob(BRAND_KIT_PATH, kit)
+    _save_brand_kit(kit)
     return jsonify({'success': True, 'preset': preset, 'presets': kit['caption_presets']})
 
 
@@ -3625,7 +4296,7 @@ def delete_brand_preset(preset_id):
     kit = _load_brand_kit()
     kit['caption_presets'] = [p for p in kit.get('caption_presets', []) if p.get('id') != preset_id]
     kit['updated'] = time.time()
-    _save_json_blob(BRAND_KIT_PATH, kit)
+    _save_brand_kit(kit)
     return jsonify({'success': True, 'presets': kit['caption_presets']})
 
 
@@ -3911,6 +4582,7 @@ def upload():
             'video_path': video_path,
             'user_id': user_id,                # Phase 3: who to bill for this set
             'access_token': user_info.get('access_token'),  # SESSIE 30: routed through update-usage edge function when no service_role
+            'workspace_id': current_workspace_id(user_info, required=False)[0],  # SESSIE 74 fase 2b: brand-scope van de job
             'usage_counted': False,            # Phase 3: idempotency for increment
             'status': 'queued',
             'message': 'Upload complete, starting analysis...',
@@ -4117,6 +4789,7 @@ def upload_local():
             'no_copy': True,
             'user_id': user_id,                # Phase 3: who to bill for this set
             'access_token': user_info.get('access_token'),  # SESSIE 30: routed through update-usage edge function when no service_role
+            'workspace_id': current_workspace_id(user_info, required=False)[0],  # SESSIE 74 fase 2b: brand-scope van de job
             'usage_counted': False,            # Phase 3: idempotency for increment
             'status': 'queued',
             'message': 'Local source registered — starting analysis...',
@@ -4142,6 +4815,127 @@ def upload_local():
     thread.daemon = True
     thread.start()
     return jsonify({'job_id': job_id, 'no_copy': True, 'estimated_gb': round(est_gb, 1)})
+
+
+# ---------------------------------------------------------------------------
+# SESSIE 71 — C2: Import a finished short straight into the editor.
+# ADDITIVE endpoint. It does NOT touch the analyse/cut pipeline. It saves the
+# uploaded video into a fresh job folder, probes it, makes a thumbnail, and
+# registers it as a single-clip "done" job so it opens in the editor for
+# trim / captions / brand / export. No drop-analysis runs (no quota cost).
+# Local-first: the file lives under OUTPUT_DIR/<job_id>/ (DATA_DIR), exactly
+# like every other job, and is private to the caller via job['user_id'].
+# When the multi-tenant data-layer (A1) lands this becomes workspace-scoped.
+# ---------------------------------------------------------------------------
+_IMPORT_VIDEO_EXT = {'.mp4', '.mov', '.m4v', '.webm'}
+
+
+@app.route('/api/import-clip', methods=['POST'])
+def api_import_clip():
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    user_id = user_info['user_id']
+
+    file = request.files.get('file')
+    if file is None or not file.filename:
+        return jsonify({'ok': False, 'error': 'No file provided'}), 400
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in _IMPORT_VIDEO_EXT:
+        return jsonify({'ok': False,
+                        'error': 'Unsupported file type. Import a video (mp4, mov, m4v, webm).'}), 415
+
+    job_id = str(uuid.uuid4())[:8]
+    job_dir = os.path.join(OUTPUT_DIR, job_id)
+    try:
+        os.makedirs(job_dir, exist_ok=True)
+    except OSError as e:
+        return jsonify({'ok': False, 'error': f'Could not create job folder: {e}'}), 500
+
+    safe_name = _safe_filename(os.path.basename(file.filename)) or ('import' + ext)
+    if not os.path.splitext(safe_name)[1]:
+        safe_name += ext
+    dest = os.path.join(job_dir, safe_name)
+    try:
+        file.save(dest)
+    except OSError as e:
+        return jsonify({'ok': False, 'error': f'Could not save file: {e}'}), 500
+
+    # Probe duration / dimensions (best-effort; ffprobe via cutter.get_video_info).
+    info = {}
+    duration = 0.0
+    try:
+        info = get_video_info(dest) or {}
+        duration = float(info.get('duration') or 0.0)
+    except Exception as e:
+        log.warning("import-clip: probe failed for %s: %s", dest, e)
+    if duration < 0:
+        duration = 0.0
+
+    # Thumbnail near the start (midpoint for very short clips).
+    thumb_name = 'thumb_clip01.jpg'
+    try:
+        ts = min(1.0, duration / 2.0) if duration > 0 else 0.0
+        generate_thumbnail(dest, ts, os.path.join(job_dir, thumb_name))
+    except Exception as e:
+        log.warning("import-clip: thumbnail failed: %s", e)
+        thumb_name = None
+
+    base_label = os.path.splitext(safe_name)[0]
+    # Single clip that spans the whole file. Same object in clips[] and
+    # results[] so both the editor (reads clips) and the Clips view (reads
+    # results) find the playable `files`. All ratios point at the imported
+    # file; the export pipeline reframes per-ratio from video_path as usual.
+    clip = {
+        'index': 1,
+        'type': 'import',
+        'start': 0.0,
+        'end': duration,
+        'duration': duration,
+        'peak_time': 0.0,
+        'score': 1.0,
+        'caption': base_label,
+        'files': {
+            'landscape': safe_name,
+            'vertical': safe_name,
+            'square': safe_name,
+            'portrait45': safe_name,
+        },
+    }
+    if thumb_name:
+        clip['thumbnail'] = thumb_name
+
+    job = {
+        'id': job_id,
+        'filename': safe_name,
+        'video_path': dest,            # source == the imported file (recut/export read this)
+        'no_copy': False,
+        'user_id': user_id,
+        'usage_counted': True,         # imports don't consume analysis quota
+        'imported': True,
+        'status': 'done',
+        'message': 'Imported clip ready.',
+        'clips': [clip],
+        'results': [clip],
+        'waveform': [], 'filmstrip': [],
+        'duration': duration,
+        'video_info': info if isinstance(info, dict) else {},
+        'fps': info.get('fps') if isinstance(info, dict) else None,
+        'bpm': {}, 'favorites': [],
+        'settings': {},
+    }
+    with jobs_lock:
+        jobs[job_id] = job
+    try:
+        _append_to_history(job)   # writes history entry + persists snapshot
+    except Exception as e:
+        log.warning("import-clip: history/snapshot persist failed: %s", e)
+    try:
+        _audit('import_clip', user_id=user_id, metadata={'job_id': job_id, 'ext': ext})
+    except Exception:
+        pass
+
+    return jsonify({'ok': True, 'job_id': job_id, 'clip_index': 0, 'duration': duration})
 
 
 @app.route('/api/storage', methods=['GET'])
@@ -5378,8 +6172,27 @@ def api_export_preset(job_id):
         return jsonify({'error': 'Source clip file not found on disk'}), 404
 
     job_output_dir = os.path.join(OUTPUT_DIR, job_id)
-    base = os.path.splitext(os.path.basename(source))[0]
-    out_path = os.path.join(job_output_dir, f"{base}_{preset}.mp4")
+    # SESSIE 73 - honor de hernoemde clip-naam in de gedownloade filename.
+    # Deze per-card quick-export-popover (frontend _ceExportPreset) raakte de
+    # custom_label nooit aan: de output kreeg "<bron-basename>_<preset>.mp4",
+    # dus een rename ging bij download verloren (WENS sessie 71/72). Spiegelt nu
+    # /api/export: prefer een expliciet 'label' uit de request, anders het
+    # persistente clip_labels uit het snapshot, anders de oude bron-naam (geen
+    # regressie). _dedupe_output_path voorkomt stil overschrijven bij gelijke
+    # labels.
+    labels = snap.get('clip_labels') if isinstance(snap.get('clip_labels'), dict) else {}
+    custom = None
+    req_label = data.get('label')
+    if isinstance(req_label, str) and req_label.strip():
+        custom = req_label.strip()
+    else:
+        lv = labels.get(str(clip_index)) if isinstance(labels, dict) else None
+        if isinstance(lv, str) and lv.strip():
+            custom = lv.strip()
+    label_part = _safe_filename_label(custom)
+    if not label_part:
+        label_part = _safe_filename_label(os.path.splitext(os.path.basename(source))[0]) or 'clip'
+    out_path = _dedupe_output_path(os.path.join(job_output_dir, f"{label_part}_{preset}.mp4"))
 
     try:
         export_with_preset(source, preset, out_path)
@@ -5722,6 +6535,27 @@ def _resolve_export_sources(clip, aspects=None, job_id=None, job_output_dir=None
     return out
 
 
+def _dedupe_output_path(path):
+    """SESSIE 73 - voorkom stil overschrijven bij label-gebaseerde namen.
+    Label-namen kunnen botsen (twee clips met dezelfde naam, of een re-export
+    van dezelfde clip). Bestaat het pad al, voeg dan _2/_3/... toe vóór de
+    extensie i.p.v. data te overschrijven.
+    """
+    try:
+        if not os.path.exists(path):
+            return path
+        root, ext = os.path.splitext(path)
+        i = 2
+        while i < 1000:
+            cand = f"{root}_{i}{ext}"
+            if not os.path.exists(cand):
+                return cand
+            i += 1
+    except Exception:
+        pass
+    return path
+
+
 def _safe_filename_label(label, max_len=80):
     """Make a filesystem-safe filename component from a user-facing label.
     Strips path separators and characters that confuse Finder/Explorer,
@@ -5844,8 +6678,13 @@ def _detect_layers_for_clip(job_id, output_dir, clip_index):
         log.warning("layer-detect: text_overlays read failed for %s: %s", job_id, e)
     # Brand-kit logo + watermark
     try:
-        if os.path.exists(BRAND_KIT_PATH):
-            with open(BRAND_KIT_PATH, 'r') as f:
+        # SESSIE 74 - fase 2b: verkies de per-workspace brand uit de job-map als
+        # die gematerialiseerd is; anders het globale bestand (geen regressie).
+        _kit_path = os.path.join(output_dir, 'brand_kit.json') if output_dir else BRAND_KIT_PATH
+        if not os.path.exists(_kit_path):
+            _kit_path = BRAND_KIT_PATH
+        if os.path.exists(_kit_path):
+            with open(_kit_path, 'r') as f:
                 kit = json.load(f) or {}
             logo = kit.get('logo')
             if isinstance(logo, dict) and logo.get('file') and logo.get('enabled', True):
@@ -5948,6 +6787,10 @@ def _prebake_clip_for_export(clip, idx, job_id, job_output_dir, aspect_filter,
     except (OSError, json.JSONDecodeError) as e:
         log.warning("prebake: setup failed for clip %s: %s", clip_index, e)
         return None
+
+    # SESSIE 74 - fase 2b: per-workspace brand in de baked-map zodat recut_clip
+    # (leest output_dir eerst) de juiste brand bakt. No-op -> globale fallback.
+    _materialize_job_brand(job_id, baked_dir)
 
     # Watermark/logo uitzetten gebeurt NIET via brand_kit.json edit
     # (dat is een globale file — race conditions tussen parallel exports).
@@ -6750,7 +7593,126 @@ def _default_export_dir():
     return downloads if os.path.isdir(downloads) else home
 
 
+# ---------------------------------------------------------------------------
+# SESSIE 69 — native picker via NSOpenPanel (geen Apple-Event).
+#
+# De osascript-route ('choose file'/'choose folder') is een Apple-Event en
+# wordt in de hardened-runtime bundle geblokkeerd zonder het entitlement
+# com.apple.security.automation.apple-events. Resultaat: het dialog opent
+# nergens en /api/pick-file keert nooit terug → de UI "hangt".
+#
+# NSOpenPanel draait in-proces (Cocoa/AppKit, via PyObjC dat al binnenkomt
+# met pyobjc-framework-Vision) en heeft GEEN Apple-Event nodig. Het werkt
+# dus ook onder de hardened runtime. We proberen dit eerst; de osascript-
+# variant blijft als fallback (bv. als AppKit ontbreekt in dev).
+#
+# NSOpenPanel moet op de main thread draaien. Flask-requests draaien op
+# worker-threads, dus we marshallen via een __NSObject-helper +
+# performSelectorOnMainThread en wachten op het resultaat.
+# ---------------------------------------------------------------------------
+
+# Cache zodat we de import-poging niet bij elke klik herhalen.
+_NSOPENPANEL_AVAILABLE = None
+
+
+def _nsopenpanel_supported():
+    global _NSOPENPANEL_AVAILABLE
+    if _NSOPENPANEL_AVAILABLE is not None:
+        return _NSOPENPANEL_AVAILABLE
+    if sys.platform != 'darwin':
+        _NSOPENPANEL_AVAILABLE = False
+        return False
+    try:
+        import AppKit  # noqa: F401  (pyobjc-framework-Cocoa)
+        import objc  # noqa: F401
+        _NSOPENPANEL_AVAILABLE = True
+    except Exception:
+        _NSOPENPANEL_AVAILABLE = False
+    return _NSOPENPANEL_AVAILABLE
+
+
+def _pick_with_nsopenpanel(prompt, default_dir, choose_dirs):
+    """Open an NSOpenPanel on the main thread and return (path|None, err|None).
+
+    choose_dirs=True → folder picker; False → file picker.
+    Returns (None, None) on user-cancel, (path, None) on success,
+    (None, err_string) on a real error so the caller can fall back."""
+    try:
+        import AppKit
+        import objc
+        from Foundation import NSObject, NSURL
+    except Exception as e:  # AppKit niet beschikbaar → laat caller terugvallen
+        return None, f'AppKit unavailable: {e}'
+
+    # Resultaat-container die de main-thread-helper invult.
+    box = {'path': None, 'err': None, 'done': False}
+
+    class _PanelRunner(NSObject):
+        def run_(self, _arg):
+            try:
+                panel = AppKit.NSOpenPanel.openPanel()
+                panel.setCanChooseFiles_(not choose_dirs)
+                panel.setCanChooseDirectories_(choose_dirs)
+                panel.setAllowsMultipleSelection_(False)
+                panel.setResolvesAliases_(True)
+                if prompt:
+                    try:
+                        panel.setMessage_(str(prompt))
+                    except Exception:
+                        pass
+                if default_dir and os.path.isdir(default_dir):
+                    try:
+                        panel.setDirectoryURL_(
+                            NSURL.fileURLWithPath_(str(default_dir)))
+                    except Exception:
+                        pass
+                # Breng het panel naar de voorgrond (de Flask-app heeft geen
+                # echt app-venster, dus zonder dit kan het achter Chrome vallen).
+                try:
+                    AppKit.NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
+                except Exception:
+                    pass
+                rc = panel.runModal()
+                if rc == AppKit.NSModalResponseOK or rc == 1:
+                    urls = panel.URLs()
+                    if urls and len(urls) > 0:
+                        box['path'] = urls[0].path()
+                # else: cancel → path blijft None
+            except Exception as exc:
+                box['err'] = str(exc)
+            finally:
+                box['done'] = True
+
+    try:
+        runner = _PanelRunner.alloc().init()
+        # waitUntilDone=True blokkeert deze worker-thread tot de main thread
+        # het panel heeft afgehandeld. Veilig: één modaal dialoog tegelijk.
+        runner.performSelectorOnMainThread_withObject_waitUntilDone_(
+            objc.selector(runner.run_, signature=b'v@:@'), None, True)
+    except Exception as e:
+        return None, f'NSOpenPanel dispatch failed: {e}'
+
+    if not box['done']:
+        return None, 'NSOpenPanel did not complete'
+    if box['err']:
+        return None, box['err']
+    return box['path'], None
+
+
 def _pick_folder_macos(prompt, default_dir):
+    # SESSIE 71 — NSOpenPanel ALLEEN in de gepackagede bundle (sys.frozen). Op de
+    # dev-server draait de main thread Flask's serve-loop (geen Cocoa run-loop),
+    # dus performSelectorOnMainThread hangt, en de in-functie ObjC-class-definitie
+    # crasht bij de 2e aanroep -> 500. De osascript-route is een los subprocess
+    # (thread-safe) en werkt prima op dev. In de bundle blokkeert hardened runtime
+    # Apple-Events, daar is NSOpenPanel nodig.
+    if getattr(sys, 'frozen', False) and _nsopenpanel_supported():
+        path, err = _pick_with_nsopenpanel(prompt, default_dir, choose_dirs=True)
+        if err is None:
+            return path, None  # success of nette cancel (path=None)
+        # Echte fout → log en val terug op osascript.
+        print(f'[pick-folder] NSOpenPanel faalde, fallback osascript: {err}',
+              flush=True)
     safe_prompt = (prompt or 'Choose a folder').replace('"', '')
     if default_dir and os.path.isdir(default_dir):
         # POSIX path → AppleScript "POSIX file" alias.
@@ -6823,10 +7785,17 @@ def api_pick_folder():
     prompt = body.get('prompt') or 'Choose where to save your exports'
     default_dir = body.get('default_dir')
 
-    if sys.platform == 'darwin':
-        path, err = _pick_folder_macos(prompt, default_dir)
-    else:
-        path, err = _pick_folder_tk(prompt, default_dir)
+    # SESSIE 71 — vang elke onverwachte fout op zodat de UI altijd JSON krijgt
+    # i.p.v. een rauwe HTML 500 (de oude NSOpenPanel-crash gaf precies dat).
+    try:
+        if sys.platform == 'darwin':
+            path, err = _pick_folder_macos(prompt, default_dir)
+        else:
+            path, err = _pick_folder_tk(prompt, default_dir)
+    except Exception as e:
+        log.warning("pick-folder crashed: %s", e)
+        return jsonify({'ok': False, 'cancelled': False, 'path': None,
+                        'error': f'Folder picker failed: {e}', 'platform': sys.platform}), 500
 
     if err and path is None:
         # Surface the underlying error so the UI can show something useful.
@@ -6861,6 +7830,16 @@ def _pick_file_macos(prompt, default_dir=None):
     """Open a native file-picker on macOS via AppleScript.
     Returns (absolute_path_or_None, error_or_None).
     Works for any file size — no bytes are read, just the path is returned."""
+    # SESSIE 71 — NSOpenPanel ALLEEN in de gepackagede bundle (sys.frozen); op de
+    # dev-server crasht het (main thread draait Flask, niet de Cocoa run-loop, en
+    # de in-functie ObjC-class-def botst bij de 2e aanroep). osascript is een los
+    # subprocess en werkt op dev. In de bundle is NSOpenPanel nodig (hardened runtime).
+    if getattr(sys, 'frozen', False) and _nsopenpanel_supported():
+        path, err = _pick_with_nsopenpanel(prompt, default_dir, choose_dirs=False)
+        if err is None:
+            return path, None  # success of nette cancel (path=None)
+        print(f'[pick-file] NSOpenPanel faalde, fallback osascript: {err}',
+              flush=True)
     safe_prompt = (prompt or 'Choose a DJ set to analyse').replace('"', '')
     if default_dir and os.path.isdir(default_dir):
         safe_default = default_dir.replace('"', '')

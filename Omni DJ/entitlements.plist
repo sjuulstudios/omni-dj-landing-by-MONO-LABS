@@ -37,5 +37,16 @@
 
     <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
+
+    <!--
+        SESSIE 69 — apple-events entitlement.
+        De osascript file/folder-picker ('choose file'/'choose folder') is een
+        Apple-Event. Onder de hardened runtime wordt die zonder dit entitlement
+        geblokkeerd, waardoor het dialog nergens opent en /api/pick-file hangt.
+        De primaire picker is nu NSOpenPanel (in-proces, geen Apple-Event),
+        maar dit entitlement houdt de osascript-fallback werkend.
+    -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
 </dict>
 </plist>

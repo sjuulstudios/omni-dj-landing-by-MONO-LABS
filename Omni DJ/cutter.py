@@ -893,7 +893,15 @@ def _load_brand_assets_for_job(job_id, output_dir=None):
             except Exception:
                 overlays = {}
     here = os.path.dirname(os.path.abspath(__file__))
+    # SESSIE 74 - Slice 2 fase 2b: per-workspace brand. Als de render-map een
+    # gematerialiseerd brand_kit.json bevat (door app.py neergezet o.b.v. de
+    # workspace van de job), lees die; anders het globale bestand. Strikt
+    # superset -> zonder zo'n bestand exact het gedrag van nu (geen regressie).
     kit_path = os.path.join(here, 'brand_kit.json')
+    if output_dir:
+        _ws_kit = os.path.join(output_dir, 'brand_kit.json')
+        if os.path.exists(_ws_kit):
+            kit_path = _ws_kit
     brand_fonts, brand_logo, bpm_cfg, watermark = [], None, None, None
     if os.path.exists(kit_path):
         try:

@@ -29,6 +29,11 @@ fonttools[woff]>=4.40
 opencv-python>=4.9
 ultralytics>=8.2
 pyobjc-framework-Vision>=10.0; sys_platform == "darwin"
+# SESSIE 69 — Cocoa/AppKit voor de in-process NSOpenPanel file-picker
+# (geen Apple-Event nodig → werkt onder hardened runtime). Komt transitief
+# al binnen via Vision, maar expliciet zodat de PyInstaller-bundle het zeker
+# meeneemt.
+pyobjc-framework-Cocoa>=10.0; sys_platform == "darwin"
 
 # Optional: AI-powered source separation (better drop detection)
 # Install with: pip install torch demucs

@@ -3741,6 +3741,20 @@
     text-align: left;
   }
   body.redesign-v2 .v2-nav-item:hover { background: var(--v2-bg-hover); color: var(--v2-text-primary); }
+  /* SESSIE 71 — knipperende oranje dot op de Analyse-nav als er een analyse loopt. */
+  body.redesign-v2 .v2-nav-item .v2-nav-dot {
+    margin-left: auto; width: 7px; height: 7px; border-radius: 50%; flex: none;
+    background: var(--v2-accent); opacity: 0; transform: scale(0.5);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  body.redesign-v2 .v2-nav-item .v2-nav-dot.show {
+    opacity: 1; transform: scale(1);
+    animation: navDotBlink 1.3s ease-in-out infinite;
+  }
+  @keyframes navDotBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+  @media (prefers-reduced-motion: reduce) {
+    body.redesign-v2 .v2-nav-item .v2-nav-dot.show { animation: none; }
+  }
   body.redesign-v2 .v2-nav-item .v2-ico { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.85; }
   body.redesign-v2 .v2-nav-item.active {
     background: var(--v2-accent-muted);
@@ -5650,6 +5664,18 @@
     padding: 22px;
     max-width: 480px;
   }
+  /* SESSIE 71 — export-modal: scrollbaar + responsive zodat ALLE controls (t/m de
+     Export-knop) bereikbaar zijn, ook op een kort of smal venster. */
+  body.redesign-v2 #export-settings-modal { padding: 24px 16px; }
+  body.redesign-v2 #export-settings-modal .aspect-card {
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+  @media (max-width: 560px) {
+    body.redesign-v2 #export-settings-modal .aspect-card { max-width: 100%; padding: 18px; }
+  }
   body.redesign-v2 #aspect-modal h3,
   body.redesign-v2 #export-settings-modal h3,
   body.redesign-v2 #aspect-modal-title,
@@ -6303,6 +6329,37 @@
     font-size: 11px;
     color: var(--v2-text-tertiary);
   }
+  /* SESSIE 71 — analyse-processing stappen-checklist (done / now / queued). */
+  body.redesign-v2 #view-analyse .analyse-proc-steps {
+    margin-top: 18px; display: flex; flex-direction: column; gap: 11px;
+  }
+  body.redesign-v2 #view-analyse .aps-step {
+    display: flex; align-items: center; gap: 11px;
+    font-size: 13px; color: var(--v2-text-tertiary);
+    transition: color 0.2s ease;
+  }
+  body.redesign-v2 #view-analyse .aps-dot {
+    width: 9px; height: 9px; border-radius: 50%; flex: none;
+    background: var(--v2-bg-elevated-2); border: 1px solid var(--v2-border-default);
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  body.redesign-v2 #view-analyse .aps-step.done { color: var(--v2-text-secondary); }
+  body.redesign-v2 #view-analyse .aps-step.done .aps-dot {
+    background: var(--v2-accent); border-color: var(--v2-accent);
+  }
+  body.redesign-v2 #view-analyse .aps-step.now { color: var(--v2-text-primary); font-weight: 600; }
+  body.redesign-v2 #view-analyse .aps-step.now .aps-dot {
+    background: var(--v2-accent); border-color: var(--v2-accent);
+    box-shadow: 0 0 0 4px var(--v2-accent-muted);
+    animation: apsPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes apsPulse {
+    0%, 100% { box-shadow: 0 0 0 3px var(--v2-accent-muted); }
+    50%      { box-shadow: 0 0 0 7px rgba(217, 119, 66, 0.04); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body.redesign-v2 #view-analyse .aps-step.now .aps-dot { animation: none; }
+  }
   body.redesign-v2 #view-analyse .analyse-state-cancel {
     background: transparent;
     border: 1px solid var(--v2-border-subtle);
@@ -6341,6 +6398,15 @@
     color: var(--v2-text-secondary);
     font-size: 13px;
   }
+  /* SESSIE 71 — C2: Library-header Import-knop. */
+  body.redesign-v2 #view-library .library-import-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 14px; border-radius: 9px; border: 0;
+    background: var(--v2-accent); color: var(--v2-text-inverse);
+    font-weight: 600; font-size: 13px; cursor: pointer; flex: none;
+    transition: background 120ms ease;
+  }
+  body.redesign-v2 #view-library .library-import-btn:hover { background: var(--v2-accent-hover); }
   body.redesign-v2 #view-library .library-tabs {
     display: inline-flex;
     background: var(--v2-bg-elevated);
@@ -8829,12 +8895,21 @@
             <path d="M12 16V4M6 10l6-6 6 6M4 20h16"/>
           </svg>
           <span>Analyse</span>
+          <!-- SESSIE 71 — minimale knipperende oranje dot wanneer er een analyse loopt. -->
+          <span class="v2-nav-dot" id="analyse-nav-dot" aria-hidden="true"></span>
         </button>
         <button class="v2-nav-item" type="button" data-v2nav="library">
           <svg class="v2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 4h4v16H4zM10 4h4v16h-4zM16 4l4 16"/>
           </svg>
           <span>Library</span>
+        </button>
+        <!-- SESSIE 71 — C1: Editor als eigen sidebar-tab (rechtstreeks de editor in). -->
+        <button class="v2-nav-item" type="button" data-v2nav="editor">
+          <svg class="v2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 6l2-3h3L6 6M9 6l2-3h3l-2 3M15 6l2-3h3l-2 3"/><path d="M10 11l5 3-5 3z"/>
+          </svg>
+          <span>Editor</span>
         </button>
         <button class="v2-nav-item" type="button" data-v2nav="brand">
           <svg class="v2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -8907,8 +8982,9 @@
   </main>
 </div>
 
-<!-- Dev/teaser toggle om v2-shell aan/uit te zetten (verdwijnt in Fase 4/5) -->
-<button class="v2-flag-toggle" type="button" id="v2FlagToggle" title="Toggle redesign v2 shell">v2 shell</button>
+<!-- SESSIE 69 — V2 is de enige UI; de dev-toggle is verwijderd. Knop blijft
+     als hidden stub zodat oude JS-referenties (getElementById) niet breken. -->
+<button class="v2-flag-toggle" type="button" id="v2FlagToggle" title="Toggle redesign v2 shell" hidden style="display:none !important">v2 shell</button>
 
 <!-- ============================================================ -->
 <!-- AUTH OVERLAY (shown when no session)                          -->
@@ -9285,6 +9361,8 @@
         <div class="analyse-state-meta">
           <span id="analyse-process-step">Waveform analysis</span>
         </div>
+        <!-- SESSIE 71 — zichtbare stappen-checklist zodat de user het proces volgt. -->
+        <div class="analyse-proc-steps" id="analyse-process-steps"></div>
         <button class="analyse-state-cancel" id="analyse-process-cancel" type="button">Cancel</button>
       </div>
 
@@ -9338,6 +9416,12 @@
           <h1>Library</h1>
           <p class="library-sub">All your projects and exports in one place.</p>
         </div>
+        <!-- SESSIE 71 — C2: Import a short straight into the editor. -->
+        <button class="library-import-btn" type="button" onclick="importClipPick('library')"
+                title="Import a video clip to edit (mp4, mov, m4v, webm)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+          Import
+        </button>
       </div>
       <div class="library-tabs" role="tablist" aria-label="Library tabs">
         <button class="library-tab is-on" role="tab" data-lib-tab="projects" type="button">Projects <span class="count" id="library-projects-count">0</span></button>
@@ -9522,6 +9606,8 @@
         </div>
 
         <div class="modal-foot">
+          <!-- SESSIE 74 - Slice 4: Verwijder-knop, alleen zichtbaar in edit-modus. -->
+          <button type="button" class="modal-btn" id="cal-delete-btn" onclick="calDeleteSchedule()" style="display:none;margin-right:auto;color:#e06b6b">Verwijder</button>
           <button type="button" class="modal-btn" onclick="calCloseSchedule()">Annuleer</button>
           <button type="button" class="modal-btn is-primary" onclick="calSaveSchedule()">Opslaan</button>
         </div>
@@ -9739,13 +9825,59 @@
       </div>
     </main>
 
+    <style>
+    /* SESSIE 71 — C1: Editor-tab leegstaat-kiezer (v2-scope, bestaande tokens). */
+    body.redesign-v2 #view-editor { position: relative; }
+    /* SESSIE 71 fix: normale flow + min-height i.p.v. absolute over een
+       ingeklapte parent (anders werd de kiezer afgekapt). */
+    body.redesign-v2 #view-editor .ed-empty { display: flex; align-items: flex-start; justify-content: center; min-height: calc(100vh - 120px); overflow-y: auto; padding: 48px 24px 96px; background: var(--v2-bg-base); }
+    body.redesign-v2 .ed-empty-inner { width: 100%; max-width: 760px; }
+    body.redesign-v2 .ed-empty-head h2 { font-size: 22px; margin: 0 0 4px; color: var(--v2-text-primary); }
+    body.redesign-v2 .ed-empty-head p { margin: 0 0 20px; color: var(--v2-text-secondary); font-size: 14px; }
+    body.redesign-v2 .ed-empty-actions { margin-bottom: 24px; }
+    body.redesign-v2 .ed-empty-import { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; border: 0; background: var(--v2-accent); color: var(--v2-text-inverse); font-weight: 600; font-size: 14px; cursor: pointer; transition: background 120ms ease; }
+    body.redesign-v2 .ed-empty-import:hover { background: var(--v2-accent-hover); }
+    body.redesign-v2 .ed-empty-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--v2-text-tertiary); margin: 0 0 10px; }
+    body.redesign-v2 .ed-empty-continue { margin-bottom: 26px; }
+    body.redesign-v2 .ed-continue-card { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--v2-border-default); background: var(--v2-bg-elevated); color: var(--v2-text-primary); cursor: pointer; text-align: left; transition: border-color 120ms ease; }
+    body.redesign-v2 .ed-continue-card:hover { border-color: var(--v2-accent); }
+    body.redesign-v2 .ed-continue-ico { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: var(--v2-accent); color: var(--v2-text-inverse); flex: none; }
+    body.redesign-v2 .ed-continue-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    body.redesign-v2 .ed-continue-meta b { font-size: 15px; }
+    body.redesign-v2 .ed-continue-meta span { font-size: 12.5px; color: var(--v2-text-secondary); }
+    body.redesign-v2 .ed-recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+    body.redesign-v2 .ed-recent-card { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 12px; border: 1px solid var(--v2-border-default); background: var(--v2-bg-elevated); color: var(--v2-text-primary); cursor: pointer; text-align: left; transition: border-color 120ms ease, transform 120ms ease; }
+    body.redesign-v2 .ed-recent-card:hover { border-color: var(--v2-accent); transform: translateY(-1px); }
+    body.redesign-v2 .ed-recent-title { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    body.redesign-v2 .ed-recent-when { font-size: 12px; color: var(--v2-text-secondary); }
+    body.redesign-v2 .ed-empty-none { color: var(--v2-text-secondary); font-size: 14px; padding: 8px 0; }
+    </style>
     <main class="view" id="view-editor" data-scene="5">
       <!-- Trim loading overlay — floats while /api/recut is running. -->
       <div class="ed-trim-loading" id="ed-trim-loading" aria-live="polite">
         <div class="ed-trim-loading-bar"></div>
         <div class="ed-trim-loading-text">Trimming…</div>
       </div>
-      <div class="canvas">
+      <!-- SESSIE 71 — C1: Editor-tab leegstaat-kiezer. Verschijnt wanneer er geen
+           clip geladen is (rechtstreeks via de Editor-sidebar-tab). Hergebruikt
+           openExportInEditor() om een set te laden; importClipPick() voor C2. -->
+      <div class="ed-empty" id="ed-empty" style="display:none">
+        <div class="ed-empty-inner">
+          <div class="ed-empty-head">
+            <h2>Editor</h2>
+            <p>Open a set to edit, continue your last session, or import a clip.</p>
+          </div>
+          <div class="ed-empty-actions">
+            <button class="ed-empty-import" type="button" id="ed-empty-import" onclick="importClipPick('editor')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+              Import clip
+            </button>
+          </div>
+          <div class="ed-empty-continue" id="ed-empty-continue" style="display:none"></div>
+          <div class="ed-empty-recent" id="ed-empty-recent"></div>
+        </div>
+      </div>
+      <div class="canvas" id="ed-canvas-wrap">
         <div class="editor">
           <div class="ed-top">
             <div class="crumbs">
@@ -9764,6 +9896,12 @@
               <!-- SESSIE 64 — Edit/Style/Brand tabs verwijderd (FEATURE-CLEANUP ITEM 4):
                    Edit was redundant, Style zit in de Text-rail, Brand in de sidebar.
                    Spacer blijft zodat de export-knoppen rechts blijven plakken. -->
+              <!-- SESSIE 71 — C2: Import a short straight into the editor. -->
+              <button class="t" id="ed-import-clip" type="button"
+                      onclick="importClipPick('editor')"
+                      title="Import a video clip to edit (mp4, mov, m4v, webm)">
+                Import
+              </button>
               <span style="flex:1"></span>
               <button class="t" id="ed-export-selected" type="button"
                       onclick="exportSelected()" disabled
@@ -9870,6 +10008,12 @@
                      op het amber thema, op verzoek van Sjuul). Compactere één-regel
                      layout zodat platform-naam en resolutie naast elkaar passen. -->
                 <div class="ed-export-menu" id="ed-export-menu" role="menu" hidden>
+                  <!-- SESSIE 74 - Slice 4: plan deze clip als draft in de Calendar. -->
+                  <div class="ed-export-item" role="menuitem" onclick="planClipInCalendar()">
+                    <span class="glyph" aria-hidden="true" style="display:flex;align-items:center;justify-content:center;font-size:16px">&#128197;</span>
+                    <span class="meta"><span class="t">Plan in Calendar</span><span class="s">Schedule a draft</span></span>
+                  </div>
+                  <div style="height:1px;background:var(--v2-border-subtle,#222);margin:4px 8px"></div>
                   <div class="ed-export-item" role="menuitem" data-preset="tiktok" onclick="exportClipPreset('tiktok', this)">
                     <span class="glyph brand" aria-hidden="true">
                       <!-- TikTok: white musical-note glyph met cyaan/magenta offset, op donker. -->
@@ -10557,6 +10701,85 @@
           </div>
         </div>
       </div>
+
+      <!-- SESSIE 74 - Slice 2 fase 3: per-artist profielvelden. Los van het
+           globale brand_kit; opgeslagen in dj_profiles via /api/brand/profile,
+           per artist gescheiden. Raakt de export/render niet. -->
+      <div class="cap-room" id="artist-profile-room" style="margin-top:18px">
+        <div class="cap-left">
+          <h2>Artist <em>profile</em></h2>
+          <p>These travel with the active artist: name, links, hashtags and caption voice. Stored per artist, applied across your clips and (soon) your calendar.</p>
+          <div class="style-row">
+            <label>Artist name</label>
+            <input type="text" id="ap-artist-name" class="bs-input" placeholder="DJ Sjuul" maxlength="80" />
+          </div>
+          <div class="style-row">
+            <label>Alias / handle</label>
+            <input type="text" id="ap-alias" class="bs-input" placeholder="@sjuulstudios" maxlength="60" />
+          </div>
+        </div>
+
+        <div class="cap-right">
+          <div class="panel-h"><div class="ti" style="font-size:16px">Call to action</div></div>
+          <div class="style-row">
+            <label>CTA style</label>
+            <select id="ap-cta-style" class="bs-input" style="flex:0 1 200px">
+              <option value="out_now">Out now</option>
+              <option value="stream_now">Stream now</option>
+              <option value="coming_soon">Coming soon</option>
+              <option value="save_the_date">Save the date</option>
+            </select>
+          </div>
+          <div class="style-row">
+            <label>Spotify link</label>
+            <input type="text" id="ap-spotify" class="bs-input" placeholder="spotify:artist:..." maxlength="200" />
+          </div>
+          <div class="style-row">
+            <label>Beatport link</label>
+            <input type="text" id="ap-beatport" class="bs-input" placeholder="https://www.beatport.com/..." maxlength="200" />
+          </div>
+
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+            <div class="panel-h"><div class="ti" style="font-size:16px">Hashtags</div></div>
+            <div class="style-row">
+              <label>TikTok</label>
+              <input type="text" id="ap-tags-tiktok" class="bs-input" placeholder="#djset, #techno" />
+            </div>
+            <div class="style-row">
+              <label>Instagram</label>
+              <input type="text" id="ap-tags-instagram" class="bs-input" placeholder="#djlife, #techno" />
+            </div>
+            <div class="style-row">
+              <label>YouTube Shorts</label>
+              <input type="text" id="ap-tags-youtube" class="bs-input" placeholder="#shorts, #djset" />
+            </div>
+          </div>
+
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+            <div class="panel-h"><div class="ti" style="font-size:16px">Caption voice</div></div>
+            <div class="style-row">
+              <label>Tone</label>
+              <select id="ap-voice-tone" class="bs-input" style="flex:0 1 200px">
+                <option value="hyped">Hyped</option>
+                <option value="minimal">Minimal</option>
+                <option value="informative">Informative</option>
+                <option value="ironic">Ironic</option>
+              </select>
+            </div>
+            <div class="style-row">
+              <label>Use emojis</label>
+              <input type="checkbox" id="ap-voice-emojis" style="width:16px;height:16px;accent-color:var(--v2-accent,#D97742)" />
+            </div>
+            <div class="style-row">
+              <label>Max length</label>
+              <input type="number" id="ap-voice-maxlen" class="bs-input" style="flex:0 1 100px" min="20" max="300" value="80" />
+            </div>
+            <div class="style-row" style="margin-top:8px">
+              <button class="btn primary" id="ap-save" type="button" style="padding:8px 14px;font-size:12px">Save artist profile</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <!-- view-export removed in C1 cleanup. Export now lives in Dashboard
@@ -11190,6 +11413,14 @@ const STATE = {
   progressName: '',
 };
 
+// SESSIE 72 — expose STATE op window. Diverse v2-helpers (plan-badge,
+// processing-kaart-guard in renderAnalyse, analyse-dot, history-reads) lazen
+// `window.STATE`, maar STATE is een lexical const -> window.STATE was ALTIJD
+// undefined -> die features faalden stil (FREE-badge bleef staan, analyse-
+// progress verdween). Aliasen lost de hele klasse bugs in 1x op; STATE muteert
+// in-place dus window.STATE wijst naar hetzelfde object en blijft in sync.
+window.STATE = STATE;
+
 /* ============================================================ */
 /* HELPERS                                                      */
 /* ============================================================ */
@@ -11331,12 +11562,73 @@ function scheduleProactiveRefresh(){
   }, leadMs);
 }
 
+// SESSIE 73 - A1 multi-tenant frontend plumbing (PLAN-COMBINED v1.3, Correctie 9).
+// currentWorkspaceId() leest de ACTIEVE workspace-UUID uit localStorage. Bewust
+// een gereserveerde sleutel 'omniDjWorkspaceId' (NIET 'omniDjActiveArtist', dat is
+// nog een display-naam-stub uit Fase 5). De X-Omni-Workspace header blijft dus
+// DORMANT tot A2 echte workspace-UUIDs in die sleutel zet -> additief, en stuurt
+// nooit een misleidende niet-UUID-waarde. _omniWsHeaders(h) voegt de header toe.
+function currentWorkspaceId(){
+  try {
+    var v = localStorage.getItem('omniDjWorkspaceId');
+    if (v) {
+      v = String(v).trim();
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) return v;
+    }
+  } catch(_){}
+  return null;
+}
+function _omniWsHeaders(h){
+  h = h || {};
+  try { var w = currentWorkspaceId(); if (w) h['X-Omni-Workspace'] = w; } catch(_){}
+  return h;
+}
+
+// SESSIE 74 - A1 afmaken (Slice 1): de slapende workspace-scope aanzetten.
+// _setActiveWorkspace() schrijft een gevalideerde workspace-UUID naar de
+// gereserveerde sleutel die currentWorkspaceId() leest -> _omniWsHeaders()
+// stuurt vanaf dan de X-Omni-Workspace header mee op elke authed call.
+function _setActiveWorkspace(id){
+  try {
+    if (!id) return false;
+    id = String(id).trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return false;
+    localStorage.setItem('omniDjWorkspaceId', id);
+    return true;
+  } catch(_){ return false; }
+}
+// loadWorkspaces() haalt de echte artists (workspaces) van de ingelogde user op
+// via /api/workspaces (RLS-scoped) en kiest een actieve workspace: behoud de
+// huidige als die nog lid is, anders de primaire (eerste). Fire-and-forget,
+// nooit blocking; degradeert stil naar [] als Supabase niet is geconfigureerd.
+async function loadWorkspaces(force){
+  try {
+    if (!STATE.session || !STATE.session.access_token) return [];
+    if (!force && STATE._workspacesLoaded && Array.isArray(STATE.workspaces)) {
+      return STATE.workspaces;
+    }
+    const data = await api('/api/workspaces');               // {ok, workspaces:[...]}
+    const rows = (data && data.ok && Array.isArray(data.workspaces)) ? data.workspaces : [];
+    STATE.workspaces = rows;
+    STATE._workspacesLoaded = true;
+    var cur = (typeof currentWorkspaceId === 'function') ? currentWorkspaceId() : null;
+    var stillMember = cur && rows.some(function(w){ return w && w.id === cur; });
+    if (!stillMember && rows.length) _setActiveWorkspace(rows[0].id);
+    try { if (typeof window.v2PaintArtistChip === 'function') window.v2PaintArtistChip(); } catch(_){}
+    return rows;
+  } catch (e) {
+    return [];
+  }
+}
+
 async function api(path, opts){
   opts = opts || {};
   const init = { method: opts.method || 'GET', headers: {} };
   // Auth: attach Bearer token if session is loaded
   if (STATE.session && STATE.session.access_token) {
     init.headers['Authorization'] = 'Bearer ' + STATE.session.access_token;
+    // SESSIE 73 - A1: workspace-scope meesturen (dormant tot A2 de UUID zet).
+    _omniWsHeaders(init.headers);
   }
   if (opts.body && !(opts.body instanceof FormData)) {
     init.headers['Content-Type'] = 'application/json';
@@ -11476,6 +11768,11 @@ function switchView(name){
     } else if (name === 'processing') {
       // Keep target = analyse; processing-pill / state is set elsewhere.
       try { if (typeof window.analyseSetState === 'function') window.analyseSetState('processing', {title:'Analyzing set…'}); } catch(_){}
+      // SESSIE 71 — fix: in v2 draait renderProcessing() NIET (processing mapt op
+      // analyse), dus de status-poller die %/stappen live bijwerkt werd nooit
+      // gestart. Start hem hier. Hij zet ook STATE.progressJobId, zodat
+      // renderAnalyse de processing-kaart niet wist (zie renderAnalyse-guard).
+      try { if (STATE.jobId && typeof openProgressStream === 'function') openProgressStream(STATE.jobId); } catch(_){}
       name = 'analyse';
     }
   }
@@ -11576,27 +11873,74 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+/* SESSIE 69 — fallback naar de verborgen browser-file-input. Gebruikt voor
+   elk geval waarin de native picker niet werkt: oude build, dev zonder
+   server, of (de echte aanleiding) de native picker hangt/faalt in de
+   gesignde bundle. De input → uploadFile() → /api/upload (HTTP multipart),
+   wat de osascript/Apple-Event-route volledig omzeilt. */
+function _fallbackToBrowserPicker() {
+  setTimeout(() => {
+    const fi = document.getElementById('global-file-input');
+    if (fi) fi.click();
+  }, 60);
+}
+
 /* openFilePicker — opent een native macOS/Windows bestandspicker via
    /api/pick-file. Geeft het absolute pad terug aan de server zodat grote
    sets (100 GB+) zonder browser-limiet of HTTP-upload kunnen worden
-   geanalyseerd. Valt terug op de browser file-input als het endpoint
-   niet beschikbaar is (bijv. oude build). */
+   geanalyseerd.
+
+   SESSIE 69 — robuust tegen een hangende/geblokkeerde native picker:
+   1) /api/pick-file krijgt een harde timeout. Onder de hardened runtime kon
+      de osascript-picker oneindig blijven hangen (geblokkeerde Apple-Event);
+      de UI bleef dan stil staan. Nu valt hij na de timeout netjes terug op
+      de browser-file-input en toont een toast.
+   2) Een server-side fout (HTTP 500 met error) of een ontbrekend pad valt
+      ook terug op de browser-picker i.p.v. stil te falen. */
 async function openFilePicker() {
+  const PICKER_TIMEOUT_MS = 7000;
   let pick;
+  let timedOut = false;
+
+  // Race de native-picker-call tegen een timeout. api() heeft zelf geen
+  // abort, dus we resolven de timeout met een sentinel en negeren de
+  // late echte respons (de gebruiker is dan al via de fallback bezig).
+  const timeout = new Promise((resolve) => {
+    setTimeout(() => { timedOut = true; resolve({ __timeout: true }); },
+      PICKER_TIMEOUT_MS);
+  });
+
   try {
-    pick = await api('/api/pick-file', {
-      method: 'POST',
-      body: { prompt: 'Kies een DJ set om te analyseren' },
-    });
+    pick = await Promise.race([
+      api('/api/pick-file', {
+        method: 'POST',
+        body: { prompt: 'Kies een DJ set om te analyseren' },
+      }),
+      timeout,
+    ]);
   } catch (e) {
-    // Fallback naar browser picker (bijv. tijdens lokale dev zonder server).
+    // Endpoint niet beschikbaar (oude build / dev zonder server).
     console.warn('Native picker niet beschikbaar, val terug op browser picker:', e);
-    setTimeout(() => {
-      const fi = document.getElementById('global-file-input');
-      if (fi) fi.click();
-    }, 120);
+    _fallbackToBrowserPicker();
     return;
   }
+
+  // Timeout: native dialog opende niet (bv. geblokkeerde Apple-Event).
+  if (timedOut || (pick && pick.__timeout)) {
+    console.warn('Native picker reageerde niet binnen', PICKER_TIMEOUT_MS, 'ms — fallback browser picker.');
+    try { toast('Systeemvenster reageerde niet — kies je bestand hier.'); } catch (_) {}
+    _fallbackToBrowserPicker();
+    return;
+  }
+
+  // Server gaf een echte fout terug (bv. NSOpenPanel én osascript faalden).
+  if (pick && pick.ok === false && !pick.cancelled) {
+    console.warn('Native picker fout:', pick.error);
+    try { toast('Systeemvenster mislukte — kies je bestand hier.'); } catch (_) {}
+    _fallbackToBrowserPicker();
+    return;
+  }
+
   if (!pick || pick.cancelled || !pick.path) return; // gebruiker geannuleerd
   await _startLocalJob(pick.path);
 }
@@ -11844,7 +12188,12 @@ async function uploadFile(file){
       // bypasses that helper. Re-add the token header so the server sees
       // the same auth context.
       try {
-        var tok = (window.STATE && window.STATE.session && window.STATE.session.access_token) || null;
+        // SESSIE 71 — fix: STATE is een closure-const, niet window.STATE. De oude
+        // `window.STATE`-read gaf altijd undefined -> geen Authorization header ->
+        // drag-drop upload faalde met 401 "Geen Authorization header" (de picker-
+        // route werkt wel want die loopt via api()). Lees nu de echte STATE.
+        var tok = ((typeof STATE !== 'undefined' && STATE.session && STATE.session.access_token)
+                   || (window.STATE && window.STATE.session && window.STATE.session.access_token)) || null;
         if (tok) xhr.setRequestHeader('Authorization', 'Bearer ' + tok);
       } catch(_){}
       xhr.upload.onprogress = function(e){
@@ -11924,7 +12273,7 @@ const RENDERERS = {
   library:    function(){ try { if (window.renderLibrary) return window.renderLibrary(); } catch(_){} },
   // SESSIE 56 — Social / Calendar / Insights shells (v2-only).
   social:     function(){ try { if (window.renderSocial) return window.renderSocial(); } catch(_){} },
-  calendar:   function(){ try { if (window.renderCalendar) return window.renderCalendar(); } catch(_){} },
+  calendar:   function(){ try { if (typeof loadCalendarPosts==='function') loadCalendarPosts(); if (window.renderCalendar) return window.renderCalendar(); } catch(_){} },
   insights:   function(){ try { if (window.renderInsights) return window.renderInsights(); } catch(_){} },
   // SESSIE 57 — Fase A: Brand-view forward-ref.
   brand:      function(){ try { if (window.renderBrand) return window.renderBrand(); } catch(_){} },
@@ -11939,8 +12288,30 @@ const RENDERERS = {
 window.renderAnalyse = function renderAnalyse(){
   var el = document.getElementById('view-analyse');
   if (!el) return;
-  // Reset all sub-states
-  el.classList.remove('is-uploading', 'is-processing');
+  // SESSIE 71 — fix: wis de uploading/processing-substaat NIET terwijl er een
+  // analyse loopt. Anders wist deze render de processing-kaart die net door
+  // switchView('processing')/analyseSetState is gezet (de stappen verdwenen dan).
+  if (!(window.STATE && STATE.progressJobId)) {
+    el.classList.remove('is-uploading', 'is-processing');
+  } else {
+    // SESSIE 71 — een analyse loopt nog: hervat de processing-kaart bij terugkeer
+    // naar Analyse (de poller loopt door op de achtergrond, maar we herschilderen
+    // direct vanuit STATE zodat de user niet 1 tick op verouderde info kijkt).
+    el.classList.add('is-processing');
+    try {
+      var ph = (STATE.progressPhase || '').toLowerCase();
+      var idx = -1;
+      if (ph && typeof PROC_STEPS !== 'undefined') {
+        idx = PROC_STEPS.findIndex(function(s){ return s.match.some(function(m){ return ph.indexOf(m) >= 0; }); });
+      }
+      var pc = Number(STATE.progressPct) || 0;
+      if (idx < 0 && pc > 0 && typeof PROC_STEPS !== 'undefined') {
+        idx = Math.min(PROC_STEPS.length - 1, Math.floor((pc / 100) * PROC_STEPS.length));
+      }
+      var lbl = STATE.progressPhase ? (STATE.progressPhase.charAt(0).toUpperCase() + STATE.progressPhase.slice(1)) : 'Working…';
+      window.analyseSetState('processing', { pct: pc, step: lbl, stepIndex: (idx < 0 ? 0 : idx), title: 'Analyzing set…' });
+    } catch(_){}
+  }
   // Populate "Continue editing" from latest history entry, if any
   try {
     var cont = document.getElementById('analyse-continue');
@@ -12193,6 +12564,9 @@ window.analyseSetState = function analyseSetState(state, opts){
     }
   } else if (state === 'processing') {
     el.classList.add('is-processing');
+    // SESSIE 71 — toon de stappen-checklist direct (eerste stap actief) zodat de
+    // user meteen het proces ziet, ook vóór de eerste poll-tick.
+    try { if (window.renderAnalyseProcSteps) window.renderAnalyseProcSteps((opts && typeof opts.stepIndex === 'number') ? opts.stepIndex : 0); } catch(_){}
     if (opts) {
       if (opts.title) (document.getElementById('analyse-process-title')||{}).textContent = opts.title;
       if (typeof opts.pct === 'number') {
@@ -12348,6 +12722,12 @@ var V2_CAL_STATE = {
 };
 
 function _v2LoadCalEvents(){
+  // SESSIE 74 - Slice 4b: ingelogd -> server-events (leeg tot loadCalendarPosts
+  // ze heeft opgehaald), GEEN demo-seeding. Uitgelogd -> de oude localStorage/demo.
+  var __sess = (typeof STATE !== 'undefined') ? STATE : (window.STATE || {});
+  if (__sess.session && __sess.session.access_token) {
+    return V2_CAL_STATE.serverEvents || {};
+  }
   if (V2_CAL_STATE.events) return V2_CAL_STATE.events;
   var ev = {};
   try {
@@ -12382,6 +12762,38 @@ function _v2LoadCalEvents(){
 function _v2SaveCalEvents(){
   try { localStorage.setItem('omnidj.calendar.v1', JSON.stringify(V2_CAL_STATE.events || {})); }
   catch(_){}
+}
+
+// SESSIE 74 - Slice 4b: Calendar server-backed (scheduled_posts via /api/calendar/*,
+// per workspace). Ingelogd -> echte drafts uit Supabase; uitgelogd -> de bestaande
+// localStorage/demo-laag (ongemoeid).
+function _v2PostsToEvents(posts){
+  var ev = {};
+  var pad = function(n){ return (n < 10 ? '0' : '') + n; };
+  (posts || []).forEach(function(p){
+    var dt = new Date(p.scheduled_for);
+    if (isNaN(dt.getTime())) return;
+    var ymd = dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate());
+    var time = pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+    var cap = p.caption || '';
+    var name = cap ? cap.replace(/\s+/g, ' ').trim().slice(0, 16) : 'Post';
+    if (!ev[ymd]) ev[ymd] = [];
+    ev[ymd].push({ id: p.id, clipId: p.clip_id || null, clipName: name, caption: cap,
+                   platforms: p.platforms || [], time: time, status: p.status || 'draft', _server: true });
+  });
+  return ev;
+}
+async function loadCalendarPosts(){
+  try {
+    var st = (typeof STATE !== 'undefined') ? STATE : (window.STATE || {});
+    if (!st.session || !st.session.access_token) return;
+    var r = await api('/api/calendar/list');
+    if (r && r.ok) {
+      V2_CAL_STATE.serverEvents = _v2PostsToEvents(r.posts);
+      V2_CAL_STATE.serverLoaded = true;
+      if (window.renderCalendar) window.renderCalendar();
+    }
+  } catch (e) { /* stil: calendar is optioneel */ }
 }
 
 function _v2GetMonthGrid(year, month){
@@ -12450,7 +12862,7 @@ function _v2RenderMonth(events){
         else if (p === 'instagram') platCls = 'is-ig';
         else if (p === 'youtube') platCls = 'is-yt';
       }
-      evHtml += '<div class="cal-event ' + platCls + '" title="' + _v2Esc(e.caption || e.clipName) + '">' + _v2Esc(e.time + ' · ' + (e.clipName || 'Post')) + '</div>';
+      evHtml += '<div class="cal-event ' + platCls + '" data-ev-id="' + _v2Esc(e.id || '') + '" onclick="event.stopPropagation(); calOpenEdit(\'' + _v2Esc(e.id || '') + '\',\'' + c.ymd + '\')" title="' + _v2Esc(e.caption || e.clipName) + '">' + _v2Esc(e.time + ' · ' + (e.clipName || 'Post')) + '</div>';
     });
     if (dayEvents.length > 3) evHtml += '<div class="cal-event-more">+' + (dayEvents.length - 3) + ' more</div>';
     html += '<div class="' + cls + '" data-ymd="' + c.ymd + '" onclick="calCellClick(\'' + c.ymd + '\')">'
@@ -12489,7 +12901,7 @@ function _v2RenderWeek(events){
           else if (p === 'instagram') platCls = 'is-ig';
           else if (p === 'youtube') platCls = 'is-yt';
         }
-        return '<div class="cal-event ' + platCls + '">' + _v2Esc(e.clipName || 'Post') + '</div>';
+        return '<div class="cal-event ' + platCls + '" data-ev-id="' + _v2Esc(e.id || '') + '" onclick="event.stopPropagation(); calOpenEdit(\'' + _v2Esc(e.id || '') + '\',\'' + ymd + '\')">' + _v2Esc(e.clipName || 'Post') + '</div>';
       }).join('');
       html += '<div class="cal-week-cell" onclick="calCellClick(\'' + ymd + '\')">' + inner + '</div>';
     });
@@ -12531,8 +12943,11 @@ window.calCellClick = function calCellClick(ymd){
 window.calOpenSchedule = function calOpenSchedule(preselYmd){
   var modal = document.getElementById('cal-schedule-modal');
   if (!modal) return;
-  // Reset state
-  V2_CAL_STATE.editing = { clipId: null, platforms: [] };
+  // Reset state (nieuwe draft, geen edit-modus).
+  V2_CAL_STATE.editing = { clipId: null, platforms: [], editId: null };
+  // SESSIE 74 - Slice 4: titel terug naar 'nieuw' + Verwijder-knop verbergen.
+  var _ttl = document.getElementById('cal-modal-title'); if (_ttl) _ttl.textContent = 'Schedule a post';
+  var _del = document.getElementById('cal-delete-btn'); if (_del) _del.style.display = 'none';
   // Populate clip-picker from STATE.history
   var picker = document.getElementById('cal-clip-picker');
   if (picker) {
@@ -12618,6 +13033,33 @@ window.calSaveSchedule = function calSaveSchedule(){
     var pad = function(n){ return (n<10?'0':'') + n; };
     return pad(d.getHours()) + ':' + pad(d.getMinutes());
   })();
+  // SESSIE 74 - Slice 4b: ingelogd -> opslaan in Supabase (scheduled_posts) per
+  // workspace; uitgelogd -> de bestaande lokale demo-store.
+  var __sess = (typeof STATE !== 'undefined') ? STATE : (window.STATE || {});
+  if (__sess.session && __sess.session.access_token) {
+    // SESSIE 74 - Slice 4: edit-modus -> PUT update, anders POST nieuw.
+    var _editId = V2_CAL_STATE.editing && V2_CAL_STATE.editing.editId;
+    var _body = {
+      caption: (cap || V2_CAL_STATE.editing.clipName || ''),
+      platforms: plats,
+      scheduled_for: d.toISOString(),
+      status: 'draft'
+    };
+    var _path = '/api/calendar/schedule', _method = 'POST';
+    if (_editId) { _path = '/api/calendar/update'; _method = 'PUT'; _body.id = _editId; }
+    api(_path, { method: _method, body: _body }).then(function(r){
+      if (r && r.ok) {
+        calCloseSchedule();
+        if (typeof toast === 'function') toast(_editId ? 'Draft bijgewerkt' : 'Draft opgeslagen', 'good');
+        if (typeof loadCalendarPosts === 'function') loadCalendarPosts();
+      } else {
+        if (typeof toast === 'function') toast('Kon draft niet opslaan', 'bad');
+      }
+    }).catch(function(e){
+      if (typeof toast === 'function') toast('Kon draft niet opslaan: ' + (e && e.message || ''), 'bad');
+    });
+    return;
+  }
   var events = _v2LoadCalEvents();
   if (!events[ymd]) events[ymd] = [];
   events[ymd].push({
@@ -12634,6 +13076,44 @@ window.calSaveSchedule = function calSaveSchedule(){
   calCloseSchedule();
   if (typeof toast === 'function') toast('Draft opgeslagen', 'ok');
   window.renderCalendar();
+};
+
+// SESSIE 74 - Slice 4: open een bestaande post in edit-modus (prefill + Verwijder).
+// Werkt op server-events (ingelogd). No-op als de post niet gevonden wordt.
+window.calOpenEdit = function calOpenEdit(eventId, ymd){
+  var st = (typeof STATE !== 'undefined') ? STATE : (window.STATE || {});
+  var bag = (st.session && st.session.access_token) ? (V2_CAL_STATE.serverEvents || {}) : (V2_CAL_STATE.events || {});
+  var arr = bag[ymd] || [];
+  var ev = null;
+  for (var i = 0; i < arr.length; i++){ if (arr[i].id === eventId){ ev = arr[i]; break; } }
+  if (!ev) return;
+  var modal = document.getElementById('cal-schedule-modal');
+  if (!modal) return;
+  V2_CAL_STATE.editing = { clipId: ev.clipId || null, clipName: ev.clipName || null, platforms: [], editId: eventId, editYmd: ymd };
+  var ttl = document.getElementById('cal-modal-title'); if (ttl) ttl.textContent = 'Edit post';
+  var del = document.getElementById('cal-delete-btn'); if (del) del.style.display = '';
+  var cap = document.getElementById('cal-caption'); if (cap) cap.value = ev.caption || '';
+  var dt = document.getElementById('cal-datetime'); if (dt) dt.value = ymd + 'T' + (ev.time || '19:00');
+  modal.querySelectorAll('.plat-chip').forEach(function(b){
+    b.classList.toggle('is-on', (ev.platforms || []).indexOf(b.dataset.plat) >= 0);
+  });
+  modal.classList.add('on');
+};
+
+window.calDeleteSchedule = function calDeleteSchedule(){
+  var id = V2_CAL_STATE.editing && V2_CAL_STATE.editing.editId;
+  if (!id) { calCloseSchedule(); return; }
+  api('/api/calendar/delete', { method: 'POST', body: { id: id } }).then(function(r){
+    if (r && r.ok) {
+      calCloseSchedule();
+      if (typeof toast === 'function') toast('Draft verwijderd', 'good');
+      if (typeof loadCalendarPosts === 'function') loadCalendarPosts();
+    } else {
+      if (typeof toast === 'function') toast('Kon niet verwijderen', 'bad');
+    }
+  }).catch(function(e){
+    if (typeof toast === 'function') toast('Kon niet verwijderen: ' + (e && e.message || ''), 'bad');
+  });
 };
 
 // Calendar event-handlers — single delegation, registered once
@@ -15322,6 +15802,43 @@ async function openExportInEditor(jobId, clipIdx){
   switchView('editor');
 }
 
+// SESSIE 71 — C2: Import a finished short straight into the editor. Opens a
+// hidden file input, uploads via /api/import-clip (additive, no analysis),
+// then opens the resulting single-clip job in the editor for trim/captions/
+// brand/export. Local-first: the file is stored under the app's data folder.
+function importClipPick(origin){
+  let input = document.getElementById('omnidj-import-input');
+  if (!input) {
+    input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'omnidj-import-input';
+    input.accept = 'video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.addEventListener('change', function(){
+      const f = input.files && input.files[0];
+      input.value = '';   // allow picking the same file again later
+      if (f) importClipUpload(f);
+    });
+  }
+  input.click();
+}
+async function importClipUpload(file){
+  try { toast('Importing clip…'); } catch(_){}
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await api('/api/import-clip', { method: 'POST', body: fd });
+    if (!res || !res.ok || !res.job_id) throw new Error((res && res.error) || 'Import failed');
+    try { await refreshHistoryFromServer(); } catch(_){}
+    toast('Clip imported', 'ok');
+    openExportInEditor(res.job_id, null);
+  } catch(e){
+    toast('Import failed: ' + (e.message || ''), 'bad');
+  }
+}
+window.importClipPick = importClipPick;
+
 async function copyExportToFolder(jobId, filename){
   if (!jobId || !filename) return;
   // Reuse the same native folder picker the main export flow uses.
@@ -15449,6 +15966,29 @@ const PROC_STEPS = [
   { id: 'compose', t: 'Cutting your clips...',                    sub: '',  match: ['compose','cut','encode','render','clip'] },
 ];
 
+// SESSIE 71 — v2 analyse-processing-checklist. Bouwt de stappenlijst (1x) en
+// markeert done/now/queued op basis van de actieve stap. Gevoed door setProcUI
+// (live, vanuit de status-poller) en door analyseSetState (initieel).
+window.renderAnalyseProcSteps = function renderAnalyseProcSteps(activeIdx){
+  var root = document.getElementById('analyse-process-steps');
+  if (!root) return;
+  if (!root.children.length) {
+    root.innerHTML = PROC_STEPS.map(function(s, i){
+      return '<div class="aps-step" data-i="' + i + '">' +
+               '<span class="aps-dot" aria-hidden="true"></span>' +
+               '<span class="aps-label">' + s.t + '</span>' +
+             '</div>';
+    }).join('');
+  }
+  var n = root.children.length;
+  for (var i = 0; i < n; i++){
+    var el = root.children[i];
+    el.classList.remove('done', 'now');
+    if (i < activeIdx) el.classList.add('done');
+    else if (i === activeIdx) el.classList.add('now');
+  }
+};
+
 function renderProcessing(){
   // Pull the steps list scaffold (idempotent — only render when empty)
   const stepsRoot = document.getElementById('proc-steps');
@@ -15521,6 +16061,7 @@ function setProcUI(pct, eta, activePhase){
         window.analyseSetState('processing', {
           pct: safePct,
           step: stepLabel || (eta || 'Working…'),
+          stepIndex: (activeIdx < 0 ? 0 : activeIdx),
           title: 'Analyzing set…'
         });
       }
@@ -15536,6 +16077,12 @@ function setProcUI(pct, eta, activePhase){
 /* idempotent — call from anywhere progress changes.             */
 /* ============================================================ */
 function setBgProcessPill(){
+  // SESSIE 71 — knipperende oranje sidebar-dot op de Analyse-nav zolang er een
+  // analyse loopt (signaal dat het proces doorloopt, ook op andere pagina's).
+  try {
+    var _dot = document.getElementById('analyse-nav-dot');
+    if (_dot) _dot.classList.toggle('show', !!(window.STATE && STATE.progressJobId));
+  } catch(_){}
   const el = document.getElementById('bg-process-pill');
   if (!el) return;
   const active = !!STATE.progressJobId && STATE.view !== 'processing';
@@ -16085,7 +16632,7 @@ async function loadDashFilmstrip(clipIndex, stripEl){
       // 6 frames is enough for at-a-glance scrubbing on a card-width strip,
       // and a clean 1-second multiple at typical clip durations (30-60s).
       const r = await fetch(`/api/clip-filmstrip/${STATE.jobId}/${clipIndex}?n=6`, {
-        headers: STATE.session ? { 'Authorization': 'Bearer ' + STATE.session.access_token } : {}
+        headers: _omniWsHeaders(STATE.session ? { 'Authorization': 'Bearer ' + STATE.session.access_token } : {})
       });
       if (!r.ok) return;
       const fs = await r.json();
@@ -16559,7 +17106,10 @@ async function _ceExportPreset(idx, preset, itemEl){
   try {
     const r = await api(`/api/export-preset/${STATE.jobId}`, {
       method: 'POST',
-      body: { clip_index, preset },
+      // SESSIE 73 - stuur de huidige label mee zodat de gedownloade filename de
+      // hernoemde naam draagt. Backend prefereert dit, valt anders terug op het
+      // persistente clip_labels. undefined -> JSON.stringify laat de key weg.
+      body: { clip_index, preset, label: (clip && clip.custom_label) ? clip.custom_label : undefined },
     });
     if (!r || !r.success) throw new Error(r && r.error ? r.error : 'unknown error');
     toast(`Exported · ${orig || preset} → ${r.filename}`, 'ok');
@@ -17255,7 +17805,7 @@ function pickExportSettings(label, opts){
         const tok = STATE.session && STATE.session.access_token;
         if (!tok) return;
         const r = await fetch(`/api/clip-overlays/${STATE.jobId}`, {
-          headers: { Authorization: 'Bearer ' + tok },
+          headers: _omniWsHeaders({ Authorization: 'Bearer ' + tok }),
         });
         if (!r.ok) return;
         const j = await r.json();
@@ -17325,10 +17875,10 @@ function pickExportSettings(label, opts){
         // error — we tonen die dan aan de user.
         const fileResp = await fetch('/api/brand-kit/watermark', {
           method: 'POST',
-          headers: {
+          headers: _omniWsHeaders({
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + (STATE.session && STATE.session.access_token || ''),
-          },
+          }),
           body: JSON.stringify({ path: pick.path }),
         });
         if (!fileResp.ok) {
@@ -17980,14 +18530,74 @@ function openEditorForSelected(){
   if (!STATE.clips.length) { toast('No clips to edit yet', 'bad'); return; }
   switchView('editor');
 }
+// SESSIE 71 — C1: Editor-tab leegstaat-kiezer. Bouwt "Continue editing" (laatste
+// sessie uit localStorage) + een grid met recente sets. Laadt een set via de
+// bestaande openExportInEditor() — geen nieuwe laad-logica.
+function renderEditorEmpty(){
+  const ed1 = document.getElementById('ed-set-name'); if (ed1) ed1.textContent = 'No set loaded';
+  const ed2 = document.getElementById('ed-clip-name'); if (ed2) ed2.textContent = ' - ';
+  let last = null;
+  try { last = JSON.parse(localStorage.getItem('omnidj.editor.lastSession') || 'null'); } catch(_){ last = null; }
+  const hist = (window.STATE && Array.isArray(STATE.history)) ? STATE.history : [];
+  const contWrap = document.getElementById('ed-empty-continue');
+  if (contWrap) {
+    const lastH = (last && last.jobId) ? hist.find(h => h && h.id === last.jobId) : null;
+    if (lastH) {
+      const lt = (lastH.original_filename || lastH.filename || 'Set').replace(/\.[^.]+$/, '');
+      contWrap.style.display = '';
+      contWrap.innerHTML =
+        '<div class="ed-empty-label">Continue editing</div>' +
+        '<button class="ed-continue-card" type="button" onclick="editorContinueLast()">' +
+          '<span class="ed-continue-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7Z"/></svg></span>' +
+          '<span class="ed-continue-meta"><b>' + escapeHtml(lt) + '</b><span>Resume your last edit</span></span>' +
+        '</button>';
+    } else {
+      contWrap.style.display = 'none';
+      contWrap.innerHTML = '';
+    }
+  }
+  const grid = document.getElementById('ed-empty-recent');
+  if (grid) {
+    if (!hist.length) {
+      grid.innerHTML = '<div class="ed-empty-label">Recent sets</div>' +
+        '<div class="ed-empty-none">No sets yet. Analyse a DJ set first, or import a clip.</div>';
+    } else {
+      const cards = hist.slice().reverse().slice(0, 12).map(h => {
+        const t = (h.original_filename || h.filename || 'Set').replace(/\.[^.]+$/, '');
+        const when = (typeof formatWhen === 'function' && h.created_at) ? formatWhen(h.created_at) : '';
+        return '<button class="ed-recent-card" type="button" onclick="openExportInEditor(\'' + h.id + '\', null)">' +
+                 '<span class="ed-recent-title">' + escapeHtml(t) + '</span>' +
+                 (when ? '<span class="ed-recent-when">' + escapeHtml(when) + '</span>' : '') +
+               '</button>';
+      }).join('');
+      grid.innerHTML = '<div class="ed-empty-label">Recent sets</div><div class="ed-recent-grid">' + cards + '</div>';
+    }
+  }
+}
+function editorContinueLast(){
+  let last = null;
+  try { last = JSON.parse(localStorage.getItem('omnidj.editor.lastSession') || 'null'); } catch(_){ last = null; }
+  if (!last || !last.jobId) { toast('No previous session', 'bad'); return; }
+  openExportInEditor(last.jobId, (last.clipIdx != null ? last.clipIdx : null));
+}
 async function renderEditor(){
-  if (!STATE.jobId || !STATE.clips.length) {
-    // No data — bounce back to dashboard
+  // SESSIE 71 — C1: Editor is een eigen tab. Zonder geladen clip tonen we de
+  // kiezer (Continue editing + recente sets + Import) i.p.v. een leeg scherm.
+  const _edEmpty = document.getElementById('ed-empty');
+  const _edWrap  = document.getElementById('ed-canvas-wrap');
+  if (!STATE.jobId || !STATE.clips.length || !STATE.clips[STATE.selectedClipIdx || 0]) {
+    try { renderEditorEmpty(); } catch(_){}
+    if (_edEmpty) _edEmpty.style.display = '';
+    if (_edWrap)  _edWrap.style.display = 'none';
     return;
   }
+  if (_edEmpty) _edEmpty.style.display = 'none';
+  if (_edWrap)  _edWrap.style.display = '';
   const idx  = STATE.selectedClipIdx || 0;
   const clip = STATE.clips[idx];
   if (!clip) return;
+  // SESSIE 71 — C1: onthoud de laatste editor-sessie voor "Continue editing".
+  try { localStorage.setItem('omnidj.editor.lastSession', JSON.stringify({ jobId: STATE.jobId, clipIdx: (clip.index != null ? clip.index : idx) })); } catch(_){}
 
   // Header
   const setName = STATE.history.find(h => h.id === STATE.jobId);
@@ -19291,6 +19901,22 @@ function toggleExportMenu(event){
 // is synchronous (waits for ffmpeg) so we show a spinner on the chosen
 // menu item, swap to a "Done — open Library" toast on success, and refresh
 // the library-has-new dot so the sidebar surfaces the fresh file.
+// SESSIE 74 - Slice 4: open de Calendar-scheduler vanuit de editor met de huidige
+// clip-label als voorgevulde caption (de modal opent over de editor).
+function planClipInCalendar(){
+  try {
+    var m = document.getElementById('ed-export-menu'); if (m) m.hidden = true;
+    var btn = document.getElementById('ed-export-btn'); if (btn) btn.setAttribute('aria-expanded', 'false');
+    var sel = (STATE.clips || [])[STATE.selectedClipIdx];
+    var label = (sel && (sel.custom_label || sel.label || sel.name)) || '';
+    if (typeof calOpenSchedule === 'function') calOpenSchedule();
+    var cap = document.getElementById('cal-caption');
+    if (cap && label) cap.value = label;
+  } catch (e) {
+    if (typeof toast === 'function') toast('Kon de planner niet openen', 'bad');
+  }
+}
+
 async function exportClipPreset(preset, itemEl){
   if (!STATE.jobId) { toast('No active set', 'bad'); return; }
   const sel = (STATE.clips || [])[STATE.selectedClipIdx];
@@ -19309,7 +19935,10 @@ async function exportClipPreset(preset, itemEl){
   try {
     const r = await api(`/api/export-preset/${STATE.jobId}`, {
       method: 'POST',
-      body: { clip_index, preset },
+      // SESSIE 73 - stuur de huidige label mee zodat de gedownloade filename de
+      // hernoemde naam draagt. Backend prefereert dit, valt anders terug op het
+      // persistente clip_labels. undefined -> JSON.stringify laat de key weg.
+      body: { clip_index, preset, label: (sel && sel.custom_label) ? sel.custom_label : undefined },
     });
     if (r && r.success) {
       toast(`Exported · ${origLabel || preset} → ${r.filename}`, 'ok');
@@ -21119,6 +21748,8 @@ async function renderStyle(){
   // Style Room. Idempotent: re-binds on every view-switch, internal helpers
   // gate bindings via dataset flags so listeners don't pile up.
   try { await renderBrandStack(); } catch(e){ console.warn('Brand Stack render:', e); }
+  // SESSIE 74 - Slice 2 fase 3: laad de per-artist profielvelden uit dj_profiles.
+  try { loadArtistProfile(); } catch(_){}
   // SESSIE 31 — make every right-rail section a collapsible. Must run
   // after renderBrandStack() because Watermark/BPM/etc may have been
   // re-rendered between view switches.
@@ -22851,6 +23482,67 @@ async function _pollAutoTrackStatus(){
 /* via /api/brand-kit + /api/brand-kit/{fonts,logo,presets}.         */
 /* ================================================================ */
 
+// SESSIE 74 - Slice 2 fase 3: per-artist profielvelden (artist_name/alias/cta/
+// hashtags/caption_voice) gekoppeld aan /api/brand/profile (dj_profiles, per
+// workspace). Los van het globale brand_kit; raakt de export/render niet.
+async function loadArtistProfile(){
+  try {
+    if (!STATE.session || !STATE.session.access_token) return;
+    var r = await api('/api/brand/profile');
+    if (!r || !r.ok || !r.profile) return;
+    var p = r.profile;
+    var setV = function(id, v){ var el = document.getElementById(id); if (el != null) el.value = (v == null ? '' : v); };
+    setV('ap-artist-name', p.artist_name);
+    setV('ap-alias', p.alias);
+    var cta = p.cta || {};
+    setV('ap-cta-style', cta.style || 'out_now');
+    setV('ap-spotify', cta.spotify_link);
+    setV('ap-beatport', cta.beatport_link);
+    var h = p.hashtags || {};
+    setV('ap-tags-tiktok', (h.tiktok || []).join(', '));
+    setV('ap-tags-instagram', (h.instagram || []).join(', '));
+    setV('ap-tags-youtube', (h.youtube_shorts || []).join(', '));
+    var v = p.caption_voice || {};
+    setV('ap-voice-tone', v.tone || 'hyped');
+    var em = document.getElementById('ap-voice-emojis'); if (em) em.checked = (v.use_emojis !== false);
+    setV('ap-voice-maxlen', v.max_length_chars || 80);
+  } catch (e) { /* stil: profiel is optioneel */ }
+}
+function _apTags(id){
+  var el = document.getElementById(id);
+  if (!el) return [];
+  return String(el.value || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean).slice(0, 30);
+}
+async function saveArtistProfile(){
+  var btn = document.getElementById('ap-save');
+  var val = function(id){ var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  var profile = {
+    artist_name: val('ap-artist-name'),
+    alias: val('ap-alias'),
+    cta: { style: val('ap-cta-style') || 'out_now', spotify_link: val('ap-spotify'), beatport_link: val('ap-beatport') },
+    hashtags: { tiktok: _apTags('ap-tags-tiktok'), instagram: _apTags('ap-tags-instagram'), youtube_shorts: _apTags('ap-tags-youtube') },
+    caption_voice: {
+      tone: val('ap-voice-tone') || 'hyped',
+      use_emojis: !!((document.getElementById('ap-voice-emojis') || {}).checked),
+      max_length_chars: Math.max(20, Math.min(300, parseInt(val('ap-voice-maxlen'), 10) || 80))
+    }
+  };
+  var ot = btn ? btn.textContent : null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  try {
+    var r = await api('/api/brand/profile', { method: 'PUT', body: { profile: profile } });
+    if (r && r.ok) { if (typeof toast === 'function') toast('Artist profile saved.', 'good'); }
+    else { if (typeof toast === 'function') toast('Could not save artist profile.', 'bad'); }
+  } catch (e) {
+    if (typeof toast === 'function') toast('Could not save profile: ' + (e && e.message || ''), 'bad');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = ot || 'Save artist profile'; }
+  }
+}
+document.addEventListener('click', function(e){
+  if (e.target && e.target.closest && e.target.closest('#ap-save')) { e.preventDefault(); saveArtistProfile(); }
+});
+
 async function renderBrandStack(){
   // Always fetch fresh so a re-render after upload reflects new fonts.
   try {
@@ -24405,6 +25097,20 @@ function renderAccountChip(){
     planEl.textContent = plan.toUpperCase();
     planEl.className = 'ac-plan ' + plan;
   }
+  // SESSIE 72 — ook de v2-chips (sidebar workspace-badge + Settings-badge)
+  // bijwerken vanuit het echte profiel. Hun eigen painter (v2GetCurrentPlan)
+  // draait alleen bij boot/dropdown -> zonder dit blijven ze op FREE staan na
+  // login tot een reload. renderAccountChip draait wel na fetchAndStoreProfile.
+  try {
+    var _planUp = String(plan || 'free').toUpperCase();
+    ['v2WsPlan','settings-ws-plan-badge'].forEach(function(id){
+      var b = document.getElementById(id);
+      if (!b) return;
+      b.textContent = _planUp;
+      b.classList.remove('v2-plan-free','v2-plan-pro','v2-plan-studio');
+      b.classList.add(plan === 'studio' ? 'v2-plan-studio' : (plan === 'pro' ? 'v2-plan-pro' : 'v2-plan-free'));
+    });
+  } catch(_){}
   if (billEl) {
     if (plan === 'free') {
       billEl.innerHTML = `
@@ -24420,6 +25126,14 @@ function renderAccountChip(){
   // Phase 3: re-paint the quota-strip whenever the chip re-renders so a
   // plan-flip immediately swaps Free→Unlimited copy.
   renderQuotaStrip();
+  // SESSIE 74 - Slice 1: laad de workspaces (artists) één keer per sessie en zet
+  // de actieve workspace-UUID, zodat de X-Omni-Workspace header live gaat. De
+  // artist-chip wordt opnieuw geverfd zodra de data binnen is. Nooit blocking.
+  try {
+    if (STATE.session && !STATE._workspacesLoaded && typeof loadWorkspaces === 'function') {
+      loadWorkspaces();
+    }
+  } catch(_){}
 }
 
 function showAuthOverlay(initialTab){
@@ -25423,7 +26137,8 @@ async function postLoginBoot(){
   //
   // SESSIE 54 — in v2-modus is de landing-pagina altijd Analyse (geen auto-
   // resume in project). Gebruiker bereikt projecten via Library.
-  const v2On = (function(){ try { return localStorage.getItem('omniDjRedesignV2') === '1'; } catch(_){ return false; }})();
+  // SESSIE 69 — V2 is de enige UI: landing is altijd Analyse.
+  const v2On = true;
   if (v2On) {
     switchView('analyse');
     return;
@@ -25495,7 +26210,10 @@ window.addEventListener('DOMContentLoaded', boot);
   var FLAG_KEY = 'omniDjRedesignV2';
 
   function isV2On(){
-    try { return localStorage.getItem(FLAG_KEY) === '1'; } catch(_) { return false; }
+    // SESSIE 69 — V2 is de enige UI. De feature-flag is uitgefaseerd: V2
+    // staat altijd aan, ongeacht localStorage. De V1-code blijft in het
+    // bestand staan (en in git) maar is niet meer bereikbaar in de tool.
+    return true;
   }
   function setV2(on){
     try { localStorage.setItem(FLAG_KEY, on ? '1' : '0'); } catch(_) {}
@@ -25509,6 +26227,8 @@ window.addEventListener('DOMContentLoaded', boot);
   var NAV_MAP = {
     analyse:  { view: 'analyse',   label: 'Analyse' },
     library:  { view: 'library',   label: 'Library' },
+    // SESSIE 71 — C1: Editor als eigen top-level view/tab.
+    editor:   { view: 'editor',    label: 'Editor' },
     // SESSIE 57 — Fase A: Brand is nu een eigen view (#view-brand),
     // niet langer een fallback naar Settings. Profile + Workspace +
     // Diagnostics blijven in Settings.
@@ -25585,9 +26305,9 @@ window.addEventListener('DOMContentLoaded', boot);
 
   function v2SyncActiveNav(){
     var cur = (window.STATE && STATE.view) || 'analyse';
-    // SESSIE 54 — Fase 5: dashboard/editor zijn sub-states binnen Library.
-    // Map dashboard/editor terug naar Library voor sidebar-highlight.
-    if (cur === 'dashboard' || cur === 'editor') cur = 'library';
+    // SESSIE 54 — Fase 5: dashboard (Clips) is een sub-state binnen Library.
+    // SESSIE 71 — C1: Editor is nu een eigen tab; alleen dashboard mapt op Library.
+    if (cur === 'dashboard') cur = 'library';
     // upload/processing/home zijn sub-states binnen Analyse.
     if (cur === 'upload' || cur === 'processing' || cur === 'home') cur = 'analyse';
     var match = 'analyse';
@@ -25661,15 +26381,14 @@ window.addEventListener('DOMContentLoaded', boot);
     }
   });
 
-  // Flag-toggle (linksonder)
+  // SESSIE 69 — V2 is de enige UI. De dev-toggle is uitgefaseerd: de knop is
+  // verborgen en de click-handler is verwijderd, zodat V1 niet meer terug te
+  // zetten is vanuit de tool. (setV2 blijft bestaan maar wordt nergens meer
+  // aangeroepen.) De V1-code blijft in het bestand + git bewaard.
   var toggle = document.getElementById('v2FlagToggle');
   if (toggle) {
-    function paintToggle(){ toggle.textContent = isV2On() ? 'v2 ON' : 'v2 OFF'; }
-    paintToggle();
-    toggle.addEventListener('click', function(){
-      setV2(!isV2On());
-      paintToggle();
-    });
+    toggle.hidden = true;
+    toggle.style.display = 'none';
   }
 
   // ============================================================
@@ -25683,10 +26402,12 @@ window.addEventListener('DOMContentLoaded', boot);
   // Plan helper — leest huidige plan uit auth-state of localStorage.
   function v2GetCurrentPlan(){
     try {
-      // Pak uit window.STATE.user.plan_id of auth-context (Sjuul's app)
-      var st = window.STATE || {};
-      var p = (st.user && st.user.plan_id) || (st.profile && st.profile.plan_id);
-      if (typeof p === 'string') return p.toLowerCase();
+      // SESSIE 72 — echte plan-bron is STATE.session.profile.plan. De oude
+      // read (STATE.user.plan_id / STATE.profile.plan_id) bestaat NIET in deze
+      // app -> badge bleef altijd op FREE staan ondanks plan=studio.
+      var st = (typeof STATE !== 'undefined') ? STATE : (window.STATE || {});
+      var p = st && st.session && st.session.profile && st.session.profile.plan;
+      if (typeof p === 'string' && p) return p.toLowerCase();
     } catch(_){}
     try {
       var lp = localStorage.getItem('omniDjPlanOverride');
@@ -25706,11 +26427,33 @@ window.addEventListener('DOMContentLoaded', boot);
     else planEl.classList.add('v2-plan-free');
   }
 
+  // SESSIE 74 - Slice 1: helpers om de ECHTE actieve workspace (artist) te vinden
+  // uit de via /api/workspaces geladen lijst in STATE.workspaces.
+  function v2ActiveWorkspace(){
+    try {
+      var st = window.STATE || {};
+      var rows = Array.isArray(st.workspaces) ? st.workspaces : [];
+      if (!rows.length) return null;
+      var id = (typeof currentWorkspaceId === 'function') ? currentWorkspaceId() : null;
+      var found = id ? rows.filter(function(w){ return w && w.id === id; })[0] : null;
+      return found || rows[0];
+    } catch(_){ return null; }
+  }
+  function v2WsLabel(w){
+    if (!w) return '';
+    if (w.artist_name && String(w.artist_name).trim()) return String(w.artist_name).trim();
+    if (w.name && String(w.name).trim()) return String(w.name).trim();
+    return '';
+  }
+
   function v2PaintArtistChip(){
     var artistEl = document.getElementById('v2ArtistName');
     if (!artistEl) return;
     var active = null;
-    try { active = localStorage.getItem('omniDjActiveArtist'); } catch(_){}
+    // SESSIE 74 - Slice 1: toon de naam van de ECHTE actieve workspace als die
+    // geladen is; val anders terug op de oude stub (localStorage + profile).
+    try { var _ws = v2ActiveWorkspace(); var _lbl = v2WsLabel(_ws); if (_lbl) active = _lbl; } catch(_){}
+    try { if (!active || !active.trim()) active = localStorage.getItem('omniDjActiveArtist'); } catch(_){}
     if (!active || !active.trim()) {
       // Fallback: gebruik artist_name uit profile
       try {
@@ -25729,6 +26472,9 @@ window.addEventListener('DOMContentLoaded', boot);
       artistEl.removeAttribute('data-placeholder');
     }
   }
+  // SESSIE 74 - Slice 1: painter beschikbaar maken buiten deze closure zodat
+  // loadWorkspaces() (globale scope) de chip kan herverven zodra de data binnen is.
+  try { window.v2PaintArtistChip = v2PaintArtistChip; } catch(_){}
 
   // Generic dropdown opener — chip is the trigger element.
   function v2OpenDropdown(chip, content){
@@ -25780,35 +26526,59 @@ window.addEventListener('DOMContentLoaded', boot);
 
   function v2ArtistDropdownContent(){
     var plan = v2GetCurrentPlan();
-    var defaultArtist = null;
-    try { defaultArtist = localStorage.getItem('omniDjActiveArtist'); } catch(_){}
-    if (!defaultArtist) {
-      try {
-        var st = window.STATE || {};
-        var prof = st.profile || (st.user && st.user.profile);
-        if (prof && prof.artist_name) defaultArtist = prof.artist_name;
-      } catch(_){}
-    }
-    if (!defaultArtist) defaultArtist = 'Artist name';
-
+    var checkSvg = '<svg class="v2-ws-dropdown-item-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
     var html = '';
     html += '<div class="v2-ws-dropdown-header">Artists</div>';
-    // Default artist (always active in non-studio plan)
-    html += '<div class="v2-ws-dropdown-item is-active" data-action="artist-select" data-artist="'+escapeHtmlSafe(defaultArtist)+'">';
-    html +=   '<span class="v2-ws-dropdown-item-name">'+escapeHtmlSafe(defaultArtist)+'</span>';
-    html +=   '<svg class="v2-ws-dropdown-item-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-    html += '</div>';
-    // For Studio plan, additional artists would come from data; for now show placeholder lock
-    if (plan !== 'studio') {
-      // Show 2 locked demo artists to communicate the feature
-      html += '<div class="v2-ws-dropdown-item is-locked" data-action="artist-locked">';
-      html +=   '<span class="v2-ws-dropdown-item-name">+ Second artist</span>';
-      html +=   '<span class="v2-ws-lock-ico">🔒</span>';
+
+    // SESSIE 74 - Slice 1: toon de ECHTE workspaces (artists) van de user als ze
+    // geladen zijn (RLS-scoped via /api/workspaces). De actieve heeft een vinkje;
+    // klikken zet de workspace-UUID -> activeert de scope-header. Val terug op de
+    // stub zolang de lijst nog niet geladen is of Supabase niet geconfigureerd is.
+    var rows = [];
+    try { var stW = window.STATE || {}; if (Array.isArray(stW.workspaces)) rows = stW.workspaces; } catch(_){}
+    var activeId = (typeof currentWorkspaceId === 'function') ? currentWorkspaceId() : null;
+
+    if (rows.length) {
+      rows.forEach(function(w){
+        var label = v2WsLabel(w) || 'Artist';
+        var isActive = !!(w && w.id && w.id === activeId);
+        html += '<div class="v2-ws-dropdown-item'+(isActive?' is-active':'')+'" data-action="artist-select" data-ws-id="'+escapeHtmlSafe(w.id||'')+'" data-artist="'+escapeHtmlSafe(label)+'">';
+        html +=   '<span class="v2-ws-dropdown-item-name">'+escapeHtmlSafe(label)+'</span>';
+        if (isActive) html += checkSvg;
+        html += '</div>';
+      });
+      if (plan !== 'studio') {
+        html += '<div class="v2-ws-dropdown-item is-locked" data-action="artist-locked">';
+        html +=   '<span class="v2-ws-dropdown-item-name">+ Second artist</span>';
+        html +=   '<span class="v2-ws-lock-ico">🔒</span>';
+        html += '</div>';
+      }
+    } else {
+      // Stub-fallback (workspaces nog niet geladen).
+      var defaultArtist = null;
+      try { defaultArtist = localStorage.getItem('omniDjActiveArtist'); } catch(_){}
+      if (!defaultArtist) {
+        try {
+          var st2 = window.STATE || {};
+          var prof = st2.profile || (st2.user && st2.user.profile);
+          if (prof && prof.artist_name) defaultArtist = prof.artist_name;
+        } catch(_){}
+      }
+      if (!defaultArtist) defaultArtist = 'Artist name';
+      html += '<div class="v2-ws-dropdown-item is-active" data-action="artist-select" data-artist="'+escapeHtmlSafe(defaultArtist)+'">';
+      html +=   '<span class="v2-ws-dropdown-item-name">'+escapeHtmlSafe(defaultArtist)+'</span>';
+      html +=   checkSvg;
       html += '</div>';
+      if (plan !== 'studio') {
+        html += '<div class="v2-ws-dropdown-item is-locked" data-action="artist-locked">';
+        html +=   '<span class="v2-ws-dropdown-item-name">+ Second artist</span>';
+        html +=   '<span class="v2-ws-lock-ico">🔒</span>';
+        html += '</div>';
+      }
     }
+
     html += '<div class="v2-ws-dropdown-divider"></div>';
     if (plan === 'studio') {
-      // Studio: tot 3 artists toegestaan; placeholder Add knop tonen
       html += '<div class="v2-ws-dropdown-link" data-action="add-artist">+ Add artist (max 3)</div>';
     } else {
       html += '<div class="v2-ws-dropdown-link" data-action="upgrade-studio">✦ Add more artists with Studio</div>';
@@ -25876,7 +26646,13 @@ window.addEventListener('DOMContentLoaded', boot);
         v2CloseAllDropdowns();
         if (typeof window.switchView === 'function') window.switchView('settings');
       } else if (a === 'artist-select') {
+        // SESSIE 74 - Slice 1: sla de displaynaam op (chip-fallback) EN, als dit
+        // een echte workspace is, de workspace-UUID -> activeert de scope-header.
         try { localStorage.setItem('omniDjActiveArtist', act.dataset.artist || ''); } catch(_){}
+        try {
+          var _wsId = act.dataset.wsId || '';
+          if (_wsId && typeof _setActiveWorkspace === 'function') _setActiveWorkspace(_wsId);
+        } catch(_){}
         v2PaintArtistChip();
         v2CloseAllDropdowns();
       } else {
