@@ -22,7 +22,78 @@
   - Google Workspace domein-verificatie voor `monohq-labs.com` nog niet afgerond
 - **Oude landing:** `landing-omnidj/` map is de vorige simpele 1-page versie, niet meer actief
 
-> **GECOMMIT + GEPUSHT (2026-06-04):** commit `9176c8a` op `main` bevat sessie 69+71+72+73+74 (22 bestanden). De "NIET gecommit"-vermeldingen verderop zijn historisch. NOG OPEN voor Sjuul: E2E-export-check fase 2b (nu met per-workspace logo), clips-metadata (007, bewust uitgesteld), migratie 010 (review), test-infra (pytest/Playwright), gesignde rebuild + DMG->R2.
+> **GECOMMIT + GEPUSHT (2026-06-04):** commit `9176c8a` op `main` bevat sessie 69+71+72+73+74 (22 bestanden). De "NIET gecommit"-vermeldingen verderop zijn historisch. NOG OPEN voor Sjuul: clips-metadata (007, bewust uitgesteld), migratie 010 (review), test-infra (pytest/Playwright), gesignde rebuild + DMG->R2. (E2E-export-check fase 2b: GEDAAN in sessie 75 + logo-export-bug gefixt, zie direct hieronder. Sessie-75-fix nog NIET gecommit.)
+
+---
+
+**Sessie 75 (2026-06-04) - E2E-export-check (fase 2b/4) GEDAAN + logo-export-bug gefixt. Code-side klaar, NIET gecommit.**
+
+- **Doel:** bevestigen dat het per-workspace logo correct in de export bakt (open punt uit sessie 74), met no-regression.
+- **Bug gevonden + gefixt (1 regel, `app.py` r.6690):** `_detect_layers_for_clip` checkte `logo.get('file')`, maar de logo-upload slaat de sleutel op als `'path'` (en de cutter rendert ook via `'path'`). Daardoor was `has_logo` altijd False -> bij EXPORT liep de prebake nooit -> een logo werd nooit ingebakken. Nu: `(logo.get('path') or logo.get('file'))`. Bestaande bug (sessie 43a), GEEN sessie-74-regressie. Watermark werkte al (slaat wel `'file'` op). Backup `app.py.pre-sessie75.bak`, py_compile groen.
+- **LIVE geverifieerd op :5599 (na restart met de fix):** test-logo op TEST-workspace gezet -> korte Franky-excerpt vers geanalyseerd (job workspace-getagd via upload-local r.4792, brand gematerialiseerd in job-map via r.1133) -> clip geexporteerd -> frame-extract toont het per-workspace logo rechtsboven in de export (export-grootte veranderde t.o.v. de kale clip = prebake liep echt).
+- **Isolatie/no-regression bevestigd:** globaal `brand_kit.json` bleef `logo=null` (geen clobber); een export uit de bestaande ONGETAGDE Franky-job (a0746acc) viel terug op globaal en had GEEN logo (geen leak). Export-pipeline intact.
+- **Nevenobservatie (geen actie ondernomen):** de logo-upload-endpoint snuffelt alleen de eerste 4 PNG-magic-bytes, niet of de PNG decodeerbaar is (een corrupte PNG kan dus opgeslagen worden). Echte upload via de bestandskiezer stuurt geldige bytes; laag risico.
+- **Opgeruimd:** test-logo (via DELETE), excerpt, test-job 40b3cee6, test-export + frames. NB: de test-analyse verhoogde de usage-teller met 1 (5->6) voor business@; NIET teruggedraaid.
+- **GESIGNDE REBUILD GEDAAN (2026-06-04):** `./build_macos.sh sign notarize dmg` gedraaid (via osascript-achtergrond, APPLE_DEVELOPER_ID=Sjuul Smits/PTLV7AY4UL, profiel omnidj-notary). Resultaat: `dist/Omni DJ.app` + `dist/Omni DJ.dmg` (258 MB), beide spctl `accepted / Notarized Developer ID`. Gebouwd uit huidige source -> logo-fix zit erin. NOG NIET gedaan (Sjuul): bundle naar `/Applications` zetten, picker-smoketest in de gesignde bundle (harde regel), en PAS DAARNA DMG->R2 (hernoemen naar `Omni-DJ-1.0.0.dmg`).
+- **Picker-fix (`app.py`, NIET getest in bundle):** `_PanelRunner`-ObjC-class stond BINNEN
+  `_pick_with_nsopenpanel` -> 2e pick (eerst set, dan KIES MAP) gaf "_PanelRunner is overriding
+  existing Objective-C class" in de gesignde bundle. Nu 1x op moduleniveau via `_get_panel_runner_cls()`
+  (global-guard) + gedeelde `_PANEL_STATE` onder `_PANEL_LOCK`. De NSOpenPanel-route draait alleen in de
+  bundle (dev gebruikt osascript), dus pas te bevestigen NA een rebuild. Backup `app.py.pre-sessie75-picker.bak`.
+- **Export-feature GEBOUWD + LIVE GROEN op :5599 (PLAN-SESSIE75-RATIOS-NAMING-DOWNLOADS):**
+  (1) Per-ratio bestandsnaam = rename + " - <ratio>" met veilige tokens (`_build_export_filename`,
+  `_ASPECT_RATIO_LABEL` 9x16/16x9/1x1/4x5, spaties behouden). (2) Echte 1:1 + 4:5 crops: nieuwe
+  `_derive_ratio_file` (hergebruikt de /api/derive center-crop) + `_resolve_export_sources` leidt
+  square (1080x1080) en portrait45 (1080x1350) af uit landscape/vertical; aspect_filter + prebake-merge
+  laten 1:1/4:5 niet wegvallen. Frontend mapt nu 1:1->square, 4:5->portrait45 (geen collapse meer).
+  (3) Downloads-default: nieuw `GET /api/default-export-dir` (~/Downloads), modal selecteert 'm vooraf,
+  map verplicht (duidelijke toast als leeg), backend-vangnet default ~/Downloads. LIVE bewezen: export
+  van 1 clip in alle 4 formaten -> "House set - 9x16/16x9/1x1/4x5.mp4" met juiste afmetingen
+  (1080x1920 / 1920x1080 / 1080x1080 / 1080x1350); 1:1-frame is een echte center-crop. Backups
+  `app.py`/`cutter.py.pre-sessie75-ratios.bak` (cutter ongewijzigd). BEPERKING v1: brand-overlay in de
+  afgeleide 1:1/4:5 komt alleen mee als de bron-cut 'm al had (derive cropt de cut, geen aparte overlay);
+  fijn-tunen hoort bij de logo-in-editor-feature.
+- **TE COMMITTEN (stapelt op 9176c8a):** gewijzigd `Omni DJ/app.py` (logo-detect fix + `_PanelRunner`
+  moduleniveau + `_build_export_filename`/ratio-tokens + `_derive_ratio_file` + `_resolve_export_sources`
+  + aspect_filter + prebake-merge + sidecar portrait45 + `/api/default-export-dir` + export Downloads-default),
+  `Omni DJ/static/index.html` (Downloads-default + verplichte map + ratio->aspect mapping), nieuw
+  `PLAN-SESSIE75-RATIOS-NAMING-DOWNLOADS-2026-06-04.md`, `HANDOVER.md`. NIET committen: alle
+  `app.py.pre-sessie75*.bak`, `cutter.py.pre-sessie75-ratios.bak`, `_dev_restart_5599.sh`.
+- **GESIGNDE REBUILD #2 GEDAAN (2026-06-04):** bundle herbouwd `./build_macos.sh sign notarize dmg`,
+  app + dmg spctl `accepted / Notarized Developer ID` (DMG ~258 MB), en in `/Applications` gezet (ditto).
+  De bundle bevat nu ALLES van sessie 75: logo-fix + picker-fix + export-feature (per-ratio naam + echte
+  1:1/4:5 crops + Downloads-default). NOG: picker-smoketest in de bundle (set inladen EN KIES MAP), dan
+  pas DMG->R2 (`Omni-DJ-1.0.0.dmg`). Commit nog open (zie hierboven).
+- **SMOKETEST bundle #2 (Sjuul, 2026-06-04) -> 3 fixes in broncode (NIET in bundle, vereist rebuild #3):**
+  (1) Picker-crash WEG (analyse lukt), maar "Drop a set" opent Finder pas bij 2e klik en KIES MAP toont
+  niks. Diagnose: backend, NSOpenPanel hangt af van de Flask-main-thread run-loop -> paneel verschijnt
+  onbetrouwbaar; GEEN frontend-bug (de knop vuurt /api/pick-folder). FIX: `_pick_folder_macos` +
+  `_pick_file_macos` nu OSASCRIPT-EERST (los subprocess met eigen run-loop, entitlement aanwezig sinds
+  sessie 69), NSOpenPanel alleen als terugval. Strikt >= huidig (terugval blijft). Alleen in de bundle te
+  bevestigen. (2) `.meta.json` sidecar werd meegekopieerd naar de gekozen doelmap -> NU NIET meer
+  (sidecar blijft alleen in de job-map voor de Library; eindgebruiker krijgt enkel schone .mp4's).
+  (3) RESET-knop leek niks te doen: hij reset naar Downloads (al getoond) -> nu met bevestigings-toast.
+  py_compile groen, dev (:5599) laadt zonder console-fouten. Backups pre-sessie75-ratios.bak dekken app.py.
+- **REBUILD #3 GEDAAN + in /Applications (2026-06-04):** app + dmg `accepted / Notarized Developer ID`.
+  Bundle bevat nu ook de 3 smoketest-fixes. NOG door Sjuul: smoketest (1-klik Drop a set + KIES MAP openen
+  direct? geen .json in doelmap? RESET-toast?). DAARNA pas DMG->R2. Commit nog open.
+- **SMOKETEST #3 GROEN (Sjuul, 2026-06-04):** picker opent nu in EEN klik (osascript-first werkt in de
+  bundle), geen .json in de doelmap, RESET geeft toast. WEL twee normale macOS-bijverschijnselen:
+  (a) een generiek wit Dock-icoon stuitert terwijl het kies-venster open is (dat is het osascript-helper-
+  proces dat de dialog host; onschuldig), en (b) eenmalig de macOS-toestemmingsprompt voor de Downloads-map
+  (uit `NSDownloadsFolderUsageDescription`; Allow = permanent). App-icoon (Dock/Finder/.dmg) = Omni DJ-logo;
+  browser-tab favicon ontbrak -> toegevoegd.
+- **REBUILD #4 (favicon) GEDAAN + in /Applications + DMG->R2 LIVE (2026-06-04):** app+dmg notarized.
+  DMG geupload naar R2 bucket `omnidj-downloads` als `Omni-DJ-1.0.0.dmg` via wrangler (osascript kon niet
+  non-interactief -> `script -q /dev/null wrangler ... --remote` gaf een pty -> OAuth re-auth (Sjuul
+  goedgekeurd) -> upload. Wrangler zit op nvm-pad `/Users/sjuulsmits/.nvm/versions/node/v20.19.5/bin`,
+  draaien vanuit $HOME (anders `/.wrangler/cache`-fout). GEVERIFIEERD: `https://downloads.omnidj.com/Omni-DJ-1.0.0.dmg`
+  HTTP 200, content-length 258137270 = de verse build (cf-cache MISS). **NOG OPEN: git commit van alle
+  sessie 75-wijzigingen (zie TE COMMITTEN).**
+
+Detail: memory `project_sessie75_logo_export_fix`.
+
+---
 
 **Sessie 74 (2026-06-03) - A1 afmaken gestart. Stappenplan opgeleverd + Slice 1 (workspace-header activeren) GEBOUWD en LIVE GEVERIFIEERD op :5599. Frontend-only, NIET gecommit/herbouwd.**
 

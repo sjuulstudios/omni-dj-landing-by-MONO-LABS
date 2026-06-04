@@ -4,6 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Omni DJ</title>
+<!-- SESSIE 75 — favicon zodat de browser-tab ook het Omni DJ-logo toont (niet alleen de app/dmg). -->
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<link rel="icon" type="image/png" sizes="1024x1024" href="/static/icon_1024.png">
+<link rel="apple-touch-icon" href="/static/icon_1024.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -17910,6 +17914,7 @@ function pickExportSettings(label, opts){
     const folderPickBtn = document.getElementById('exs-folder-pick');
     const folderResetBtn = document.getElementById('exs-folder-reset');
     let currentOutputDir = null;
+    let defaultDownloadsDir = null;   // SESSIE 75 — cache van ~/Downloads
     try {
       const remembered = localStorage.getItem('omniDj.lastExportDir');
       if (remembered) currentOutputDir = remembered;
@@ -17920,11 +17925,30 @@ function pickExportSettings(label, opts){
         folderPathEl.textContent = currentOutputDir.replace(/^\/Users\/[^/]+/, '~');
         if (folderResetBtn) folderResetBtn.style.display = '';
       } else {
-        folderPathEl.textContent = 'Default (Library)';
+        // SESSIE 75 — geen Library-default meer; een map is verplicht.
+        folderPathEl.textContent = 'Kies een download-map…';
         if (folderResetBtn) folderResetBtn.style.display = 'none';
       }
     };
     refreshFolderRow();
+    // SESSIE 75 — default doelmap = Downloads, vooraf geselecteerd als er geen
+    // onthouden map is. Fire-and-forget; faalt stil -> dan blijft de map leeg en
+    // dwingt onOk een keuze af.
+    (async () => {
+      try {
+        const tok = STATE.session && STATE.session.access_token;
+        if (!tok) return;
+        const r = await fetch('/api/default-export-dir', {
+          headers: _omniWsHeaders({ Authorization: 'Bearer ' + tok }),
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d && d.path && d.exists) {
+          defaultDownloadsDir = d.path;
+          if (!currentOutputDir) { currentOutputDir = d.path; refreshFolderRow(); }
+        }
+      } catch(_) {}
+    })();
     const onFolderPick = async () => {
       try {
         const pick = await api('/api/pick-folder', { method: 'POST', body: {
@@ -17940,9 +17964,11 @@ function pickExportSettings(label, opts){
       }
     };
     const onFolderReset = () => {
-      currentOutputDir = null;
+      // SESSIE 75 — reset valt terug op Downloads (niet op Library/leeg) + feedback.
       try { localStorage.removeItem('omniDj.lastExportDir'); } catch(_) {}
+      currentOutputDir = defaultDownloadsDir || null;
       refreshFolderRow();
+      if (currentOutputDir) toast('Doelmap teruggezet naar Downloads', 'ok');
     };
     if (folderPickBtn) folderPickBtn.addEventListener('click', onFolderPick);
     if (folderResetBtn) folderResetBtn.addEventListener('click', onFolderReset);
@@ -17988,6 +18014,12 @@ function pickExportSettings(label, opts){
         if (note) note.textContent = 'Selecteer minstens één formaat.';
         return;
       }
+      // SESSIE 75 — download-map is verplicht (default is normaal al Downloads).
+      if (!currentOutputDir) {
+        if (note) note.textContent = 'Kies eerst een download-map (knop "Kies map…").';
+        toast('Kies eerst een download-map voordat je exporteert', 'bad');
+        return;
+      }
       const newName = (renameInput && renameInput.value || '').trim();
       const v = {
         codec: sCodec.value,
@@ -18000,7 +18032,7 @@ function pickExportSettings(label, opts){
           watermark: !!wmInput.checked,
           logo: true,  // toggle voor logo niet in UI, default aan
         },
-        outputDir: currentOutputDir || null,
+        outputDir: currentOutputDir,
       };
       try {
         localStorage.setItem('omniDj.exportSettings', JSON.stringify({
@@ -18090,11 +18122,13 @@ async function startExport(indices, label, opts){
   // / 'vertical'). Tot Onderdeel 4 backend-side rond is, mappen we 1:1 + 4:5
   // naar de dichtstbij liggende source (landscape voor breed, vertical
   // anders) zodat de user wel een bestand krijgt.
+  // SESSIE 75 — echte crops: 1:1 -> square, 4:5 -> portrait45 (geen collapse meer).
   const aspectsSet = new Set();
   (settings.ratios || ['9:16']).forEach(r => {
-    if (r === '9:16' || r === '4:5') aspectsSet.add('vertical');
+    if (r === '9:16') aspectsSet.add('vertical');
     else if (r === '16:9') aspectsSet.add('landscape');
-    else if (r === '1:1') aspectsSet.add('vertical');  // square ~ crop van vertical
+    else if (r === '1:1') aspectsSet.add('square');
+    else if (r === '4:5') aspectsSet.add('portrait45');
   });
   const aspects = Array.from(aspectsSet);
   if (!aspects.length) aspects.push('vertical');

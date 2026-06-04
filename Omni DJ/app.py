@@ -6470,42 +6470,73 @@ def _resolve_export_source(clip):
     return files.get('landscape') or files.get('vertical')
 
 
-def _resolve_export_sources(clip, aspects=None, job_id=None, job_output_dir=None):
-    """Return every available format source for this clip as a list of
-    (aspect_key, path) tuples. Used by the export worker so a single
-    queued item can produce 16:9, 9:16, or both output files.
-    `aspects` is an optional whitelist (e.g. ['vertical']) — when omitted
-    or empty, every available format is returned.
-
-    SESSIE 68 (Fix B1) — sinds Trim nog maar één formaat rendert kan een
-    gevraagd export-formaat ontbreken in clip['files'] (bv. user trimde alleen
-    vertical maar exporteert nu ook landscape). In dat geval snijden we het
-    ontbrekende formaat hier alsnog uit de bron, met de huidige clip-grenzen,
-    zodat de export compleet is. Vereist job_id + job_output_dir; zonder die
-    context valt de functie terug op het oude gedrag (alleen bestaande files)."""
-    files = clip.get('files') or {}
-    if aspects:
-        wanted = [a for a in aspects if a in ('landscape', 'vertical')]
+# SESSIE 75 — center-crop helper voor de echte 1:1 (1080x1080) en 4:5 (1080x1350)
+# formaten. Hergebruikt exact de crop-filters van /api/derive (api_derive_ratio).
+# Crop't een BESTAANDE cut (landscape/vertical); geen aparte brand-overlay-stap
+# (brand komt mee als de bron-cut 'm al had).
+def _derive_ratio_file(src, ratio, out_path):
+    if ratio == 'square':
+        crop_filter = ("crop=min(iw\\,ih):min(iw\\,ih):"
+                       "(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2,scale=1080:1080")
+    elif ratio == 'portrait45':
+        crop_filter = ("crop=min(iw\\,ih*0.8):min(iw/0.8\\,ih):"
+                       "(iw-min(iw\\,ih*0.8))/2:(ih-min(iw/0.8\\,ih))/2,scale=1080:1350")
     else:
-        wanted = ['landscape', 'vertical']
-    out = []
+        raise ValueError(f'unsupported ratio {ratio}')
+    cmd = [media_tools.ffmpeg(), '-y', '-i', src, '-vf', crop_filter,
+           '-c:v', 'h264_videotoolbox' if sys.platform == 'darwin' else 'libx264',
+           '-b:v', '8M', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart',
+           out_path]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
+    if proc.returncode != 0:
+        cmd[cmd.index('-c:v') + 1] = 'libx264'   # fallback als VideoToolbox faalt
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    if proc.returncode != 0 or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+        raise RuntimeError(f'derive {ratio} rc={proc.returncode}')
+    return out_path
+
+
+def _resolve_export_sources(clip, aspects=None, job_id=None, job_output_dir=None):
+    """Return every wanted format source for this clip as a list of
+    (aspect_key, path) tuples. Used by the export worker.
+
+    SESSIE 68 — ontbrekende landscape/vertical worden on-demand uit de bron
+    gesneden. SESSIE 75 — square (1:1) en portrait45 (4:5) worden afgeleid
+    (center-crop) uit de bijbehorende basis-cut (square<-landscape,
+    portrait45<-vertical); de basis-cut wordt zo nodig eerst gemaakt. Alleen
+    de WANTED formaten komen terug (een basis-cut die enkel als crop-bron
+    diende, wordt niet meegeleverd)."""
+    files = clip.get('files') or {}
+    BASE = ('landscape', 'vertical')
+    DERIVED = ('square', 'portrait45')
+    if aspects:
+        wanted = [a for a in aspects if a in BASE + DERIVED]
+    else:
+        wanted = list(BASE)
+    base_wanted = [a for a in wanted if a in BASE]
+    derived_wanted = [a for a in wanted if a in DERIVED]
+
+    # Welke basis-cuts hebben we nodig (gevraagd OF als crop-bron voor derived)?
+    need_base = set(base_wanted)
+    for d in derived_wanted:
+        need_base.add('vertical' if d == 'portrait45' else 'landscape')
+
+    resolved_base = {}      # key -> path
     missing = []
-    # Order matters — landscape first so it's picked as the "primary" path.
-    for key in wanted:
+    for key in need_base:
         src = files.get(key)
         if src and os.path.exists(src):
-            out.append((key, src))
+            resolved_base[key] = src
         else:
             missing.append(key)
 
-    # On-demand cut for any wanted-but-missing format.
+    # On-demand cut for any needed-but-missing base format.
     if missing and job_id and job_output_dir:
         start = clip.get('start')
         end = clip.get('end')
         clip_index = clip.get('index')
         clip_type = clip.get('type') or clip.get('kind') or 'drop'
         if start is not None and end is not None and clip_index is not None and end > start:
-            # Source video uit de in-memory job of snapshot.
             with jobs_lock:
                 j = jobs.get(job_id) or {}
                 video_path_job = j.get('video_path')
@@ -6523,14 +6554,39 @@ def _resolve_export_sources(clip, aspects=None, job_id=None, job_output_dir=None
                     for key in missing:
                         p = (cut or {}).get(key)
                         if p and os.path.exists(p):
-                            out.append((key, p))
-                            files[key] = p   # cache zodat een volgende export 'm vindt
+                            resolved_base[key] = p
+                            files[key] = p
                 except Exception as e:
                     log.warning("export: on-demand cut of %s failed for clip %s: %s",
                                 missing, clip_index, e)
 
-    # Re-sort so landscape stays first (primary path) regardless of cut order.
-    order = {'landscape': 0, 'vertical': 1}
+    out = [(k, p) for (k, p) in resolved_base.items() if k in base_wanted]
+
+    # Derived (1:1 / 4:5) afleiden uit de basis-cut.
+    for d in derived_wanted:
+        if files.get(d) and os.path.exists(files[d]):
+            out.append((d, files[d]))
+            continue
+        base_key = 'vertical' if d == 'portrait45' else 'landscape'
+        base_src = (resolved_base.get(base_key)
+                    or resolved_base.get('landscape') or resolved_base.get('vertical'))
+        if not (base_src and os.path.exists(base_src)) or not job_output_dir:
+            log.warning("export: geen bron voor %s (clip %s)", d, clip.get('index'))
+            continue
+        try:
+            base_name = os.path.splitext(os.path.basename(base_src))[0]
+            for suffix in ('_vertical', '_landscape', '_square', '_portrait45'):
+                if base_name.endswith(suffix):
+                    base_name = base_name[:-len(suffix)]
+                    break
+            out_path = os.path.join(job_output_dir, f"{base_name}_{d}.mp4")
+            _derive_ratio_file(base_src, d, out_path)
+            out.append((d, out_path))
+            files[d] = out_path
+        except Exception as e:
+            log.warning("export: derive %s failed for clip %s: %s", d, clip.get('index'), e)
+
+    order = {'landscape': 0, 'vertical': 1, 'square': 2, 'portrait45': 3}
     out.sort(key=lambda kv: order.get(kv[0], 9))
     return out
 
@@ -6567,40 +6623,58 @@ def _safe_filename_label(label, max_len=80):
     return safe[:max_len]
 
 
+# SESSIE 75 — aspect-key -> filesystem-veilig ratio-label. Geen ':' (Finder toont
+# die als '/', Windows weigert 'm), dus "9x16"-stijl. Gebruikt in de export-naam.
+_ASPECT_RATIO_LABEL = {
+    'vertical':   '9x16',
+    'landscape':  '16x9',
+    'square':     '1x1',
+    'portrait45': '4x5',
+}
+
+
+def _safe_filename_label_keep_spaces(label, max_len=80):
+    """Als _safe_filename_label maar behoudt spaties (collapse naar 1 spatie).
+    Strip alleen filesystem-illegale tekens (\\ / : * ? " < > |). Zo blijft een
+    rename als "House set" leesbaar als "House set" i.p.v. "House_set"."""
+    if not label:
+        return ''
+    safe = re.sub(r'[\\/:*?"<>|]+', '', str(label))
+    safe = re.sub(r'\s+', ' ', safe).strip()
+    return safe[:max_len]
+
+
 def _build_export_filename(clip, idx, aspect_key, codec, ext='.mp4'):
     """Compose the user-visible export filename.
 
-    SESSIE 43a — split in twee modes:
-      - 'clean' (default): "<label>.mp4" / "<label>_vertical.mp4" — schone naam
-        zoals Finder/Explorer 'm zou willen zien. Metadata (clip_index, aspect,
-        codec) gaat naar sidecar .meta.json (zie _write_export_sidecar).
-      - 'legacy': "<label>__clip<NN>__<aspect>__<codec>.mp4" — oude pattern,
-        nog steeds bruikbaar als fallback voor scripts die de oude naam
-        verwachten.
+    SESSIE 75 — elke ratio krijgt " - <ratio>" achter de rename-basis (ook 9:16),
+    met filesystem-veilige ratio-tokens. Voorbeeld rename "House set":
+      "House set - 9x16.mp4", "House set - 16x9.mp4", "House set - 1x1.mp4",
+      "House set - 4x5.mp4". Codec (bij non-match) komt er als " - h265" achteraan.
 
-    /api/exports leest beide patterns + sidecar JSON, dus oude én nieuwe
-    exports blijven in de Library zichtbaar.
+    Metadata (clip_index, aspect, codec) blijft naar de sidecar .meta.json gaan
+    (zie _write_export_sidecar), dus /api/exports leest de aspect uit de sidecar
+    en de Library blijft op alle (oude + nieuwe) namen werken.
     """
     custom = clip.get('custom_label')
     fallback_type = (clip.get('type') or clip.get('kind') or 'Clip')
     fallback_type = str(fallback_type).strip().capitalize() or 'Clip'
     fallback_idx = clip.get('index') if clip.get('index') is not None else (idx + 1)
     fallback = f"{fallback_type}_{fallback_idx}"
-    label = _safe_filename_label(custom) or _safe_filename_label(fallback) or f"clip_{idx+1:02d}"
+    label = (_safe_filename_label_keep_spaces(custom)
+             or _safe_filename_label_keep_spaces(fallback)
+             or f"clip_{idx+1:02d}")
 
-    # Suffix-strategie: alleen aspect erbij als het géén 9:16 vertical is
-    # (9:16 is verreweg de meest gebruikte ratio in deze tool). Codec alleen
-    # erbij als het géén 'match' is (default = match, dus meestal weglaten).
-    # Resultaat: 'Drop_3.mp4' voor de standaard 9:16 match-source export,
-    # 'Drop_3_landscape.mp4' voor 16:9, 'Drop_3_h265.mp4' voor codec-overrides.
     parts = [label]
-    if aspect_key and aspect_key != 'vertical':
-        parts.append(aspect_key)
+    ratio = _ASPECT_RATIO_LABEL.get(aspect_key)
+    if ratio:
+        parts.append(ratio)
+    elif aspect_key and aspect_key != 'vertical':
+        parts.append(aspect_key)  # fallback voor onbekende aspect-keys
     if codec and codec != 'match':
         # Strip _vt suffix voor leesbaarheid: h265_vt → h265, h264_vt → h264
-        codec_clean = codec.replace('_vt', '')
-        parts.append(codec_clean)
-    return '_'.join(parts) + ext
+        parts.append(codec.replace('_vt', ''))
+    return ' - '.join(parts) + ext
 
 
 def _build_export_filename_legacy(clip, idx, aspect_key, codec, ext='.mp4'):
@@ -6687,7 +6761,7 @@ def _detect_layers_for_clip(job_id, output_dir, clip_index):
             with open(_kit_path, 'r') as f:
                 kit = json.load(f) or {}
             logo = kit.get('logo')
-            if isinstance(logo, dict) and logo.get('file') and logo.get('enabled', True):
+            if isinstance(logo, dict) and (logo.get('path') or logo.get('file')) and logo.get('enabled', True):
                 info['has_logo'] = True
             wm = kit.get('watermark')
             if isinstance(wm, dict) and wm.get('file') and wm.get('enabled', True):
@@ -6885,7 +6959,8 @@ def _run_export_job(job_id, cfg):
     raw_aspects = cfg.get('aspects')
     aspect_filter = None
     if isinstance(raw_aspects, list) and raw_aspects:
-        aspect_filter = [a for a in raw_aspects if a in ('landscape', 'vertical')]
+        aspect_filter = [a for a in raw_aspects
+                         if a in ('landscape', 'vertical', 'square', 'portrait45')]
         if not aspect_filter:
             aspect_filter = None
 
@@ -6956,7 +7031,13 @@ def _run_export_job(job_id, cfg):
                     if p and os.path.exists(p):
                         baked_sources.append((key, p))
                 if baked_sources:
-                    sources = baked_sources
+                    # SESSIE 75 — merge: vervang alleen de gebakte aspecten
+                    # (landscape/vertical) door hun baked-versie; behoud andere
+                    # (square/portrait45 uit _resolve_export_sources) zodat 1:1/4:5
+                    # niet wegvallen als de prebake draait.
+                    baked_keys = {k for k, _ in baked_sources}
+                    sources = baked_sources + [(k, p) for (k, p) in sources
+                                               if k not in baked_keys]
                 else:
                     log.warning("prebake produced no usable files for clip %s — falling back to live files", idx)
             else:
@@ -7018,13 +7099,10 @@ def _run_export_job(job_id, cfg):
                 try:
                     target = os.path.join(user_dir, os.path.basename(out_path))
                     shutil.copy2(out_path, target)
-                    # Sidecar mee als die bestaat
-                    src_meta = out_path + '.meta.json'
-                    if os.path.exists(src_meta):
-                        try:
-                            shutil.copy2(src_meta, target + '.meta.json')
-                        except OSError:
-                            pass
+                    # SESSIE 75 — de .meta.json sidecar NIET meekopieren naar de
+                    # door de gebruiker gekozen map; die is alleen intern nodig
+                    # (Library leest 'm uit de job-map). Eindgebruiker krijgt enkel
+                    # de schone .mp4-bestanden.
                     out_path = target
                     try:
                         out_size = os.path.getsize(target)
@@ -7085,6 +7163,19 @@ def _run_export_job(job_id, cfg):
                 j['export_done'] = True
 
 
+@app.route('/api/default-export-dir', methods=['GET'])
+def api_default_export_dir():
+    """SESSIE 75 — default export-map (Downloads) zodat de export-modal die
+    vooraf kan selecteren. ~/Downloads ligt binnen home -> voldoet aan de
+    bestaande home-whitelist op /api/export."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    dl = os.path.expanduser('~/Downloads')
+    return jsonify({'ok': True, 'path': dl, 'label': 'Downloads',
+                    'exists': os.path.isdir(dl)})
+
+
 @app.route('/api/export/<job_id>', methods=['POST'])
 def api_export_start(job_id):
     """Start a real render queue for all clips in this job.
@@ -7130,6 +7221,13 @@ def api_export_start(job_id):
     # folder (Library/Editor "Export" buttons pick this via /api/pick-folder).
     # We validate up-front so a bad path fails fast — not after a 30 s render.
     output_dir = cfg.get('output_dir')
+    # SESSIE 75 — default doel = ~/Downloads (i.p.v. de Library) als de caller
+    # geen map meegeeft. De frontend stuurt normaal de gekozen/Downloads-map mee;
+    # dit is het vangnet zodat exports niet stilletjes in de Library belanden.
+    if not output_dir:
+        _dl = os.path.expanduser('~/Downloads')
+        if os.path.isdir(_dl):
+            output_dir = _dl
     if output_dir:
         if not isinstance(output_dir, str) or not output_dir.strip():
             return jsonify({'error': 'Invalid output folder.', 'reason': 'bad_output_dir'}), 400
@@ -7424,10 +7522,11 @@ def api_list_exports():
                     sidecar_aspect_key = meta.get('aspect')
                     if sidecar_aspect_key:
                         aspect = {
-                            'landscape': '16:9',
-                            'vertical':  '9:16',
-                            'square':    '1:1',
-                            'portrait':  '4:5',
+                            'landscape':  '16:9',
+                            'vertical':   '9:16',
+                            'square':     '1:1',
+                            'portrait':   '4:5',
+                            'portrait45': '4:5',
                         }.get(sidecar_aspect_key, '16:9')
                     sidecar_used = True
                 except (OSError, json.JSONDecodeError, TypeError):
@@ -7631,39 +7730,46 @@ def _nsopenpanel_supported():
     return _NSOPENPANEL_AVAILABLE
 
 
-def _pick_with_nsopenpanel(prompt, default_dir, choose_dirs):
-    """Open an NSOpenPanel on the main thread and return (path|None, err|None).
+# SESSIE 75 — _PanelRunner ObjC-class EEN keer op moduleniveau registreren.
+# Voorheen stond `class _PanelRunner(NSObject)` BINNEN _pick_with_nsopenpanel,
+# waardoor een 2e pick (bv. eerst een set-bestand kiezen, dan de export-map)
+# de ObjC-class opnieuw probeerde te registreren -> "_PanelRunner is overriding
+# existing Objective-C class" in de gesignde bundle. Nu lazy-once geregistreerd
+# + gedeelde state; picks zijn geserialiseerd via _PANEL_LOCK + waitUntilDone,
+# dus de gedeelde state is veilig.
+_PANEL_RUNNER_CLS = None
+_PANEL_LOCK = threading.Lock()
+_PANEL_STATE = {}
 
-    choose_dirs=True → folder picker; False → file picker.
-    Returns (None, None) on user-cancel, (path, None) on success,
-    (None, err_string) on a real error so the caller can fall back."""
-    try:
-        import AppKit
-        import objc
-        from Foundation import NSObject, NSURL
-    except Exception as e:  # AppKit niet beschikbaar → laat caller terugvallen
-        return None, f'AppKit unavailable: {e}'
 
-    # Resultaat-container die de main-thread-helper invult.
-    box = {'path': None, 'err': None, 'done': False}
+def _get_panel_runner_cls():
+    """Registreer (eenmalig) de NSObject-subclass die het NSOpenPanel op de
+    main thread opent, en geef de gecachte class terug. Volgende calls
+    her-registreren de ObjC-class NIET."""
+    global _PANEL_RUNNER_CLS
+    if _PANEL_RUNNER_CLS is not None:
+        return _PANEL_RUNNER_CLS
+    import AppKit
+    from Foundation import NSObject, NSURL
 
     class _PanelRunner(NSObject):
         def run_(self, _arg):
+            st = _PANEL_STATE
             try:
                 panel = AppKit.NSOpenPanel.openPanel()
-                panel.setCanChooseFiles_(not choose_dirs)
-                panel.setCanChooseDirectories_(choose_dirs)
+                panel.setCanChooseFiles_(not st['choose_dirs'])
+                panel.setCanChooseDirectories_(st['choose_dirs'])
                 panel.setAllowsMultipleSelection_(False)
                 panel.setResolvesAliases_(True)
-                if prompt:
+                if st.get('prompt'):
                     try:
-                        panel.setMessage_(str(prompt))
+                        panel.setMessage_(str(st['prompt']))
                     except Exception:
                         pass
-                if default_dir and os.path.isdir(default_dir):
+                if st.get('default_dir') and os.path.isdir(st['default_dir']):
                     try:
                         panel.setDirectoryURL_(
-                            NSURL.fileURLWithPath_(str(default_dir)))
+                            NSURL.fileURLWithPath_(str(st['default_dir'])))
                     except Exception:
                         pass
                 # Breng het panel naar de voorgrond (de Flask-app heeft geen
@@ -7676,27 +7782,51 @@ def _pick_with_nsopenpanel(prompt, default_dir, choose_dirs):
                 if rc == AppKit.NSModalResponseOK or rc == 1:
                     urls = panel.URLs()
                     if urls and len(urls) > 0:
-                        box['path'] = urls[0].path()
+                        st['path'] = urls[0].path()
                 # else: cancel → path blijft None
             except Exception as exc:
-                box['err'] = str(exc)
+                st['err'] = str(exc)
             finally:
-                box['done'] = True
+                st['done'] = True
 
+    _PANEL_RUNNER_CLS = _PanelRunner
+    return _PanelRunner
+
+
+def _pick_with_nsopenpanel(prompt, default_dir, choose_dirs):
+    """Open an NSOpenPanel on the main thread and return (path|None, err|None).
+
+    choose_dirs=True → folder picker; False → file picker.
+    Returns (None, None) on user-cancel, (path, None) on success,
+    (None, err_string) on a real error so the caller can fall back."""
     try:
-        runner = _PanelRunner.alloc().init()
-        # waitUntilDone=True blokkeert deze worker-thread tot de main thread
-        # het panel heeft afgehandeld. Veilig: één modaal dialoog tegelijk.
-        runner.performSelectorOnMainThread_withObject_waitUntilDone_(
-            objc.selector(runner.run_, signature=b'v@:@'), None, True)
-    except Exception as e:
-        return None, f'NSOpenPanel dispatch failed: {e}'
+        import objc
+        Runner = _get_panel_runner_cls()
+    except Exception as e:  # AppKit niet beschikbaar → laat caller terugvallen
+        return None, f'AppKit unavailable: {e}'
 
-    if not box['done']:
-        return None, 'NSOpenPanel did not complete'
-    if box['err']:
-        return None, box['err']
-    return box['path'], None
+    # Picks serialiseren: gedeelde _PANEL_STATE + één modaal dialoog tegelijk.
+    with _PANEL_LOCK:
+        _PANEL_STATE.clear()
+        _PANEL_STATE.update({
+            'path': None, 'err': None, 'done': False,
+            'choose_dirs': bool(choose_dirs),
+            'prompt': prompt, 'default_dir': default_dir,
+        })
+        try:
+            runner = Runner.alloc().init()
+            # waitUntilDone=True blokkeert deze worker-thread tot de main thread
+            # het panel heeft afgehandeld.
+            runner.performSelectorOnMainThread_withObject_waitUntilDone_(
+                objc.selector(runner.run_, signature=b'v@:@'), None, True)
+        except Exception as e:
+            return None, f'NSOpenPanel dispatch failed: {e}'
+
+        if not _PANEL_STATE['done']:
+            return None, 'NSOpenPanel did not complete'
+        if _PANEL_STATE['err']:
+            return None, _PANEL_STATE['err']
+        return _PANEL_STATE['path'], None
 
 
 def _pick_folder_macos(prompt, default_dir):
@@ -7706,13 +7836,11 @@ def _pick_folder_macos(prompt, default_dir):
     # crasht bij de 2e aanroep -> 500. De osascript-route is een los subprocess
     # (thread-safe) en werkt prima op dev. In de bundle blokkeert hardened runtime
     # Apple-Events, daar is NSOpenPanel nodig.
-    if getattr(sys, 'frozen', False) and _nsopenpanel_supported():
-        path, err = _pick_with_nsopenpanel(prompt, default_dir, choose_dirs=True)
-        if err is None:
-            return path, None  # success of nette cancel (path=None)
-        # Echte fout → log en val terug op osascript.
-        print(f'[pick-folder] NSOpenPanel faalde, fallback osascript: {err}',
-              flush=True)
+    # SESSIE 75 — osascript EERST. Een los subprocess heeft een eigen run-loop en
+    # toont het dialog betrouwbaar (ook in de bundle: het apple-events entitlement
+    # zit er sinds sessie 69 in). NSOpenPanel was in de Flask-bundle main-thread-
+    # afhankelijk en toonde het paneel pas bij de 2e klik. Bij een osascript-fout
+    # vallen we terug op NSOpenPanel (alleen in de frozen bundle).
     safe_prompt = (prompt or 'Choose a folder').replace('"', '')
     if default_dir and os.path.isdir(default_dir):
         # POSIX path → AppleScript "POSIX file" alias.
@@ -7728,17 +7856,23 @@ def _pick_folder_macos(prompt, default_dir):
         '  return ""\n'
         'end try'
     )
+    osa_err = None
     try:
         result = subprocess.run(
             ['osascript', '-e', script],
             capture_output=True, text=True, timeout=300
         )
+        if result.returncode == 0:
+            path = (result.stdout or '').strip()
+            return (path or None), None   # success, of nette cancel (path='')
+        osa_err = (result.stderr or 'osascript returned non-zero').strip()
     except (OSError, subprocess.TimeoutExpired) as e:
-        return None, f'osascript failed: {e}'
-    if result.returncode != 0:
-        return None, (result.stderr or 'osascript returned non-zero').strip()
-    path = (result.stdout or '').strip()
-    return (path or None), None
+        osa_err = f'osascript failed: {e}'
+
+    if getattr(sys, 'frozen', False) and _nsopenpanel_supported():
+        print(f'[pick-folder] osascript faalde, fallback NSOpenPanel: {osa_err}', flush=True)
+        return _pick_with_nsopenpanel(prompt, default_dir, choose_dirs=True)
+    return None, osa_err
 
 
 def _pick_folder_tk(prompt, default_dir):
@@ -7834,12 +7968,8 @@ def _pick_file_macos(prompt, default_dir=None):
     # dev-server crasht het (main thread draait Flask, niet de Cocoa run-loop, en
     # de in-functie ObjC-class-def botst bij de 2e aanroep). osascript is een los
     # subprocess en werkt op dev. In de bundle is NSOpenPanel nodig (hardened runtime).
-    if getattr(sys, 'frozen', False) and _nsopenpanel_supported():
-        path, err = _pick_with_nsopenpanel(prompt, default_dir, choose_dirs=False)
-        if err is None:
-            return path, None  # success of nette cancel (path=None)
-        print(f'[pick-file] NSOpenPanel faalde, fallback osascript: {err}',
-              flush=True)
+    # SESSIE 75 — osascript EERST (zie _pick_folder_macos). NSOpenPanel als
+    # terugval in de frozen bundle.
     safe_prompt = (prompt or 'Choose a DJ set to analyse').replace('"', '')
     if default_dir and os.path.isdir(default_dir):
         safe_default = default_dir.replace('"', '')
@@ -7854,17 +7984,23 @@ def _pick_file_macos(prompt, default_dir=None):
         '  return ""\n'
         'end try'
     )
+    osa_err = None
     try:
         result = subprocess.run(
             ['osascript', '-e', script],
             capture_output=True, text=True, timeout=300
         )
+        if result.returncode == 0:
+            path = (result.stdout or '').strip()
+            return (path or None), None
+        osa_err = (result.stderr or 'osascript returned non-zero').strip()
     except (OSError, subprocess.TimeoutExpired) as e:
-        return None, f'osascript failed: {e}'
-    if result.returncode != 0:
-        return None, (result.stderr or 'osascript returned non-zero').strip()
-    path = (result.stdout or '').strip()
-    return (path or None), None
+        osa_err = f'osascript failed: {e}'
+
+    if getattr(sys, 'frozen', False) and _nsopenpanel_supported():
+        print(f'[pick-file] osascript faalde, fallback NSOpenPanel: {osa_err}', flush=True)
+        return _pick_with_nsopenpanel(prompt, default_dir, choose_dirs=False)
+    return None, osa_err
 
 
 def _pick_file_tk(prompt, default_dir=None):
