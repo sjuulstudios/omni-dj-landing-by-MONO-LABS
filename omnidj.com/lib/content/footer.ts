@@ -1,8 +1,10 @@
+import { DOWNLOAD_URL } from '@/lib/config';
+
 export const footerColumns = [
   {
     title: 'Get Started',
     links: [
-      { label: 'Download', href: '#download' },
+      { label: 'Download', href: DOWNLOAD_URL },
       { label: 'Request demo', href: '/contact' },
       { label: 'Pricing', href: '/pricing' },
       { label: 'For business', href: '/for-business' }

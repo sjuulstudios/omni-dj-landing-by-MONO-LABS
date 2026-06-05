@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Reveal from '@/components/ui/Reveal';
 import { featuresContent } from '@/lib/content/features';
+import { DOWNLOAD_URL } from '@/lib/config';
 
 export const metadata: Metadata = {
   title: 'Features — Omni DJ',
@@ -58,7 +59,7 @@ export default function FeaturesPage() {
         <div className="page-shell text-center">
           <h2 className="headline-section">Try every feature, free.</h2>
           <div className="mt-8 flex justify-center gap-3 flex-wrap">
-            <Link href="/#download" className="btn btn-orange">Download Omni DJ</Link>
+            <a href={DOWNLOAD_URL} className="btn btn-orange">Download Omni DJ</a>
             <Link href="/pricing" className="btn btn-outline-dark">See pricing</Link>
           </div>
         </div>

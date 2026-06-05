@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Reveal from '@/components/ui/Reveal';
+import { DOWNLOAD_URL } from '@/lib/config';
 
 export default function ClosingCta() {
   const ref = useRef<HTMLElement>(null);
@@ -66,7 +67,7 @@ export default function ClosingCta() {
         </Reveal>
         <Reveal delay={200}>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
-            <Link href="#download" className="btn btn-orange">Download Omni DJ</Link>
+            <a href={DOWNLOAD_URL} className="btn btn-orange">Download Omni DJ</a>
             <Link href="/contact" className="btn btn-outline-dark">Talk to sales</Link>
           </div>
         </Reveal>

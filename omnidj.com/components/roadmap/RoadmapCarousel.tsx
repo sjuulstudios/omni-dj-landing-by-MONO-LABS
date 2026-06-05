@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { roadmapContent } from '@/lib/content/roadmap';
+import { submitBetaSignup } from '@/lib/betaSignup';
 
 /**
  * Roadmap — scroll-driven horizontal reveal with alternating branches.
@@ -252,15 +253,14 @@ function RoadmapPopout({ index, onClose }: { index: number; onClose: () => void 
 
 function RoadmapSubscribe() {
   const [email, setEmail] = useState('');
+  const [hp, setHp] = useState('');
   const [done, setDone] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes('@')) return;
-    await fetch('/api/beta-signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, source: 'roadmap' })
-    }).catch(() => null);
+    // Honeypot: real users never fill the hidden field. Bots do, so fake success.
+    if (hp) { setDone(true); return; }
+    await submitBetaSignup(email, 'roadmap');
     setDone(true);
   };
   return (
@@ -272,6 +272,16 @@ function RoadmapSubscribe() {
         </div>
       ) : (
         <form onSubmit={submit} className="flex items-center gap-2 pl-5 pr-2 py-2 rounded-full border border-creme-line bg-ink-900" style={{ maxWidth: 360, width: '100%' }}>
+          <input
+            type="text"
+            name="company"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            value={hp}
+            onChange={e => setHp(e.target.value)}
+            style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+          />
           <input
             type="email"
             required

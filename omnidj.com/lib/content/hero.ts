@@ -1,3 +1,5 @@
+import { DOWNLOAD_URL } from '@/lib/config';
+
 export const heroContent = {
   eyebrow: 'OMNI DJ · BY MONO LABS',
   headline: 'Turn your hours long DJ-sets into 20-second viral clips.',
@@ -9,7 +11,7 @@ export const heroContent = {
     },
     download: {
       label: 'Download Omni DJ',
-      href: '#download'
+      href: DOWNLOAD_URL
     },
     beta: {
       label: 'Join beta',

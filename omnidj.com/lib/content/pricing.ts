@@ -1,3 +1,5 @@
+import { DOWNLOAD_URL } from '@/lib/config';
+
 export type Tier = {
   id: 'free' | 'pro' | 'studio' | 'studio-plus';
   name: string;
@@ -30,7 +32,7 @@ export const pricingContent = {
         { label: 'Calendar', included: false },
         { label: 'Auto-mode', included: false }
       ],
-      cta: { label: 'Download free', href: '#download' }
+      cta: { label: 'Download free', href: DOWNLOAD_URL }
     },
     {
       id: 'pro',
@@ -48,7 +50,7 @@ export const pricingContent = {
         { label: 'Calendar', included: true },
         { label: 'Multi-artist', included: false }
       ],
-      cta: { label: 'Start free trial', href: '#download' },
+      cta: { label: 'Start free trial', href: DOWNLOAD_URL },
       highlight: true
     },
     {
@@ -66,7 +68,7 @@ export const pricingContent = {
         { label: 'Watch-folder', included: true, soon: true },
         { label: 'Insights', included: true, soon: true }
       ],
-      cta: { label: 'Start free trial', href: '#download' }
+      cta: { label: 'Start free trial', href: DOWNLOAD_URL }
     },
     {
       id: 'studio-plus',

@@ -4,7 +4,7 @@
 -- als /rest/v1/rpc aanroepbaar zijn. Lost de 3 resterende advisor-WARNs op
 -- (is_workspace_member / is_workspace_owner / can_access_dj_profile).
 --
--- !!! REVIEW ONLY — NOG NIET TOEGEPAST. Branch + her-audit eerst (zie 005). !!!
+-- APPLIED op main 2026-06-04 (sessie 76) na groene branch-audit. Zie HANDOVER sessie 76.
 --
 -- Achtergrond: deze helpers MOETEN door 'authenticated' uitvoerbaar zijn (RLS
 -- evalueert ze), dus revoke (sessie 67-patroon) kan NIET. Ze lekken zelf geen

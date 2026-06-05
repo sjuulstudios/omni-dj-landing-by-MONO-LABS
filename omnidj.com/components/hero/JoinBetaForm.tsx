@@ -1,30 +1,27 @@
 'use client';
 
 import React, { useState } from 'react';
+import { submitBetaSignup } from '@/lib/betaSignup';
 
 export default function JoinBetaForm({ placeholder, label }: { placeholder: string; label: string }) {
   const [email, setEmail] = useState('');
+  const [hp, setHp] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes('@')) return;
+    // Honeypot: real users never fill the hidden field. Bots do, so fake success.
+    if (hp) { setState('done'); return; }
     setState('sending');
-    try {
-      await fetch('/api/beta-signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      }).catch(() => null);
-      setState('done');
-    } catch {
-      setState('error');
-    }
+    const ok = await submitBetaSignup(email, 'site');
+    setState(ok ? 'done' : 'error');
   };
 
   const done = state === 'done';
 
   return (
+    <>
     <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 999 }}>
       {/* Form row — slides out to the left on success */}
       <form
@@ -38,6 +35,17 @@ export default function JoinBetaForm({ placeholder, label }: { placeholder: stri
           pointerEvents: done ? 'none' : 'auto'
         }}
       >
+        {/* Honeypot: hidden from people; bots that fill it are dropped silently. */}
+        <input
+          type="text"
+          name="company"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          value={hp}
+          onChange={e => setHp(e.target.value)}
+          style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+        />
         <input
           type="email"
           value={email}
@@ -104,5 +112,11 @@ export default function JoinBetaForm({ placeholder, label }: { placeholder: stri
         }
       `}</style>
     </div>
+      {state === 'error' && (
+        <p className="mt-2 text-[13px]" style={{ color: 'var(--orange)' }}>
+          Something went wrong. Please try again.
+        </p>
+      )}
+    </>
   );
 }
