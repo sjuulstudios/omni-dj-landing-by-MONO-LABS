@@ -1,6 +1,6 @@
 {
   "name": "omni-dj-desktop",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Omni DJ desktop (Electron). Wraps the local Flask/PyInstaller backend as a headless sidecar and loads the existing web UI. Analysis stays 100% local.",
   "main": "main.js",
@@ -46,10 +46,11 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "identity": null
+      "identity": "Sjuul Smits (PTLV7AY4UL)"
     },
     "dmg": {
-      "title": "Omni DJ"
+      "title": "Omni DJ",
+      "sign": true
     }
   }
 }

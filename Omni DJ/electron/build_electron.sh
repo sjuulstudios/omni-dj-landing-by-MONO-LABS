@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # SESSIE 78 - B2: bouw de Omni DJ desktop (Electron) met de PyInstaller-backend
 # als HEADLESS sidecar. Draai dit OP DE MAC (vereist Node + npm + de Python-venv
-# met pyinstaller). Dit levert een lokaal te draaien .app + .dmg. Het tekent
-# NIET (dat is B3): de mac.identity in package.json staat op null.
+# met pyinstaller). Dit levert een lokaal te draaien .app + .dmg.
+# SESSIE 80 - B3: met argument "sign" wordt de backend per-component gesigned
+# door build_macos.sh (vereist APPLE_DEVELOPER_ID env) en signt electron-builder
+# de shell met de Developer ID uit package.json. Notarize + staple gebeurt
+# daarna los met notarytool (zie HANDOVER sessie 80).
 #
 # Stappen:
 #   1. PyInstaller-backend bouwen via de bestaande, beproefde build_macos.sh
@@ -16,8 +19,9 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"          # .../Omni DJ/Omni DJ/electron
 APP_DIR="$(cd "$HERE/.." && pwd)"              # .../Omni DJ/Omni DJ
 
-echo "==> 1/4 PyInstaller-backend bouwen (build_macos.sh, geen sign/dmg)"
-( cd "$APP_DIR" && ./build_macos.sh )
+SIGN_ARG="${1:-}"
+echo "==> 1/4 PyInstaller-backend bouwen (build_macos.sh ${SIGN_ARG:-zonder sign})"
+( cd "$APP_DIR" && ./build_macos.sh $SIGN_ARG )
 
 BACKEND_APP="$APP_DIR/dist/Omni DJ.app"
 if [[ ! -d "$BACKEND_APP" ]]; then
