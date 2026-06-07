@@ -24,6 +24,13 @@ yolov8n.pt
 zibQMEOQ
 *.pt
 
+# Electron build artifacts (SESSIE 78) - config + entitlements WEL committen,
+# de zware build/staging-output NIET.
+electron/node_modules/
+electron/dist-electron/
+electron/resources/backend/
+electron/build/icon.icns
+
 # OS
 .DS_Store
 Thumbs.db

@@ -1,0 +1,55 @@
+{
+  "name": "omni-dj-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Omni DJ desktop (Electron). Wraps the local Flask/PyInstaller backend as a headless sidecar and loads the existing web UI. Analysis stays 100% local.",
+  "main": "main.js",
+  "author": "MONO LABS",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac dmg --arm64"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.monolabs.omnidj.desktop",
+    "productName": "Omni DJ",
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/backend",
+        "to": "backend"
+      }
+    ],
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "build"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64"]
+        }
+      ],
+      "category": "public.app-category.video",
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "identity": null
+    },
+    "dmg": {
+      "title": "Omni DJ"
+    }
+  }
+}

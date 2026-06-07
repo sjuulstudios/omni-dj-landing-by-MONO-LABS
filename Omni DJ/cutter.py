@@ -1000,6 +1000,87 @@ def _build_audio_filter(normalize_audio=False, fade_duration=0.0, duration=None)
     return ','.join(filters)
 
 
+# ---------------------------------------------------------------------------
+# SESSIE 78 - Spoor D / D5: crowd (camera) audio inmix at render time.
+#
+# A synced source (audio_sync.sync_and_mux) carries TWO audio streams:
+#   a:0 = clean board mix (default)         a:1 = camera/crowd ambience
+# When inmix is requested AND the source actually has that 2nd track, the cut
+# mixes a highpassed, volume-reduced crowd track UNDER the clean mix into a
+# single output audio track. Default OFF + stream-count guarded, so every
+# existing (single-track) flow renders byte-identically.
+# ---------------------------------------------------------------------------
+_INMIX_DEFAULTS = {'enabled': False, 'volume': 0.25, 'highpass': 200}
+
+
+def _normalize_inmix(inmix):
+    """Coerce an inmix request into a safe dict. Falsey/None -> disabled.
+    volume clamped 0..1.5, highpass clamped 0..2000 Hz (0 = no highpass)."""
+    out = dict(_INMIX_DEFAULTS)
+    if not inmix or not isinstance(inmix, dict):
+        return out
+    out['enabled'] = bool(inmix.get('enabled'))
+    try:
+        out['volume'] = max(0.0, min(1.5, float(inmix.get('volume', 0.25))))
+    except (TypeError, ValueError):
+        out['volume'] = 0.25
+    try:
+        out['highpass'] = max(0, min(2000, int(inmix.get('highpass', 200))))
+    except (TypeError, ValueError):
+        out['highpass'] = 200
+    return out
+
+
+def _count_audio_streams(video_path):
+    """Number of audio streams in `video_path` (0 on any failure). The D5
+    inmix path only activates when a synced source actually carries the 2nd
+    (camera/crowd) audio track, so a normal single-track set is untouched."""
+    try:
+        r = subprocess.run(
+            [FFPROBE, '-v', 'quiet', '-select_streams', 'a',
+             '-show_entries', 'stream=index', '-of', 'csv=p=0', video_path],
+            capture_output=True, text=True, timeout=30)
+        if r.returncode != 0:
+            return 0
+        return len([ln for ln in (r.stdout or '').splitlines() if ln.strip()])
+    except Exception:
+        return 0
+
+
+def _inmix_active(inmix, video_path):
+    """True when inmix is enabled AND the source has >=2 audio streams.
+    Returns (active_bool, normalized_inmix_dict)."""
+    cfg = _normalize_inmix(inmix)
+    if not cfg['enabled']:
+        return False, cfg
+    return (_count_audio_streams(video_path) >= 2), cfg
+
+
+def _compose_inmix_filters(composed, base_chain, afilter_str, inmix_cfg):
+    """Merge the existing brand/video filter graph (any mode) with an audio
+    graph that mixes clean (a:0) + highpassed/volume crowd (a:1) into ONE
+    output track. Returns (filter_complex_str, video_map_label, '[aout]').
+
+    Caller has already confirmed the source has >=2 audio streams.
+    """
+    if composed['mode'] == 'complex':
+        vfc = composed['complex']
+        vmap = composed['map_v']
+    elif composed['mode'] == 'vf' and composed.get('vf'):
+        vfc = "[0:v]%s[vmix]" % composed['vf']
+        vmap = "[vmix]"
+    else:
+        chain = composed.get('vf') or base_chain or 'null'
+        vfc = "[0:v]%s[vmix]" % chain
+        vmap = "[vmix]"
+    a_clean = "[0:a:0]%s[a0c]" % (afilter_str or 'anull')
+    hp = ("highpass=f=%d," % inmix_cfg['highpass']) if inmix_cfg['highpass'] else ""
+    a_crowd = "[0:a:1]aresample=44100,%svolume=%.3f[a1c]" % (hp, inmix_cfg['volume'])
+    a_mix = "[a0c][a1c]amix=inputs=2:duration=first:normalize=0[aout]"
+    full = ";".join([vfc, a_clean, a_crowd, a_mix])
+    return full, vmap, "[aout]"
+
+
 def _get_vertical_crop(video_info):
     """Calculate 9:16 center crop parameters from source video."""
     src_w = video_info['width']
@@ -1030,7 +1111,7 @@ def _build_landscape_cmd(video_path, start, duration, output_path,
                          fade_duration=0.0, overlay_text=None, normalize_audio=False,
                          text_layers=None, brand_logo=None, brand_fonts=None,
                          job_dir=None, target_w=1920, target_h=1080,
-                         bpm_cfg=None, clip_data=None, watermark=None):
+                         bpm_cfg=None, clip_data=None, watermark=None, inmix=None):
     """Build FFmpeg command for landscape output. Does NOT run it.
     fade_duration defaults to 0 (hard cut). Pass >0 to opt in to fades.
 
@@ -1058,6 +1139,25 @@ def _build_landscape_cmd(video_path, start, duration, output_path,
     )
 
     afilter_str = _build_audio_filter(normalize_audio, fade_duration, duration)
+
+    # SESSIE 78 - D5: crowd inmix render. Only when enabled AND the source has a
+    # 2nd (camera) audio track; otherwise the standard path below runs and the
+    # output is byte-identical to before.
+    inmix_on, inmix_cfg = _inmix_active(inmix, video_path)
+    if inmix_on:
+        fc, vmap, amap = _compose_inmix_filters(composed, base_chain, afilter_str, inmix_cfg)
+        return [
+            FFMPEG, '-y',
+            '-ss', str(start),
+            '-i', video_path,
+            '-t', str(duration),
+            '-filter_complex', fc,
+            '-map', vmap, '-map', amap,
+            '-c:v', encoder, *quality_args,
+            '-c:a', 'aac', '-b:a', '320k',
+            '-movflags', '+faststart',
+            output_path,
+        ]
 
     cmd = [
         FFMPEG, '-y',
@@ -1087,7 +1187,7 @@ def _build_vertical_cmd(video_path, start, duration, output_path,
                         job_dir=None,
                         bpm_cfg=None, clip_data=None,
                         track_keyframes=None, track_crop_mode='pan',
-                        watermark=None):
+                        watermark=None, inmix=None):
     """Build FFmpeg command for 9:16 vertical output. Does NOT run it.
     fade_duration defaults to 0 (hard cut). Pass >0 to opt in to fades.
 
@@ -1166,6 +1266,24 @@ def _build_vertical_cmd(video_path, start, duration, output_path,
     # The composed dict always returns 'vf' here unless a logo or watermark is set.
 
     afilter_str = _build_audio_filter(normalize_audio, fade_duration, duration)
+
+    # SESSIE 78 - D5: crowd inmix render (see _build_landscape_cmd). Guarded by
+    # enabled-flag + a real 2nd audio stream, so single-track sets are untouched.
+    inmix_on, inmix_cfg = _inmix_active(inmix, video_path)
+    if inmix_on:
+        fc, vmap, amap = _compose_inmix_filters(composed, base_chain, afilter_str, inmix_cfg)
+        return [
+            FFMPEG, '-y',
+            '-ss', str(start),
+            '-i', video_path,
+            '-t', str(duration),
+            '-filter_complex', fc,
+            '-map', vmap, '-map', amap,
+            '-c:v', encoder, *quality_args,
+            '-c:a', 'aac', '-b:a', '320k',
+            '-movflags', '+faststart',
+            output_path,
+        ]
 
     cmd = [
         FFMPEG, '-y',
@@ -1710,7 +1828,7 @@ def cut_clip_landscape(video_path, start, end, output_path, fade_duration=0.0,
                        overlay_text=None, normalize_audio=False,
                        text_layers=None, brand_logo=None, brand_fonts=None,
                        job_dir=None, target_w=None, target_h=None,
-                       bpm_cfg=None, clip_data=None, watermark=None):
+                       bpm_cfg=None, clip_data=None, watermark=None, inmix=None):
     """Cut a clip in landscape format. Uses GPU encoding + fast seek.
     Hard cut by default — pass fade_duration>0 to opt in to fades.
 
@@ -1731,7 +1849,7 @@ def cut_clip_landscape(video_path, start, end, output_path, fade_duration=0.0,
         job_dir=job_dir or os.path.dirname(os.path.abspath(output_path)),
         target_w=target_w, target_h=target_h,
         bpm_cfg=bpm_cfg, clip_data=clip_data,
-        watermark=watermark,
+        watermark=watermark, inmix=inmix,
     )
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -1854,7 +1972,7 @@ def cut_clip_vertical(video_path, start, end, output_path, video_info=None,
                       job_dir=None,
                       bpm_cfg=None, clip_data=None,
                       track_keyframes=None, track_crop_mode='pan',
-                      watermark=None):
+                      watermark=None, inmix=None):
     """Cut a clip cropped to 9:16 vertical format. Uses GPU encoding + fast seek.
     Hard cut by default - pass fade_duration>0 to opt in to fades.
 
@@ -1872,7 +1990,7 @@ def cut_clip_vertical(video_path, start, end, output_path, video_info=None,
         job_dir=job_dir or os.path.dirname(os.path.abspath(output_path)),
         bpm_cfg=bpm_cfg, clip_data=clip_data,
         track_keyframes=track_keyframes, track_crop_mode=track_crop_mode,
-        watermark=watermark,
+        watermark=watermark, inmix=inmix,
     )
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -1939,7 +2057,7 @@ def export_clips_csv(clips, output_path):
 # ---------------------------------------------------------------------------
 
 def recut_clip(video_path, start, end, output_dir, clip_index, clip_type, formats=None,
-               overlay_text=None, normalize_audio=False):
+               overlay_text=None, normalize_audio=False, inmix=None):
     """Re-cut a single clip with adjusted timestamps.
 
     SESSIE 21 — loads the Brand Stack (fonts + logo) and the per-clip
@@ -1997,7 +2115,7 @@ def recut_clip(video_path, start, end, output_dir, clip_index, clip_type, format
             target_w=video_info.get('width') or 1920,
             target_h=video_info.get('height') or 1080,
             bpm_cfg=bpm_cfg, clip_data=clip_data_for_stamp,
-            watermark=brand_watermark,
+            watermark=brand_watermark, inmix=inmix,
         )
         files['landscape'] = landscape_path
 
@@ -2012,7 +2130,7 @@ def recut_clip(video_path, start, end, output_dir, clip_index, clip_type, format
             brand_fonts=brand_fonts, job_dir=output_dir,
             bpm_cfg=bpm_cfg, clip_data=clip_data_for_stamp,
             track_keyframes=track_kfs, track_crop_mode=track_mode,
-            watermark=brand_watermark,
+            watermark=brand_watermark, inmix=inmix,
         )
         files['vertical'] = vertical_path
 

@@ -44,6 +44,8 @@ from cutter import (
     _ffmpeg_has_drawtext,
     # SESSIE 43a — slice_clip = trim zonder layers; gebruikt door /api/slice
     slice_clip,
+    # SESSIE 78 - D5: crowd-inmix stream-count guard (alleen actief bij synced 2-track bron).
+    _count_audio_streams,
 )
 from uploader import get_platform_status, upload_to_youtube, upload_to_tiktok, upload_to_instagram, upload_to_facebook
 # SESSIE 66 — centrale resolver voor de gebundelde ffmpeg/ffprobe binaries.
@@ -2890,6 +2892,109 @@ def put_brand_profile():
 
 
 # ---------------------------------------------------------------------------
+# SESSIE 78 - per-workspace settings (editor/export-defaults + crowd-inmix).
+#
+# Opslag: dj_profiles.profile.settings (een JSONB sub-sleutel NAAST brand_kit/
+# artist_name). Bewust GEEN aparte tabel/migratie: dj_profiles + zijn RLS
+# (008/010) zijn al live op main en workspace==dj_profile is hier 1-op-1, dus
+# een sub-sleutel landt meteen autonoom zonder schema-checkpoint. Een dedicated
+# `workspace_settings`-tabel blijft een optie als settings later zwaarder worden.
+#
+# De settings-PUT raakt ALLEEN de 'settings'-sleutel en behoudt de rest van het
+# profiel; de brand-PUT (_merge_brand_profile) behoudt op zijn beurt 'settings'
+# (hij merget per bekende sub-sleutel), dus ze leven naast elkaar zonder clobber.
+# Uitgelogd / geen workspace -> de frontend blijft op localStorage draaien.
+# ---------------------------------------------------------------------------
+def _merge_workspace_settings(base, incoming):
+    """Merge incoming op base, 2 niveaus diep (editor/export -> hun sub-objecten
+    zoals inmix). None-waarden negeren zodat partiele saves niets wegvegen."""
+    out = dict(base or {})
+    for k, v in (incoming or {}).items():
+        if v is None:
+            continue
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            merged = dict(out[k])
+            for kk, vv in v.items():
+                if vv is None:
+                    continue
+                if isinstance(vv, dict) and isinstance(merged.get(kk), dict):
+                    inner = dict(merged[kk])
+                    inner.update({a: b for a, b in vv.items() if b is not None})
+                    merged[kk] = inner
+                else:
+                    merged[kk] = vv
+            out[k] = merged
+        else:
+            out[k] = v
+    return out
+
+
+@app.route('/api/workspace/settings', methods=['GET'])
+def get_workspace_settings():
+    """Lees de per-workspace settings (RLS-scoped). Leeg object als er nog niets
+    is opgeslagen of als er (nog) geen workspace/Supabase is -> frontend valt dan
+    terug op zijn localStorage-defaults."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    ws_id, _werr = current_workspace_id(user_info, required=False)
+    if sb is None or not ws_id:
+        return jsonify({'ok': True, 'workspace_id': ws_id, 'source': 'none', 'settings': {}})
+    try:
+        res = (sb.table('dj_profiles').select('profile')
+                 .eq('workspace_id', ws_id).limit(1).execute())
+        rows = getattr(res, 'data', None) or []
+        prof = (rows[0].get('profile') if rows else None) or {}
+        settings = prof.get('settings') if isinstance(prof, dict) else None
+        return jsonify({'ok': True, 'workspace_id': ws_id, 'source': 'supabase',
+                        'settings': settings or {}})
+    except Exception as e:
+        log.warning("get_workspace_settings mislukt: %s", e)
+        return jsonify({'ok': False, 'error': 'Kon settings niet laden'}), 502
+
+
+@app.route('/api/workspace/settings', methods=['PUT'])
+def put_workspace_settings():
+    """Schrijf (merge) de per-workspace settings via de user-JWT (RLS = grens).
+    Raakt alleen profile.settings; brand-velden blijven intact."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    ws_id, werr = current_workspace_id(user_info, required=True)
+    if werr:
+        return werr
+    if sb is None:
+        return jsonify({'ok': False, 'error': 'Supabase niet geconfigureerd'}), 503
+    body = request.get_json(silent=True) or {}
+    incoming = body.get('settings')
+    if not isinstance(incoming, dict):
+        return jsonify({'ok': False, 'error': 'settings-object ontbreekt'}), 400
+    try:
+        res = (sb.table('dj_profiles').select('profile')
+                 .eq('workspace_id', ws_id).limit(1).execute())
+        rows = getattr(res, 'data', None) or []
+        base_profile = (rows[0].get('profile') if rows else None) or _seed_brand_profile_from_kit()
+    except Exception:
+        base_profile = _seed_brand_profile_from_kit()
+    if not isinstance(base_profile, dict):
+        base_profile = {}
+    base_settings = base_profile.get('settings') or {}
+    merged_settings = _merge_workspace_settings(base_settings, incoming)
+    new_profile = dict(base_profile)
+    new_profile['settings'] = merged_settings
+    try:
+        sb.table('dj_profiles').upsert(
+            {'workspace_id': ws_id, 'profile': new_profile},
+            on_conflict='workspace_id').execute()
+    except Exception as e:
+        log.warning("put_workspace_settings upsert mislukt: %s", e)
+        return jsonify({'ok': False, 'error': 'Kon settings niet opslaan'}), 502
+    return jsonify({'ok': True, 'workspace_id': ws_id, 'settings': merged_settings})
+
+
+# ---------------------------------------------------------------------------
 # SESSIE 74 - Slice 2 FASE 2a: brand-kit metadata per workspace (mirror).
 # De cutter (cutter.py `_load_brand_assets_for_job`) leest het GLOBALE
 # brand_kit.json ZELF van schijf. Daarom blijft dat bestand in fase 2a exact
@@ -3139,6 +3244,282 @@ def api_calendar_delete():
         log.warning("api_calendar_delete mislukt: %s", e)
         return jsonify({'ok': False, 'error': 'Kon post niet verwijderen'}), 502
     return jsonify({'ok': True})
+
+
+# ---------------------------------------------------------------------------
+# SESSIE 77 - Clip-metadata sync (A1/A3). Schrijft lichte clip-verwijzingen van
+# een job naar de live clips-tabel zodat de Content Calendar een echte clip kan
+# kiezen (clip_id-koppeling). ADDITIEF: raakt de analyse/cut/export-pipeline
+# NIET aan. De media blijft lokaal; alleen metadata (een local_path-referentie,
+# label, duur, set-naam) gaat naar Supabase, RLS-scoped via _user_supabase.
+# Dedupe op (workspace_id, local_path) zodat herhaald syncen geen duplicaten
+# geeft en bestaande clip_id-koppelingen intact blijven (geen delete/herinsert).
+# ---------------------------------------------------------------------------
+_CLIP_COLS = 'id,label,duration_s,source_set,kind,local_path,created_at'
+
+
+def _clip_label_for(job, r, idx):
+    """Beste leesbare naam voor een clip: per-job hernoeming eerst, dan
+    custom_label/caption, anders 'Clip N'."""
+    try:
+        labels = job.get('clip_labels') or {}
+        v = labels.get(str(idx))
+        if v is None and idx is not None:
+            v = labels.get(idx)
+        if isinstance(v, str) and v.strip():
+            return v.strip()[:200]
+    except Exception:
+        pass
+    for k in ('custom_label', 'caption'):
+        v = r.get(k)
+        if isinstance(v, str) and v.strip():
+            return v.strip()[:200]
+    return ("Clip %s" % idx) if idx is not None else "Clip"
+
+
+def _clip_rows_from_job(job):
+    """Bouw lichte clips-tabel-rijen uit een job. local_path = '<job_id>/<bestand>'
+    (stabiele, unieke dedupe-sleutel; verwijst naar de lokale cut). Geen media,
+    alleen een referentie + metadata. Slaat clips zonder bestand over."""
+    if not isinstance(job, dict):
+        return []
+    job_id = job.get('id')
+    if not job_id:
+        return []
+    results = job.get('results') or job.get('clips') or []
+    set_name = os.path.splitext(str(job.get('filename') or 'set'))[0][:200]
+    kind = 'import' if job.get('imported') else 'clip'
+    rows = []
+    for r in results:
+        if not isinstance(r, dict):
+            continue
+        files = r.get('files') or {}
+        primary = (files.get('vertical') or files.get('landscape')
+                   or files.get('square') or files.get('portrait45'))
+        if not primary:
+            continue
+        idx = r.get('index')
+        try:
+            dur = float(r.get('duration') or 0.0)
+            if dur <= 0:
+                dur = max(0.0, float(r.get('end') or 0) - float(r.get('start') or 0))
+        except Exception:
+            dur = 0.0
+        rows.append({
+            'local_path': ("%s/%s" % (job_id, primary))[:500],
+            'label': _clip_label_for(job, r, idx),
+            'duration_s': round(dur, 3) if dur else None,
+            'source_set': set_name,
+            'kind': kind,
+        })
+    return rows
+
+
+def _load_job_for_caller(job_id, user_id):
+    """Haal een job (memory of snapshot) op en verifieer eigenaarschap. None als
+    onbekend of niet van de caller -> de sync slaat 'm dan stil over."""
+    job = None
+    try:
+        with jobs_lock:
+            job = jobs.get(job_id)
+    except Exception:
+        job = None
+    if job is None:
+        try:
+            job = _load_job_snapshot(job_id)
+        except Exception:
+            job = None
+    if not isinstance(job, dict):
+        return None
+    owner = job.get('user_id')
+    if owner and user_id and owner != user_id:
+        return None
+    return job
+
+
+@app.route('/api/clips', methods=['GET'])
+def api_clips_list():
+    """Lijst clips van de actieve workspace (RLS-scoped) voor de Calendar-picker."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    ws_id, werr = current_workspace_id(user_info, required=True)
+    if werr:
+        return werr
+    if sb is None:
+        return jsonify({'ok': True, 'clips': []})
+    try:
+        res = (sb.table('clips').select(_CLIP_COLS)
+                 .eq('workspace_id', ws_id)
+                 .order('created_at', desc=True).limit(200).execute())
+        rows = getattr(res, 'data', None) or []
+    except Exception as e:
+        log.warning("api_clips_list mislukt: %s", e)
+        return jsonify({'ok': False, 'error': 'Kon clips niet laden'}), 502
+    return jsonify({'ok': True, 'workspace_id': ws_id, 'clips': rows})
+
+
+@app.route('/api/clips/sync', methods=['POST'])
+def api_clips_sync():
+    """Registreer de clips van een of meer jobs in de clips-tabel van de actieve
+    workspace (dedupe op local_path). Retourneert de actuele workspace-cliplijst.
+    ADDITIEF en best-effort: verstoort de pipeline nooit; alleen metadata."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    sb = _user_supabase(user_info.get('access_token'))
+    ws_id, werr = current_workspace_id(user_info, required=True)
+    if werr:
+        return werr
+    if sb is None:
+        return jsonify({'ok': True, 'clips': [], 'inserted': 0})
+    body = request.get_json(silent=True) or {}
+    ids = body.get('job_ids')
+    if not isinstance(ids, list):
+        ids = []
+    one = body.get('job_id')
+    if isinstance(one, str) and one:
+        ids = ids + [one]
+    # Veilige, gecapte, unieke lijst van job-id-strings.
+    seen_ids = []
+    for j in ids:
+        if isinstance(j, str) and j and j not in seen_ids:
+            seen_ids.append(j)
+        if len(seen_ids) >= 20:
+            break
+    uid = user_info.get('user_id')
+    want = []
+    for jid in seen_ids:
+        job = _load_job_for_caller(jid, uid)
+        if job is None:
+            continue
+        want.extend(_clip_rows_from_job(job))
+    inserted = 0
+    try:
+        # Bestaande local_paths in deze workspace ophalen -> alleen nieuwe invoegen.
+        existing = set()
+        try:
+            ex = (sb.table('clips').select('local_path')
+                    .eq('workspace_id', ws_id).limit(1000).execute())
+            for row in (getattr(ex, 'data', None) or []):
+                lp = row.get('local_path')
+                if lp:
+                    existing.add(lp)
+        except Exception as e:
+            log.warning("clips dedupe-read mislukt: %s", e)
+        to_insert = []
+        seen_lp = set()
+        for row in want:
+            lp = row.get('local_path')
+            if not lp or lp in existing or lp in seen_lp:
+                continue
+            seen_lp.add(lp)
+            r = dict(row)
+            r['workspace_id'] = ws_id
+            to_insert.append(r)
+        if to_insert:
+            sb.table('clips').insert(to_insert).execute()
+            inserted = len(to_insert)
+    except Exception as e:
+        log.warning("api_clips_sync insert mislukt: %s", e)
+        # Niet fataal: probeer alsnog de huidige lijst terug te geven.
+    try:
+        res = (sb.table('clips').select(_CLIP_COLS)
+                 .eq('workspace_id', ws_id)
+                 .order('created_at', desc=True).limit(200).execute())
+        rows = getattr(res, 'data', None) or []
+    except Exception as e:
+        log.warning("api_clips_sync list mislukt: %s", e)
+        rows = []
+    return jsonify({'ok': True, 'workspace_id': ws_id, 'clips': rows, 'inserted': inserted})
+
+
+# ---------------------------------------------------------------------------
+# SESSIE 77 - Spoor D: video + audio sync. Additieve, optionele tweede ingang op
+# de Analyse-page. Matcht een losse camera-video tegen een schone audio-opname
+# (audio_sync.py), muxt de schone audio onder het beeld (camera-audio blijft als
+# 2e spoor) en levert EEN gewoon videobestand op dat daarna de BESTAANDE analyse-
+# pipeline in kan. Raakt analyzer.py/cutter.py NIET aan. Lokaal + workspace-
+# scoped; inputs gevalideerd met _path_within_home (S2), net als upload-local.
+# ---------------------------------------------------------------------------
+_SYNC_VIDEO_EXT = {'.mp4', '.mov', '.m4v', '.webm', '.mkv'}
+_SYNC_AUDIO_EXT = {'.wav', '.mp3', '.m4a', '.aac', '.flac', '.aif', '.aiff'}
+
+
+@app.route('/api/sync-import', methods=['POST'])
+def api_sync_import():
+    """Sync een losse camera-video met een schone audio-opname en mux ze.
+    Retourneert metrics (offset/drift/confidence/warnings) + het lokale pad van
+    het gemuxede bestand; de frontend voert dat pad daarna in de bestaande
+    /api/upload-local-flow voor de normale drop-analyse."""
+    user_info, err = _require_authed_user()
+    if err:
+        return err
+    body = request.get_json(silent=True) or {}
+    video_path = (body.get('video_path') or '').strip()
+    audio_path = (body.get('audio_path') or '').strip()
+    if not video_path or not audio_path:
+        return jsonify({'ok': False, 'error': 'video_path and audio_path are required'}), 400
+    # S2: beide inputs moeten binnen de home-map vallen (zelfde regel als upload-local).
+    if not _path_within_home(video_path) or not _path_within_home(audio_path):
+        return jsonify({'ok': False, 'error': 'File outside your home folder is not allowed'}), 403
+    vp = os.path.realpath(os.path.expanduser(video_path))
+    ap = os.path.realpath(os.path.expanduser(audio_path))
+    if not os.path.isfile(vp):
+        return jsonify({'ok': False, 'error': 'video does not exist'}), 404
+    if not os.path.isfile(ap):
+        return jsonify({'ok': False, 'error': 'audio does not exist'}), 404
+    if os.path.splitext(vp)[1].lower() not in _SYNC_VIDEO_EXT:
+        return jsonify({'ok': False, 'error': 'video format not supported'}), 415
+    if os.path.splitext(ap)[1].lower() not in _SYNC_AUDIO_EXT:
+        return jsonify({'ok': False, 'error': 'audio format not supported'}), 415
+
+    # Output landt lokaal in de workspace-map (sync/), of globaal als er (nog)
+    # geen workspace is. Geen cloud-opslag (local-first, consistent met C2).
+    ws_id, _werr = current_workspace_id(user_info, required=False)
+    if ws_id:
+        out_dir = os.path.join(DATA_DIR, 'workspaces', str(ws_id), 'sync')
+    else:
+        out_dir = os.path.join(OUTPUT_DIR, '_sync')
+    try:
+        os.makedirs(out_dir, exist_ok=True)
+    except OSError as e:
+        return jsonify({'ok': False, 'error': 'could not create sync folder: %s' % e}), 500
+
+    base = _safe_filename(os.path.splitext(os.path.basename(vp))[0]) or 'set'
+    out_path = _dedupe_output_path(os.path.join(out_dir, base + '_synced.mp4'))
+
+    try:
+        import audio_sync
+        _ff = media_tools.ffmpeg()
+        _fp = media_tools.ffprobe()
+        manual = body.get('manual_offset_s')
+        if manual is not None:
+            # D4 - handmatige bevestiging: mux met de door de gebruiker gekozen offset.
+            res = audio_sync.mux_with_offset(
+                vp, ap, out_path, ffmpeg_bin=_ff, ffprobe_bin=_fp, offset_s=float(manual))
+        else:
+            # Eerst analyseren (geen mux). Hoge confidence -> automatisch muxen
+            # (live-bewezen sync_and_mux). Lage confidence -> NIET stil een slechte
+            # sync bakken, maar de handmatige-uitlijn-UI vragen (D4).
+            info = audio_sync.analyze(vp, ap, ffmpeg_bin=_ff, ffprobe_bin=_fp)
+            if float(info.get('confidence') or 0.0) >= 0.15:
+                res = audio_sync.sync_and_mux(
+                    vp, ap, out_path, ffmpeg_bin=_ff, ffprobe_bin=_fp)
+            else:
+                info['ok'] = True
+                info['status'] = 'needs_manual'
+                return jsonify(info)
+    except Exception as e:
+        log.warning("sync-import mislukt: %s", e)
+        return jsonify({'ok': False, 'error': str(e)}), 422
+    try:
+        _audit('sync.import', user_id=user_info.get('user_id'),
+               metadata={'video': os.path.basename(vp), 'confidence': res.get('confidence')})
+    except Exception:
+        pass
+    return jsonify(res)
 
 
 # --- Font upload + serving --------------------------------------------------
@@ -6783,8 +7164,13 @@ def _detect_layers_for_clip(job_id, output_dir, clip_index):
 
 
 def _prebake_clip_for_export(clip, idx, job_id, job_output_dir, aspect_filter,
-                              cfg_overlays):
+                              cfg_overlays, inmix=None):
     """SESSIE 43a — bake text/logo/watermark in vóór de codec-conversie.
+
+    SESSIE 78 - D5: `inmix` (default None) wordt doorgegeven aan recut_clip zodat
+    een synced bron (2e camera/crowd-audiospoor) de crowd onder de schone mix
+    bakt. No-op als de bron maar 1 audiospoor heeft (recut guardt op de stream-
+    telling), dus geen impact op gewone sets.
 
     Wordt alleen aangeroepen als _detect_layers_for_clip iets vond én de
     user-toggles (cfg_overlays) niet alles uitschakelen. Roept recut_clip
@@ -6883,6 +7269,7 @@ def _prebake_clip_for_export(clip, idx, job_id, job_output_dir, aspect_filter,
             formats=formats,
             overlay_text=None,
             normalize_audio=False,
+            inmix=inmix,
         )
         return files or None
     except Exception as e:
@@ -6975,6 +7362,28 @@ def _run_export_job(job_id, cfg):
         'logo':      bool(raw_overlays.get('logo',      True)),
     }
 
+    # SESSIE 78 - D5: crowd (camera) audio inmix. Default OFF. Alleen effectief
+    # als de export-modal het vraagt EN de bronset echt een 2e audiospoor heeft
+    # (een via Spoor D gesynced camera+schone-audio-bestand). Dan forceren we de
+    # recut/prebake zodat de crowd onder de schone mix wordt gebakken. Gewone
+    # 1-spoor-sets raken dit niet (identieke output als voorheen). De stream-
+    # telling gebeurt 1x per export-job op de bron, niet per clip.
+    raw_inmix = cfg.get('inmix') or {}
+    inmix_cfg = None
+    inmix_source_ok = False
+    if isinstance(raw_inmix, dict) and raw_inmix.get('enabled'):
+        inmix_cfg = {
+            'enabled': True,
+            'volume': raw_inmix.get('volume', 0.25),
+            'highpass': raw_inmix.get('highpass', 200),
+        }
+        try:
+            src_v = (job or {}).get('video_path')
+            if src_v and os.path.exists(src_v):
+                inmix_source_ok = _count_audio_streams(src_v) >= 2
+        except Exception:
+            inmix_source_ok = False
+
     # SESSIE 43a — custom labels per clip-index meegeven via cfg['labels'].
     # Shape: {"<clip_index>": "Naam"}. Wordt door /api/export gevuld vanuit
     # de modal-rename (Onderdeel 2). Niet-meegegeven clips behouden hun
@@ -7012,6 +7421,14 @@ def _run_export_job(job_id, cfg):
         # wat de editor liet zien.
         needs_prebake = want_captions or want_watermark or want_logo or layer_info['has_tracking']
 
+        # SESSIE 78 - D5: een crowd-inmix moet vanaf de BRON herrenderd worden
+        # (de bestaande clipfiles hebben het 2e camera-spoor mogelijk al laten
+        # vallen), dus forceer de prebake-recut als inmix gevraagd is en de bron
+        # 2 audiosporen heeft. Bij gewone sets is use_inmix None -> niets verandert.
+        use_inmix = inmix_cfg if (inmix_cfg and inmix_source_ok) else None
+        if use_inmix:
+            needs_prebake = True
+
         sources = _resolve_export_sources(
             clip, aspects=aspect_filter,
             job_id=job_id, job_output_dir=job_output_dir,
@@ -7020,7 +7437,7 @@ def _run_export_job(job_id, cfg):
             _set_item(idx, status='running', pct=15)
             baked = _prebake_clip_for_export(
                 clip_for_export, idx, job_id, job_output_dir,
-                aspect_filter, overlays_cfg,
+                aspect_filter, overlays_cfg, inmix=use_inmix,
             )
             if baked:
                 # Swap baked-files in als source voor de codec-conversie.

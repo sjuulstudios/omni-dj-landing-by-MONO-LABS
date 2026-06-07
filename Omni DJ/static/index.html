@@ -6200,7 +6200,7 @@
   /* Intake tiles grid (Watch / Dropbox / Drive) */
   body.redesign-v2 #view-analyse .analyse-tiles {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 24px;
   }
@@ -7726,6 +7726,139 @@
     color: var(--v2-text-subtle, #948a7a);
     line-height: 1.5;
     margin: 0;
+  }
+
+  /* ============================================================
+     SESSIE 79 - C5: consolidated Brand page.
+     Group headers split the cards into Identity / Visual /
+     Typography / Lower-third + CTA / Hashtags / Templates /
+     Captions. Plus a lightweight live 9:16 preview.
+     ============================================================ */
+  body.redesign-v2 .v2-brand-section-head {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 14px 2px 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--v2-border-subtle, #2a2622);
+  }
+  body.redesign-v2 .v2-brand-section-head.is-first {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 2px;
+  }
+  body.redesign-v2 .v2-brand-section-head .t {
+    font-family: var(--v2-font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--v2-accent, #ff7a45);
+  }
+  body.redesign-v2 .v2-brand-section-head .s {
+    font-size: 12px;
+    color: var(--v2-text-subtle, #948a7a);
+  }
+
+  /* Live preview card */
+  body.redesign-v2 .v2-brand-preview-wrap {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  body.redesign-v2 .v2-brand-phone {
+    position: relative;
+    width: 150px;
+    height: 266px;
+    flex: 0 0 auto;
+    border-radius: 16px;
+    border: 1px solid var(--v2-border-subtle, #2a2622);
+    overflow: hidden;
+    background: #0d0b09;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+  }
+  body.redesign-v2 .v2-brand-phone .v2-bp-logo {
+    position: absolute;
+    max-width: 42%;
+    object-fit: contain;
+  }
+  body.redesign-v2 .v2-brand-phone .v2-bp-avatar {
+    position: absolute;
+    left: 8px;
+    bottom: 46px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+  body.redesign-v2 .v2-brand-phone .v2-bp-wm {
+    position: absolute;
+    font-size: 8px;
+    color: #fff;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+  }
+  body.redesign-v2 .v2-brand-phone .v2-bp-lt {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    padding: 0 10px;
+  }
+  body.redesign-v2 .v2-brand-phone .v2-bp-name {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.1;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.75);
+  }
+  body.redesign-v2 .v2-brand-phone .v2-bp-cta {
+    color: #0d0b09;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  body.redesign-v2 .v2-brand-preview-legend {
+    flex: 1 1 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 200px;
+  }
+  body.redesign-v2 .v2-brand-preview-legend .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--v2-border-subtle, #2a2622);
+  }
+  body.redesign-v2 .v2-brand-preview-legend .k {
+    color: var(--v2-text-subtle, #948a7a);
+  }
+  body.redesign-v2 .v2-brand-preview-legend .v {
+    color: var(--v2-text, #ece5d8);
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    text-align: right;
+  }
+  body.redesign-v2 .v2-brand-preview-legend .sw {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    display: inline-block;
+    border: 1px solid rgba(255,255,255,0.15);
   }
 
   /* Brand Kit logo zone */
@@ -9370,8 +9503,22 @@
         <button class="analyse-state-cancel" id="analyse-process-cancel" type="button">Cancel</button>
       </div>
 
-      <!-- Intake tiles: Watch / Dropbox / Drive -->
+      <!-- Intake tiles: Sync / Watch / Dropbox / Drive -->
       <div class="analyse-tiles">
+        <!-- SESSIE 77 - Spoor D: video + audio sync als eerste source-tile. -->
+        <div class="analyse-tile" id="analyse-tile-sync" role="button" tabindex="0"
+             onclick="openSyncImport()"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSyncImport();}">
+          <div class="analyse-tile-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="5" width="14" height="14" rx="2"/>
+              <path d="m16 9 6-3v12l-6-3"/>
+              <path d="M6 12h4"/>
+            </svg>
+          </div>
+          <h4 class="analyse-tile-title">Video + audio sync</h4>
+          <p class="analyse-tile-sub">Match a camera video with a clean audio recording.</p>
+        </div>
         <div class="analyse-tile" id="analyse-tile-watch" role="button" tabindex="0"
              onclick="openWatchFolderUI()"
              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openWatchFolderUI();}">
@@ -9577,6 +9724,57 @@
          SESSIE 56 — Schedule-post modal voor Content Calendar.
          Top-level (buiten v2-app) zodat 'm op elke view-state werkt.
          ============================================================ -->
+    <!-- SESSIE 77 - Spoor D: video + audio sync sub-flow. -->
+    <style>
+    /* Indeterminate loading bar voor de sync-modal. */
+    #sync-progress{margin-top:8px;height:4px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden}
+    #sync-progress[hidden]{display:none}
+    #sync-progress .sync-progress-bar{height:100%;width:40%;border-radius:3px;background:var(--v2-accent,#D97742);animation:syncIndet 1.1s ease-in-out infinite}
+    @keyframes syncIndet{0%{margin-left:-40%}50%{margin-left:60%}100%{margin-left:100%}}
+    /* D4 - manuele uitlijn-sectie (lage confidence). */
+    .sync-manual{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+    .sync-manual[hidden]{display:none}
+    .sync-manual-h{font-size:13px;font-weight:600;color:var(--ink-0);margin-bottom:2px}
+    .sync-manual-sub{font-size:11.5px;color:var(--paper-dim);margin:0 0 8px;line-height:1.5}
+    #sync-wave{width:100%;height:120px;background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:8px;display:block}
+    .sync-manual-row{display:flex;align-items:center;gap:10px;margin-top:8px}
+    .sync-manual-row input[type=range]{flex:1 1 auto;accent-color:var(--v2-accent,#D97742)}
+    .sync-offset-readout{font-family:var(--mono);font-size:12px;color:var(--ink-0);min-width:64px;text-align:right}
+    #sync-manual-confirm{margin-top:10px}
+    </style>
+    <div class="v2-modal-bg" id="sync-modal" onclick="if(event.target===this)closeSyncImport()">
+      <div class="v2-modal" role="dialog" aria-modal="true">
+        <h2>Import video + audio sync</h2>
+        <p class="modal-sub">Pick your camera video and a clean audio recording of the same set. Omni DJ aligns them automatically and places the clean audio under the picture; the normal drop analysis runs afterwards. The camera audio is kept as a second track.</p>
+        <div class="field">
+          <label>Camera video (mp4, mov, m4v, webm, mkv)</label>
+          <button type="button" class="modal-btn" onclick="syncPick('video')">Choose video&hellip;</button>
+          <div id="sync-video-name" style="font-size:11.5px;color:var(--paper-dim);margin-top:6px;word-break:break-all">No file selected</div>
+        </div>
+        <div class="field">
+          <label>Clean audio (wav, mp3, m4a, aac, flac)</label>
+          <button type="button" class="modal-btn" onclick="syncPick('audio')">Choose audio&hellip;</button>
+          <div id="sync-audio-name" style="font-size:11.5px;color:var(--paper-dim);margin-top:6px;word-break:break-all">No file selected</div>
+        </div>
+        <div id="sync-status" style="font-size:12px;color:var(--paper-dim);margin-top:8px;min-height:16px"></div>
+        <div class="sync-progress" id="sync-progress" hidden><div class="sync-progress-bar"></div></div>
+        <div class="sync-manual" id="sync-manual" hidden>
+          <div class="sync-manual-h">Low confidence - align manually</div>
+          <p class="sync-manual-sub" id="sync-manual-sub">Slide until the camera waveform (top) and the clean audio (bottom) line up at the start, then confirm.</p>
+          <canvas id="sync-wave" width="600" height="120"></canvas>
+          <div class="sync-manual-row">
+            <input type="range" id="sync-offset-slider" min="-15" max="15" step="0.05" value="0" oninput="syncOnSlide()">
+            <span id="sync-offset-readout" class="sync-offset-readout">0.00s</span>
+          </div>
+          <button type="button" class="modal-btn is-primary" id="sync-manual-confirm" onclick="syncConfirmManual()">Use this alignment</button>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="modal-btn" onclick="closeSyncImport()">Cancel</button>
+          <button type="button" class="modal-btn is-primary" id="sync-run-btn" onclick="runSyncImport()">Sync + analyse</button>
+        </div>
+      </div>
+    </div>
+
     <div class="v2-modal-bg" id="cal-schedule-modal" onclick="if(event.target===this)calCloseSchedule()">
       <div class="v2-modal" role="dialog" aria-modal="true">
         <h2 id="cal-modal-title">Schedule a post</h2>
@@ -9856,6 +10054,19 @@
     body.redesign-v2 .ed-recent-when { font-size: 12px; color: var(--v2-text-secondary); }
     body.redesign-v2 .ed-empty-none { color: var(--v2-text-secondary); font-size: 14px; padding: 8px 0; }
     </style>
+    <style>
+    /* SESSIE 77 - C3 CapCut-stijl sizeable panes (additief, scoped op #view-editor). Splitters zijn grid-tracks; de defaults zijn de HUIDIGE maten zodat de editor ongewijzigd oogt tot je sleept. */
+    @media (min-width:981px){
+      #view-editor .ed-body{grid-template-columns:var(--ed-left-w,340px) 8px 1fr 88px}
+      #view-editor .editor{grid-template-rows:auto minmax(0,1fr) 8px var(--ed-tl-h,auto)}
+      #view-editor .timeline{min-height:0}
+    }
+    #view-editor .ed-split-x{align-self:stretch;cursor:ew-resize;background:transparent;transition:background .12s;touch-action:none}
+    #view-editor .ed-split-x:hover,#view-editor .ed-split-x.dragging{background:linear-gradient(90deg,transparent,rgba(217,119,66,.55),transparent)}
+    #view-editor .ed-split-y{cursor:ns-resize;background:transparent;transition:background .12s;touch-action:none}
+    #view-editor .ed-split-y:hover,#view-editor .ed-split-y.dragging{background:linear-gradient(180deg,transparent,rgba(217,119,66,.55),transparent)}
+    @media (max-width:980px){#view-editor .ed-split-x,#view-editor .ed-split-y{display:none}}
+    </style>
     <main class="view" id="view-editor" data-scene="5">
       <!-- Trim loading overlay — floats while /api/recut is running. -->
       <div class="ed-trim-loading" id="ed-trim-loading" aria-live="polite">
@@ -9937,6 +10148,8 @@
                 <div class="cue-list" id="ed-cue-list"></div>
               </div>
             </div>
+
+            <div class="ed-split-x" id="ed-split-x" title="Sleep om de cue-lijst te verbreden"></div>
 
             <!-- CENTER: preview -->
             <div class="ed-canvas">
@@ -10081,6 +10294,7 @@
           <!-- TIMELINE — simplified: in/out trim handles, scrubbable waveform,
                and zoom that stays inside the frame. No cue marker track,
                no Delete button. -->
+          <div class="ed-split-y" id="ed-split-y" title="Sleep om de timeline hoger of lager te maken"></div>
           <div class="timeline">
             <div class="tl-toolbar">
               <!-- LEFT: trim + zoom controls.
@@ -10706,84 +10920,9 @@
         </div>
       </div>
 
-      <!-- SESSIE 74 - Slice 2 fase 3: per-artist profielvelden. Los van het
-           globale brand_kit; opgeslagen in dj_profiles via /api/brand/profile,
-           per artist gescheiden. Raakt de export/render niet. -->
-      <div class="cap-room" id="artist-profile-room" style="margin-top:18px">
-        <div class="cap-left">
-          <h2>Artist <em>profile</em></h2>
-          <p>These travel with the active artist: name, links, hashtags and caption voice. Stored per artist, applied across your clips and (soon) your calendar.</p>
-          <div class="style-row">
-            <label>Artist name</label>
-            <input type="text" id="ap-artist-name" class="bs-input" placeholder="DJ Sjuul" maxlength="80" />
-          </div>
-          <div class="style-row">
-            <label>Alias / handle</label>
-            <input type="text" id="ap-alias" class="bs-input" placeholder="@sjuulstudios" maxlength="60" />
-          </div>
-        </div>
-
-        <div class="cap-right">
-          <div class="panel-h"><div class="ti" style="font-size:16px">Call to action</div></div>
-          <div class="style-row">
-            <label>CTA style</label>
-            <select id="ap-cta-style" class="bs-input" style="flex:0 1 200px">
-              <option value="out_now">Out now</option>
-              <option value="stream_now">Stream now</option>
-              <option value="coming_soon">Coming soon</option>
-              <option value="save_the_date">Save the date</option>
-            </select>
-          </div>
-          <div class="style-row">
-            <label>Spotify link</label>
-            <input type="text" id="ap-spotify" class="bs-input" placeholder="spotify:artist:..." maxlength="200" />
-          </div>
-          <div class="style-row">
-            <label>Beatport link</label>
-            <input type="text" id="ap-beatport" class="bs-input" placeholder="https://www.beatport.com/..." maxlength="200" />
-          </div>
-
-          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
-            <div class="panel-h"><div class="ti" style="font-size:16px">Hashtags</div></div>
-            <div class="style-row">
-              <label>TikTok</label>
-              <input type="text" id="ap-tags-tiktok" class="bs-input" placeholder="#djset, #techno" />
-            </div>
-            <div class="style-row">
-              <label>Instagram</label>
-              <input type="text" id="ap-tags-instagram" class="bs-input" placeholder="#djlife, #techno" />
-            </div>
-            <div class="style-row">
-              <label>YouTube Shorts</label>
-              <input type="text" id="ap-tags-youtube" class="bs-input" placeholder="#shorts, #djset" />
-            </div>
-          </div>
-
-          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
-            <div class="panel-h"><div class="ti" style="font-size:16px">Caption voice</div></div>
-            <div class="style-row">
-              <label>Tone</label>
-              <select id="ap-voice-tone" class="bs-input" style="flex:0 1 200px">
-                <option value="hyped">Hyped</option>
-                <option value="minimal">Minimal</option>
-                <option value="informative">Informative</option>
-                <option value="ironic">Ironic</option>
-              </select>
-            </div>
-            <div class="style-row">
-              <label>Use emojis</label>
-              <input type="checkbox" id="ap-voice-emojis" style="width:16px;height:16px;accent-color:var(--v2-accent,#D97742)" />
-            </div>
-            <div class="style-row">
-              <label>Max length</label>
-              <input type="number" id="ap-voice-maxlen" class="bs-input" style="flex:0 1 100px" min="20" max="300" value="80" />
-            </div>
-            <div class="style-row" style="margin-top:8px">
-              <button class="btn primary" id="ap-save" type="button" style="padding:8px 14px;font-size:12px">Save artist profile</button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- SESSIE 79 - C5: de per-artist profielvelden (ap-*) zijn verhuisd naar
+           de V2 Brand-view (#view-brand). Deze legacy #view-style is in V2 niet
+           zichtbaar; we houden de ap-* ids uniek door ze hier weg te halen. -->
     </main>
 
     <!-- view-export removed in C1 cleanup. Export now lives in Dashboard
@@ -10835,6 +10974,17 @@
       </div>
     </main>
 
+    <style>
+    /* SESSIE 77 - C7 Settings herinrichting (single-column + Advanced-inklap). Additief, scoped op #view-settings. */
+    #view-settings .settings-stack{display:flex;flex-direction:column;gap:14px;padding:8px 0 28px;max-width:760px}
+    #view-settings .settings-sec{background:rgba(0,0,0,0.40);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+    #view-settings .settings-sec > :first-child{margin-top:0 !important;border-top:0 !important;padding-top:0 !important}
+    #view-settings .settings-adv-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:rgba(0,0,0,0.40);border:1px solid var(--line);border-radius:12px;padding:14px 18px;color:var(--ink-0);font:inherit;font-size:13.5px;font-weight:600;letter-spacing:0.02em;cursor:pointer;transition:border-color .15s}
+    #view-settings .settings-adv-toggle:hover{border-color:var(--v2-accent)}
+    #view-settings .settings-adv-caret{display:inline-block;transition:transform .15s;color:var(--paper-dim);font-size:12px}
+    #view-settings .settings-adv-toggle[aria-expanded="true"] .settings-adv-caret{transform:rotate(90deg)}
+    #view-settings .settings-ratio-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    </style>
     <main class="view" id="view-settings">
       <div class="scene-header">
         <div>
@@ -10844,32 +10994,10 @@
         </div>
       </div>
 
-      <div class="cap-room">
-        <div class="cap-left">
-          <h2>Watch <em>folder</em></h2>
-          <p>Drop a track in here and Omni DJ processes it automatically. Re-running creates a new set, never overwrites.</p>
-          <div class="render-card" style="margin-top:6px;align-items:flex-start">
-            <div class="info">
-              <div class="t" id="settings-watch-path">Not configured</div>
-              <div class="s" id="settings-watch-status">Pick a folder to start auto-processing.</div>
-              <div class="wf-status-row" id="settings-watch-stats" hidden>
-                <span class="wf-stat" id="wf-stat-state"><span class="dot"></span><span class="lbl">Idle</span></span>
-                <span class="wf-stat" id="wf-stat-last">Last check —</span>
-                <span class="wf-stat" id="wf-stat-queue">Queue <b>0</b></span>
-                <span class="wf-stat" id="wf-stat-processed">Auto-processed <b>0</b></span>
-              </div>
-              <div class="wf-banner" id="settings-watch-banner" hidden></div>
-              <div class="wf-buttons">
-                <button class="btn ghost" id="settings-watch-pick">Choose folder</button>
-                <button class="btn ghost" id="settings-watch-toggle" hidden>Pause watching</button>
-                <button class="btn ghost" id="settings-watch-reset" hidden>Re-scan folder</button>
-                <button class="btn ghost" id="settings-watch-clear">Stop watching</button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="settings-stack">
 
-        <div class="cap-right">
+        <section class="settings-sec">
+
 
           <!-- SESSIE 30 - Profile section: artist name, full name, email.
                Sidebar now shows "Workstation of: FULL NAME", which means
@@ -10877,7 +11005,7 @@
                here so the sidebar stays minimal even with long addresses. -->
           <div id="settings-profile">
             <div class="panel-h">
-              <div class="ti">Profile</div>
+              <div class="ti">Account</div>
               <button class="btn ghost" id="settings-profile-save" style="padding:6px 10px;font-size:12px" disabled>Save</button>
             </div>
             <p style="font-size:11.5px;color:var(--paper-dim);line-height:1.5;margin:0 0 10px">Your name is shown in the sidebar header. Artist name is used when we eventually publish clips on your behalf. Email is your login.</p>
@@ -10903,8 +11031,10 @@
               <button class="btn ghost" id="settings-logout" type="button" style="font-size:12px;padding:7px 12px">Log out</button>
             </div>
           </div>
+        </section>
 
-          <!-- SESSIE 54 — Fase 5: Workspace + Artists card. Multi-artist is
+        <section class="settings-sec">
+<!-- SESSIE 54 — Fase 5: Workspace + Artists card. Multi-artist is
                Studio-plan-only (max 3 artists). FREE/PRO toont locked-state
                + upgrade-modal trigger op "+ Add artist" knop.
                Alleen zichtbaar in v2 (oude UI niet aanraken). -->
@@ -10930,10 +11060,60 @@
               <p id="settings-artists-note" style="font-size:11px;color:var(--paper-dim);margin:8px 0 0">Up to 3 artists in the Studio plan.</p>
             </div>
           </div>
+        </section>
 
-          <!-- SESSIE 54 — Fase 5: Capabilities-sectie verborgen in v2 (geen waarde voor user).
+        <section class="settings-sec" id="settings-sec-privacy">
+          <div class="panel-h"><div class="ti">Privacy</div></div>
+          <p style="font-size:11.5px;color:var(--paper-dim);line-height:1.5;margin:0 0 10px">Alles wordt lokaal op deze Mac verwerkt. Je sets en clips verlaten je computer niet; alleen lichte metadata (je account en instellingen) staat in je beveiligde account.</p>
+          <label class="v2-brand-toggle" style="opacity:.55;cursor:not-allowed"><input type="checkbox" id="settings-airgap" disabled><span class="pill"></span><span class="lbl">Airgap-modus (binnenkort)</span></label>
+        </section>
+
+        <button type="button" class="settings-adv-toggle" id="settings-adv-toggle" aria-expanded="false" onclick="settingsToggleAdvanced()"><span>Advanced</span><span class="settings-adv-caret">&#9656;</span></button>
+
+        <div class="settings-adv-body" id="settings-adv-body" hidden>
+          <section class="settings-sec">
+<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+            <div class="panel-h"><div class="ti">Editor-defaults</div></div>
+            <p style="font-size:11.5px;color:var(--paper-dim);line-height:1.5;margin:0 0 10px">Standaard formaat en captions voor nieuwe clips. Bewaard op deze Mac.</p>
+            <div class="style-row"><label>Default ratio</label><div class="settings-ratio-row"><label class="v2-brand-toggle"><input type="radio" name="ed-default-ratio" value="9x16"><span class="pill"></span><span class="lbl">9:16</span></label><label class="v2-brand-toggle"><input type="radio" name="ed-default-ratio" value="16x9"><span class="pill"></span><span class="lbl">16:9</span></label><label class="v2-brand-toggle"><input type="radio" name="ed-default-ratio" value="1x1"><span class="pill"></span><span class="lbl">1:1</span></label><label class="v2-brand-toggle"><input type="radio" name="ed-default-ratio" value="4x5"><span class="pill"></span><span class="lbl">4:5</span></label></div></div>
+            <label class="v2-brand-toggle" style="margin-top:10px"><input type="checkbox" id="ed-default-captions"><span class="pill"></span><span class="lbl">Captions standaard aan</span></label>
+          </div>
+<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+            <div class="panel-h"><div class="ti">Export-defaults</div></div>
+            <p style="font-size:11.5px;color:var(--paper-dim);line-height:1.5;margin:0 0 10px">Standaard export-instellingen. Bewaard op deze Mac.</p>
+            <label class="v2-brand-toggle"><input type="checkbox" id="ex-default-captions"><span class="pill"></span><span class="lbl">Captions inbakken standaard aan</span></label>
+            <label class="v2-brand-toggle" style="margin-top:10px"><input type="checkbox" id="ex-default-watermark"><span class="pill"></span><span class="lbl">Watermark standaard aan</span></label>
+            <label class="v2-brand-toggle" style="margin-top:10px"><input type="checkbox" id="ex-default-inmix"><span class="pill"></span><span class="lbl">Crowd-audio inmixen (gesyncte sets)</span></label>
+            <div class="style-row" id="ex-default-inmix-vol-row" style="margin-top:8px"><label>Crowd-volume</label><select id="ex-default-inmix-vol"><option value="0.15">Subtiel (15%)</option><option value="0.25" selected>Gebalanceerd (25%)</option><option value="0.4">Sterk (40%)</option></select></div>
+            <p style="font-size:11px;color:var(--paper-dim);line-height:1.5;margin:8px 0 0">Alleen actief bij sets die je met "Import video + audio sync" hebt gemaakt. De camera/crowd-audio komt zacht onder de schone mix in de export.</p>
+          </div>
+<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+
+          <div class="panel-h"><div class="ti">Watch folder</div></div>
+          <p>Drop a track in here and Omni DJ processes it automatically. Re-running creates a new set, never overwrites.</p>
+          <div class="render-card" style="margin-top:6px;align-items:flex-start">
+            <div class="info">
+              <div class="t" id="settings-watch-path">Not configured</div>
+              <div class="s" id="settings-watch-status">Pick a folder to start auto-processing.</div>
+              <div class="wf-status-row" id="settings-watch-stats" hidden>
+                <span class="wf-stat" id="wf-stat-state"><span class="dot"></span><span class="lbl">Idle</span></span>
+                <span class="wf-stat" id="wf-stat-last">Last check —</span>
+                <span class="wf-stat" id="wf-stat-queue">Queue <b>0</b></span>
+                <span class="wf-stat" id="wf-stat-processed">Auto-processed <b>0</b></span>
+              </div>
+              <div class="wf-banner" id="settings-watch-banner" hidden></div>
+              <div class="wf-buttons">
+                <button class="btn ghost" id="settings-watch-pick">Choose folder</button>
+                <button class="btn ghost" id="settings-watch-toggle" hidden>Pause watching</button>
+                <button class="btn ghost" id="settings-watch-reset" hidden>Re-scan folder</button>
+                <button class="btn ghost" id="settings-watch-clear">Stop watching</button>
+              </div>
+            </div>
+          </div>
+          </div>
+<!-- SESSIE 54 — Fase 5: Capabilities-sectie verborgen in v2 (geen waarde voor user).
                DOM blijft staan zodat backend-detection logica intact blijft. -->
-          <div class="v2-hide-in-v2">
+          <div class="">
             <div class="panel-h" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
               <div class="ti">Capabilities</div>
               <div class="ct" id="settings-cap-summary">—</div>
@@ -10944,18 +11124,14 @@
             <div class="style-row"><label>MPS (Metal)</label><span id="cap-mps" style="font-family:var(--mono);font-size:12px">—</span></div>
           </div>
 
-          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
-            <div class="panel-h">
-              <div class="ti" style="font-size:16px">Brand kit</div>
-              <button class="btn ghost" id="settings-edit-brand" style="padding:6px 10px;font-size:12px">Open style room</button>
-            </div>
-            <div class="style-row"><label>Name</label><span id="settings-brand-name" style="font-size:13px;color:var(--ink-0)">—</span></div>
-            <div class="style-row"><label>Accent</label><span id="settings-brand-accent" style="display:inline-block;width:24px;height:24px;border-radius:6px;background:var(--amber);border:1px solid var(--line)"></span></div>
-          </div>
+          <!-- SESSIE 79 - C5: het Brand kit-blok is uit Settings gehaald en
+               woont nu volledig in de Brand-view (#view-brand). De JS die
+               settings-brand-name/accent vulde is null-safe, dus weghalen is
+               veilig. -->
 
           <!-- SESSIE 54 — Fase 5: Storage & large files sectie verborgen in v2.
                proxy-cleanup-functie blijft beschikbaar via DOM; alleen visueel weg. -->
-          <div class="v2-hide-in-v2" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+          <div class="" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
             <div class="panel-h">
               <div class="ti" style="font-size:16px">Storage &amp; large files</div>
               <button class="btn ghost" id="settings-cleanup-proxies" style="padding:6px 10px;font-size:12px">Clean proxy clips</button>
@@ -10980,8 +11156,11 @@
             </div>
             <div id="settings-logs-status" style="font-size:11.5px;color:var(--paper-dim);margin-top:8px;min-height:14px"></div>
           </div>
+          </section>
         </div>
+
       </div>
+
     </main>
 
     <!-- SESSIE 57 — Fase A: Brand view als eigen view, niet meer Settings-fallback.
@@ -11619,6 +11798,8 @@ async function loadWorkspaces(force){
     var stillMember = cur && rows.some(function(w){ return w && w.id === cur; });
     if (!stillMember && rows.length) _setActiveWorkspace(rows[0].id);
     try { if (typeof window.v2PaintArtistChip === 'function') window.v2PaintArtistChip(); } catch(_){}
+    // SESSIE 78 - per-workspace settings ophalen na het bepalen van de actieve workspace.
+    try { if (typeof window._settingsSyncFromServer === 'function') window._settingsSyncFromServer(); } catch(_){}
     return rows;
   } catch (e) {
     return [];
@@ -12971,6 +13152,15 @@ window.calOpenSchedule = function calOpenSchedule(preselYmd){
       }).join('');
     }
   }
+  // SESSIE 77 - ingelogd: vervang de set-tegels door echte workspace-clips uit
+  // de clips-tabel zodat de geplande post via clip_id koppelt. Best-effort; bij
+  // geen clips of een fout blijven de set-tegels hierboven staan als terugval.
+  try {
+    var __csess = (typeof STATE !== 'undefined') ? STATE : (window.STATE || {});
+    if (picker && __csess.session && __csess.session.access_token && typeof _calLoadClipPicker === 'function') {
+      _calLoadClipPicker(picker);
+    }
+  } catch (_e) {}
   // Reset form
   var cap = document.getElementById('cal-caption');
   if (cap) cap.value = '';
@@ -13008,6 +13198,36 @@ window.calCloseSchedule = function calCloseSchedule(){
     top.classList.remove('on');
   });
 })();
+
+// SESSIE 77 - laad echte workspace-clips in de Calendar-picker. Registreert
+// eerst de clips van recente sets (POST /api/clips/sync) en toont daarna tegels
+// met de echte clips-UUID, zodat een geplande post via clip_id koppelt.
+window._calLoadClipPicker = async function _calLoadClipPicker(picker){
+  if (!picker) return;
+  try {
+    var st = (typeof STATE !== 'undefined') ? STATE : (window.STATE || {});
+    var hist = Array.isArray(st.history) ? st.history.slice(-10).reverse() : [];
+    var jobIds = [];
+    hist.forEach(function(h){ if (h && h.id) jobIds.push(h.id); });
+    var resp;
+    if (jobIds.length) {
+      resp = await api('/api/clips/sync', { method: 'POST', body: { job_ids: jobIds } });
+    } else {
+      resp = await api('/api/clips');
+    }
+    var clips = (resp && resp.ok && Array.isArray(resp.clips)) ? resp.clips : [];
+    if (!clips.length) return;  // geen clips -> laat de set-tegels als terugval staan
+    picker.innerHTML = clips.slice(0, 60).map(function(c){
+      var nm = (c.label || c.source_set || 'Clip').toString().slice(0, 24);
+      var sub = (c.source_set || '').toString().slice(0, 24);
+      return '<div class="clip-pick" data-clip-id="' + _v2Esc(c.id || '') + '" data-clip-name="' + _v2Esc(nm) + '" onclick="calPickClip(this)">'
+        +    '<div class="clip-pick-label">' + _v2Esc(nm)
+        +      (sub ? '<span style="display:block;opacity:.6;font-size:10px">' + _v2Esc(sub) + '</span>' : '')
+        +    '</div>'
+        +  '</div>';
+    }).join('');
+  } catch (_e) {}
+};
 
 window.calPickClip = function calPickClip(el){
   var picker = document.getElementById('cal-clip-picker');
@@ -13049,6 +13269,12 @@ window.calSaveSchedule = function calSaveSchedule(){
       scheduled_for: d.toISOString(),
       status: 'draft'
     };
+    // SESSIE 77 - koppel de gekozen clip echt mee (alleen een geldige UUID; de
+    // set-terugval levert een job-id dat hier bewust wordt overgeslagen).
+    var _cid = V2_CAL_STATE.editing && V2_CAL_STATE.editing.clipId;
+    if (typeof _cid === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(_cid)) {
+      _body.clip_id = _cid;
+    }
     var _path = '/api/calendar/schedule', _method = 'POST';
     if (_editId) { _path = '/api/calendar/update'; _method = 'PUT'; _body.id = _editId; }
     api(_path, { method: _method, body: _body }).then(function(r){
@@ -13718,16 +13944,56 @@ window.renderBrand = function renderBrand(){
   // Seed built-in clip-templates one-shot per pack.
   try { window.OmniBrand.seedBuiltinTemplates(active); window.OmniBrand.save(active); } catch(_){}
 
+  // SESSIE 79 - C5: one consolidated, grouped Brand page.
+  // Identity / links / hashtags / caption-voice = per-workspace backend
+  // profile (/api/brand/profile, the ap-* ids reused from sessie 74).
+  // Logo / colors / watermark / fonts / templates / captions = per
+  // brand-pack (OmniBrand localStorage). Section heads group them.
+  grid.appendChild(_c5SectionHead('Identity', 'Who you are. Travels with this artist across clips and calendar.', true));
+  grid.appendChild(renderIdentityCard(active, tier));
+  grid.appendChild(renderBrandPreviewCard(active));
+
+  grid.appendChild(_c5SectionHead('Visual', 'Logo, colors and watermark for this brand-pack. Use "Apply to exports" to bake them in.'));
   grid.appendChild(renderBrandKitCard(active, tier));
   grid.appendChild(renderWatermarkCard(active, tier));
-  grid.appendChild(renderCaptionPresetsCard(active, tier));
-  // SESSIE 57 — Fase B sections
-  grid.appendChild(renderClipTemplatesCard(active, tier));
-  grid.appendChild(renderHooksCard(active, tier));
+  grid.appendChild(renderApplyExportsCard(active));
+
+  grid.appendChild(_c5SectionHead('Typography', 'Fonts for clip titles and captions.'));
+  grid.appendChild(renderTypographyCard(active, tier));
+
+  grid.appendChild(_c5SectionHead('Lower-third and CTA', 'Your links and call-to-action, shown under the clip.'));
+  grid.appendChild(renderCtaProfileCard(active, tier));
   grid.appendChild(renderCtasCard(active, tier));
-  grid.appendChild(renderCaptionCopyCard(active, tier));
+
+  grid.appendChild(_c5SectionHead('Hashtags', 'Per-platform hashtags for captions and scheduling.'));
+  grid.appendChild(renderHashtagsProfileCard(active, tier));
   grid.appendChild(renderHashtagSetsCard(active, tier));
+
+  grid.appendChild(_c5SectionHead('Templates', 'Reusable clip recipes: aspect, captions, watermark.'));
+  grid.appendChild(renderClipTemplatesCard(active, tier));
+
+  grid.appendChild(_c5SectionHead('Captions and extras', 'Caption voice, presets, hooks, caption copy and stickers.'));
+  grid.appendChild(renderCaptionVoiceCard(active, tier));
+  grid.appendChild(renderCaptionPresetsCard(active, tier));
+  grid.appendChild(renderHooksCard(active, tier));
+  grid.appendChild(renderCaptionCopyCard(active, tier));
   grid.appendChild(renderStickersAndExtrasCard(active, tier));
+
+  // Hydrate the per-workspace backend profile into the ap-* fields and
+  // repaint the live preview. The save (#ap-save) is handled by the
+  // existing document-level delegated listener -> saveArtistProfile().
+  setTimeout(function(){
+    try { loadArtistProfile(); } catch(_){}
+    try { _c5RenderPreview(window.OmniBrand.getActive()); } catch(_){}
+  }, 0);
+  if (!grid.dataset.c5PreviewWired) {
+    grid.dataset.c5PreviewWired = '1';
+    var _c5Repaint = function(){
+      setTimeout(function(){ try { _c5RenderPreview(window.OmniBrand.getActive()); } catch(_){} }, 0);
+    };
+    grid.addEventListener('input', _c5Repaint);
+    grid.addEventListener('change', _c5Repaint);
+  }
 };
 
 // Helper — HTML escape voor user-content.
@@ -13736,6 +14002,422 @@ function escapeHtml(s){
   return String(s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ================================================================
+// SESSIE 79 - C5: consolidated Brand page helpers.
+// Section header + new cards (Identity / Typography / Links+CTA /
+// Hashtags / Caption-voice) + a lightweight live 9:16 preview.
+// Identity/links/hashtags/voice persist via the existing sessie-74
+// backend profile (ap-* ids + loadArtistProfile/saveArtistProfile).
+// ================================================================
+
+// Full-width group header inside the brand grid.
+function _c5SectionHead(title, sub, isFirst){
+  var h = document.createElement('div');
+  h.className = 'v2-brand-section-head' + (isFirst ? ' is-first' : '');
+  h.innerHTML = '<span class="t">' + escapeHtml(title) + '</span>'
+    + (sub ? '<span class="s">' + escapeHtml(sub) + '</span>' : '');
+  return h;
+}
+
+// Identity card. Reuses the backend ap-artist-name / ap-alias ids and
+// hosts the single #ap-save button (saves the whole backend profile).
+// Avatar is stored on the brand-pack (data URL, v1 storage).
+function renderIdentityCard(pack, tier){
+  var card = document.createElement('div');
+  card.className = 'v2-brand-card is-wide';
+  card.dataset.section = 'identity';
+  var avatarInner = pack.identity_avatar_url
+    ? '<img src="' + escapeHtml(pack.identity_avatar_url) + '" alt="avatar">'
+    : '<div class="v2-empty-logo">Photo<br>optional</div>';
+  var avatarRemove = pack.identity_avatar_url
+    ? '<button class="v2-brand-mini" id="v2-id-avatar-remove" type="button">Remove</button>'
+    : '';
+  card.innerHTML = ''
+    + '<div class="v2-brand-card-h"><div>'
+    +   '<p class="ti">Identity</p>'
+    +   '<p class="sub">Name and links travel with this artist. The brand-pack below is your switchable visual look.</p>'
+    + '</div></div>'
+    + '<div class="v2-brand-logo-zone">'
+    +   '<div class="v2-brand-logo-preview" id="v2-id-avatar-preview">' + avatarInner + '</div>'
+    +   '<div class="v2-brand-logo-actions">'
+    +     '<div class="v2-brand-field-row">'
+    +       '<div class="v2-brand-field"><label>Artist name</label><input type="text" id="ap-artist-name" placeholder="DJ Sjuul" maxlength="80"></div>'
+    +       '<div class="v2-brand-field"><label>Alias / handle</label><input type="text" id="ap-alias" placeholder="@sjuulstudios" maxlength="60"></div>'
+    +     '</div>'
+    +     '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px">'
+    +       '<button class="v2-brand-mini" id="v2-id-avatar-upload" type="button">Upload photo</button>'
+    +       avatarRemove
+    +       '<button class="v2-brand-mini" id="ap-save" type="button" style="border-color:var(--v2-accent,#ff7a45);color:var(--v2-text,#ece5d8)">Save identity and links</button>'
+    +     '</div>'
+    +     '<p class="v2-brand-help">Stored per artist in your workspace. Logo, colors and templates live in the brand-pack.</p>'
+    +   '</div>'
+    + '</div>';
+  setTimeout(function(){
+    var up = card.querySelector('#v2-id-avatar-upload');
+    if (up) up.addEventListener('click', function(){
+      var inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'image/png,image/jpeg,image/webp';
+      inp.onchange = function(){
+        var f = inp.files && inp.files[0];
+        if (!f) return;
+        if (f.size > 2*1024*1024){
+          if (window.showToast) showToast('Photo must be 2 MB or less', 'error');
+          else alert('Photo must be 2 MB or less');
+          return;
+        }
+        var rd = new FileReader();
+        rd.onload = function(){ pack.identity_avatar_url = rd.result; window.OmniBrand.save(pack); window.renderBrand(); };
+        rd.readAsDataURL(f);
+      };
+      inp.click();
+    });
+    var rm = card.querySelector('#v2-id-avatar-remove');
+    if (rm) rm.addEventListener('click', function(){ pack.identity_avatar_url = null; window.OmniBrand.save(pack); window.renderBrand(); });
+  }, 0);
+  return card;
+}
+
+// Typography card. Title + caption font, stored on the brand-pack.
+// Drives the live preview; baking into the export render uses the
+// existing /api/brand-kit fonts pipeline (follow-up).
+function renderTypographyCard(pack, tier){
+  var card = document.createElement('div');
+  card.className = 'v2-brand-card';
+  card.dataset.section = 'typography';
+  var typ = pack.typography || {};
+  var fonts = ['Inter','Montserrat','Poppins','Oswald','Bebas Neue','Anton','Archivo','Roboto','Rubik','Sora','Space Grotesk'];
+  var opt = function(sel){
+    return fonts.map(function(f){
+      return '<option value="' + escapeHtml(f) + '"' + (sel === f ? ' selected' : '') + '>' + escapeHtml(f) + '</option>';
+    }).join('');
+  };
+  card.innerHTML = ''
+    + '<div class="v2-brand-card-h"><div>'
+    +   '<p class="ti">Typography</p>'
+    +   '<p class="sub">Fonts for clip titles and captions.</p>'
+    + '</div></div>'
+    + '<div class="v2-brand-field-row">'
+    +   '<div class="v2-brand-field"><label>Title font</label><select id="v2-typ-title">' + opt(typ.title_font || 'Inter') + '</select></div>'
+    +   '<div class="v2-brand-field"><label>Caption font</label><select id="v2-typ-caption">' + opt(typ.caption_font || 'Inter') + '</select></div>'
+    + '</div>'
+    + '<p class="v2-brand-help">Used by the live preview and new clip templates.</p>';
+  setTimeout(function(){
+    var t = card.querySelector('#v2-typ-title');
+    var c = card.querySelector('#v2-typ-caption');
+    function persist(){
+      pack.typography = { title_font: t ? t.value : 'Inter', caption_font: c ? c.value : 'Inter' };
+      window.OmniBrand.save(pack);
+    }
+    if (t) t.addEventListener('change', persist);
+    if (c) c.addEventListener('change', persist);
+  }, 0);
+  return card;
+}
+
+// Links + CTA card (backend profile ids ap-cta-style / ap-spotify /
+// ap-beatport). Saved by the shared #ap-save button up top.
+function renderCtaProfileCard(pack, tier){
+  var card = document.createElement('div');
+  card.className = 'v2-brand-card';
+  card.dataset.section = 'cta';
+  card.innerHTML = ''
+    + '<div class="v2-brand-card-h"><div>'
+    +   '<p class="ti">Links and CTA</p>'
+    +   '<p class="sub">Shown as a lower-third under your clips.</p>'
+    + '</div></div>'
+    + '<div class="v2-brand-field"><label>CTA style</label><select id="ap-cta-style">'
+    +   '<option value="out_now">Out now</option>'
+    +   '<option value="stream_now">Stream now</option>'
+    +   '<option value="coming_soon">Coming soon</option>'
+    +   '<option value="save_the_date">Save the date</option>'
+    + '</select></div>'
+    + '<div class="v2-brand-field"><label>Spotify link</label><input type="text" id="ap-spotify" placeholder="spotify:artist:..." maxlength="200"></div>'
+    + '<div class="v2-brand-field"><label>Beatport link</label><input type="text" id="ap-beatport" placeholder="https://www.beatport.com/..." maxlength="200"></div>'
+    + '<p class="v2-brand-help">Saved with Identity. Use the Save button up top.</p>';
+  return card;
+}
+
+// Per-platform hashtags card (backend profile ids ap-tags-*).
+function renderHashtagsProfileCard(pack, tier){
+  var card = document.createElement('div');
+  card.className = 'v2-brand-card';
+  card.dataset.section = 'hashtags';
+  card.innerHTML = ''
+    + '<div class="v2-brand-card-h"><div>'
+    +   '<p class="ti">Per-platform hashtags</p>'
+    +   '<p class="sub">Comma-separated. Pulled into captions and scheduling.</p>'
+    + '</div></div>'
+    + '<div class="v2-brand-field"><label>TikTok</label><input type="text" id="ap-tags-tiktok" placeholder="#djset, #techno"></div>'
+    + '<div class="v2-brand-field"><label>Instagram</label><input type="text" id="ap-tags-instagram" placeholder="#djlife, #techno"></div>'
+    + '<div class="v2-brand-field"><label>YouTube Shorts</label><input type="text" id="ap-tags-youtube" placeholder="#shorts, #djset"></div>'
+    + '<p class="v2-brand-help">Saved with Identity.</p>';
+  return card;
+}
+
+// Caption-voice card (backend profile ids ap-voice-*).
+function renderCaptionVoiceCard(pack, tier){
+  var card = document.createElement('div');
+  card.className = 'v2-brand-card';
+  card.dataset.section = 'voice';
+  card.innerHTML = ''
+    + '<div class="v2-brand-card-h"><div>'
+    +   '<p class="ti">Caption voice</p>'
+    +   '<p class="sub">How auto-generated captions sound.</p>'
+    + '</div></div>'
+    + '<div class="v2-brand-field-row">'
+    +   '<div class="v2-brand-field"><label>Tone</label><select id="ap-voice-tone">'
+    +     '<option value="hyped">Hyped</option>'
+    +     '<option value="minimal">Minimal</option>'
+    +     '<option value="informative">Informative</option>'
+    +     '<option value="ironic">Ironic</option>'
+    +   '</select></div>'
+    +   '<div class="v2-brand-field" style="flex:0 0 120px"><label>Max length</label><input type="number" id="ap-voice-maxlen" min="20" max="300" value="80"></div>'
+    + '</div>'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-top:2px">'
+    +   '<input type="checkbox" id="ap-voice-emojis" style="width:16px;height:16px;accent-color:var(--v2-accent,#ff7a45)">'
+    +   '<span style="font-size:12px;color:var(--v2-text-muted,#aea394)">Use emojis</span>'
+    + '</div>'
+    + '<p class="v2-brand-help">Saved with Identity.</p>';
+  return card;
+}
+
+// Live 9:16 preview card. A rough mock, not the real renderer.
+function renderBrandPreviewCard(pack){
+  var card = document.createElement('div');
+  card.className = 'v2-brand-card is-wide';
+  card.dataset.section = 'preview';
+  card.innerHTML = ''
+    + '<div class="v2-brand-card-h"><div>'
+    +   '<p class="ti">Live preview</p>'
+    +   '<p class="sub">A rough 9:16 mock of how your brand sits on a clip. Updates as you edit.</p>'
+    + '</div></div>'
+    + '<div class="v2-brand-preview-wrap">'
+    +   '<div class="v2-brand-phone" id="v2-brand-phone"></div>'
+    +   '<div class="v2-brand-preview-legend" id="v2-brand-preview-legend"></div>'
+    + '</div>';
+  setTimeout(function(){ try { _c5RenderPreview(pack); } catch(_){} }, 0);
+  return card;
+}
+
+// 9-grid logo/watermark positions -> [leftPct, topPct].
+var _C5_POS = {
+  tl:[8,8],   tc:[50,8],   tr:[92,8],
+  ml:[8,50],  mc:[50,50],  mr:[92,50],
+  bl:[8,86],  bc:[50,86],  br:[92,86]
+};
+var _C5_CTA = { out_now:'OUT NOW', stream_now:'STREAM NOW', coming_soon:'COMING SOON', save_the_date:'SAVE THE DATE' };
+
+function _c5ReadField(id){
+  var el = document.getElementById(id);
+  return el ? String(el.value || '').trim() : '';
+}
+
+// Repaint the preview from the active pack + the live ap-* fields.
+function _c5RenderPreview(pack){
+  var phone = document.getElementById('v2-brand-phone');
+  if (!phone || !pack) return;
+  var kit = pack.brand_kit || {};
+  var wm  = pack.watermark || {};
+  var typ = pack.typography || {};
+  var accent = kit.accent || '#ff7a45';
+  var name = _c5ReadField('ap-artist-name') || pack.name || 'Artist name';
+  var ctaTxt = _C5_CTA[_c5ReadField('ap-cta-style')] || 'OUT NOW';
+  var capFont = typ.caption_font || 'Inter';
+
+  phone.style.background = 'radial-gradient(120% 80% at 50% 0%, ' + accent + '33, #0d0b09 62%)';
+
+  var html = '';
+  if (kit.logo_url){
+    var p = _C5_POS[kit.logo_position] || _C5_POS.tr;
+    var sz = (kit.logo_size || 10);
+    html += '<img class="v2-bp-logo" src="' + escapeHtml(kit.logo_url) + '" style="left:' + p[0] + '%;top:' + p[1] + '%;height:' + sz + '%;opacity:' + ((kit.logo_opacity || 80) / 100) + ';transform:translate(-' + p[0] + '%,-' + p[1] + '%)">';
+  }
+  if (pack.identity_avatar_url){
+    html += '<img class="v2-bp-avatar" src="' + escapeHtml(pack.identity_avatar_url) + '">';
+  }
+  if (wm.enabled && wm.type !== 'image'){
+    var wp = _C5_POS[wm.position] || _C5_POS.br;
+    html += '<span class="v2-bp-wm" style="left:' + wp[0] + '%;top:' + wp[1] + '%;opacity:' + ((wm.opacity || 60) / 100) + ';transform:translate(-' + wp[0] + '%,-' + wp[1] + '%)">' + escapeHtml(wm.text || '@handle') + '</span>';
+  }
+  html += '<div class="v2-bp-lt" style="font-family:' + escapeHtml(capFont) + ',Inter,sans-serif">'
+       +    '<span class="v2-bp-name">' + escapeHtml(name) + '</span>'
+       +    '<span class="v2-bp-cta" style="background:' + accent + '">' + escapeHtml(ctaTxt) + '</span>'
+       +  '</div>';
+  phone.innerHTML = html;
+
+  var legend = document.getElementById('v2-brand-preview-legend');
+  if (legend){
+    var sec = (kit.secondary || []);
+    var chips = '<span class="sw" style="background:' + accent + '"></span>'
+      + sec.map(function(c){ return '<span class="sw" style="background:' + escapeHtml(c) + '"></span>'; }).join('');
+    legend.innerHTML = ''
+      + '<div class="row"><span class="k">Pack</span><span class="v">' + escapeHtml(pack.name || '-') + '</span></div>'
+      + '<div class="row"><span class="k">Colors</span><span class="v">' + chips + '</span></div>'
+      + '<div class="row"><span class="k">Logo</span><span class="v">' + (kit.logo_url ? (String(kit.logo_position || 'tr').toUpperCase() + ' / ' + (kit.logo_size || 10) + '%') : 'none') + '</span></div>'
+      + '<div class="row"><span class="k">Watermark</span><span class="v">' + (wm.enabled ? escapeHtml(wm.text || '@handle') : 'off') + '</span></div>'
+      + '<div class="row"><span class="k">Caption font</span><span class="v">' + escapeHtml(capFont) + '</span></div>';
+  }
+}
+
+// ================================================================
+// SESSIE 79 - C5 reconciliatie: bak de localStorage brand-pack-look
+// (logo + image-watermark) in de export door 'm naar de bestaande
+// per-workspace backend-endpoints te pushen (/api/brand-kit*). Geen
+// wijziging aan de export-pipeline; dit voedt alleen dezelfde endpoints
+// die de legacy Brand Stack ook voedde. Additief + faalveilig; alleen
+// ingelogd. Kleuren (palette) worden meegestuurd maar bakken niet
+// rechtstreeks in de video (cutter gebruikt logo/watermark-IMAGES).
+// ================================================================
+
+// data URL -> Blob (voor svg-passthrough + raster-fallback).
+function _c5DataUrlToBlob(dataUrl){
+  var parts = String(dataUrl).split(',');
+  var meta = parts[0] || '';
+  var b64  = parts[1] || '';
+  var mime = (meta.match(/data:([^;]+)/) || [])[1] || 'application/octet-stream';
+  var bin  = atob(b64);
+  var arr  = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+// Raster data URL -> PNG Blob via canvas. Garandeert PNG-magic want de
+// backend logo-endpoint accepteert alleen png/svg.
+function _c5RasterToPngBlob(dataUrl){
+  return new Promise(function(resolve, reject){
+    try {
+      var img = new Image();
+      img.onload = function(){
+        try {
+          var c = document.createElement('canvas');
+          c.width  = img.naturalWidth  || img.width  || 512;
+          c.height = img.naturalHeight || img.height || 512;
+          c.getContext('2d').drawImage(img, 0, 0);
+          c.toBlob(function(b){ b ? resolve(b) : reject(new Error('toBlob failed')); }, 'image/png');
+        } catch(e){ reject(e); }
+      };
+      img.onerror = function(){ reject(new Error('image decode failed')); };
+      img.src = dataUrl;
+    } catch(e){ reject(e); }
+  });
+}
+
+// 9-grid positie -> de 4 hoeken die de cutter ondersteunt.
+function _c5PosToCorner(pos){
+  var map = { tl:'tl', tc:'tr', tr:'tr', ml:'tl', mc:'tr', mr:'tr', bl:'bl', bc:'br', br:'br' };
+  return map[pos] || 'tr';
+}
+
+// Push de actieve brand-pack-look naar de backend zodat de export 'm bakt.
+// Additief: stuurt alleen wat de pack HEEFT (geen destructieve verwijdering).
+async function _c5ApplyPackToExports(pack){
+  if (!pack) return;
+  if (!(STATE.session && STATE.session.access_token)){
+    if (typeof toast === 'function') toast('Log in to bake your brand into exports.', 'bad');
+    return;
+  }
+  var kit = pack.brand_kit || {};
+  var btn = document.getElementById('v2-c5-apply-btn');
+  var statusEl = document.getElementById('v2-c5-apply-status');
+  var prevLabel = btn ? btn.textContent : '';
+  if (btn){ btn.disabled = true; btn.textContent = 'Applying...'; }
+  var done = [];
+  try {
+    // 1) Palette + handle (referentie; bakt niet direct in de video).
+    var palette = [];
+    if (kit.accent) palette.push({ name: 'Accent', hex: kit.accent });
+    (kit.secondary || []).forEach(function(c, i){ if (c) palette.push({ name: 'Secondary ' + (i + 1), hex: c }); });
+    var meta = { palette: palette };
+    if (pack.watermark && pack.watermark.type === 'text' && pack.watermark.text) meta.handle = pack.watermark.text;
+    await api('/api/brand-kit', { method: 'POST', body: meta });
+    done.push('colors');
+
+    // 2) Logo (bakt WEL): upload de afbeelding, daarna positie/opacity/size.
+    if (kit.logo_url && /^data:/i.test(kit.logo_url)){
+      var blob, fname;
+      if (/^data:image\/svg/i.test(kit.logo_url)){ blob = _c5DataUrlToBlob(kit.logo_url); fname = 'logo.svg'; }
+      else { blob = await _c5RasterToPngBlob(kit.logo_url); fname = 'logo.png'; }
+      var fd = new FormData();
+      fd.append('file', blob, fname);
+      var up = await api('/api/brand-kit/logo', { method: 'POST', body: fd });
+      var logoObj = (up && up.logo) ? up.logo : null;
+      if (logoObj){
+        logoObj.corner   = _c5PosToCorner(kit.logo_position);
+        logoObj.opacity  = Math.max(0.2, Math.min(1, (kit.logo_opacity || 80) / 100));
+        logoObj.size_pct = Math.max(5, Math.min(40, kit.logo_size || 12));
+        await api('/api/brand-kit', { method: 'POST', body: { logo: logoObj } });
+      }
+      done.push('logo');
+    }
+
+    // 3) Watermark: alleen een IMAGE-watermark bakt. Tekst-watermark kan de
+    // cutter (nog) niet bakken -> overgeslagen.
+    var wm = pack.watermark || {};
+    if (wm.enabled && wm.type === 'image' && wm.image_url && /^data:/i.test(wm.image_url)){
+      var wb;
+      if (/^data:image\/png/i.test(wm.image_url)) wb = _c5DataUrlToBlob(wm.image_url);
+      else wb = await _c5RasterToPngBlob(wm.image_url);
+      var wfd = new FormData();
+      wfd.append('file', wb, 'watermark.png');
+      await api('/api/brand-kit/watermark', { method: 'POST', body: wfd });
+      await api('/api/brand-kit/watermark/settings', { method: 'POST', body: {
+        enabled: true,
+        corner: _c5PosToCorner(wm.position),
+        opacity: Math.max(0, Math.min(1, (wm.opacity || 60) / 100)),
+        size_pct: Math.max(5, Math.min(60, wm.size || 18))
+      }});
+      done.push('watermark');
+    }
+
+    if (typeof toast === 'function') toast('Brand applied to exports.', 'good');
+  } catch(e){
+    if (statusEl) statusEl.textContent = 'Apply failed: ' + (e && e.message || 'error');
+    if (typeof toast === 'function') toast('Could not apply brand: ' + (e && e.message || ''), 'bad');
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = prevLabel || 'Apply to exports'; }
+    try { await _c5RefreshApplyStatus(); } catch(_){}
+  }
+}
+
+// Read-only: laat zien wat de export NU bakt (uit de backend brand-kit).
+async function _c5RefreshApplyStatus(){
+  var statusEl = document.getElementById('v2-c5-apply-status');
+  if (!statusEl) return;
+  if (!(STATE.session && STATE.session.access_token)){
+    statusEl.textContent = 'Log in to bake your logo and watermark into exports.';
+    return;
+  }
+  try {
+    var bk = await api('/api/brand-kit');
+    var hasLogo = !!(bk && bk.logo && bk.logo.path);
+    var hasWm   = !!(bk && bk.watermark && bk.watermark.enabled && bk.watermark.path);
+    statusEl.textContent = 'Exports for this artist currently bake: logo ' + (hasLogo ? 'on' : 'off') + ', watermark ' + (hasWm ? 'on' : 'off') + '.';
+  } catch(e){ statusEl.textContent = ''; }
+}
+
+// "Bake into exports" card (in de Visual-sectie).
+function renderApplyExportsCard(pack){
+  var card = document.createElement('div');
+  card.className = 'v2-brand-card is-wide';
+  card.dataset.section = 'apply';
+  card.innerHTML = ''
+    + '<div class="v2-brand-card-h">'
+    +   '<div>'
+    +     '<p class="ti">Bake into exports</p>'
+    +     '<p class="sub">Your logo and watermark live on this device. Apply them so they render into exported clips for this artist. Colors and fonts here are reference; only image logo and watermark bake into the video for now.</p>'
+    +   '</div>'
+    +   '<button class="v2-brand-mini" id="v2-c5-apply-btn" type="button" style="border-color:var(--v2-accent,#ff7a45);color:var(--v2-text,#ece5d8)">Apply to exports</button>'
+    + '</div>'
+    + '<p class="v2-brand-help" id="v2-c5-apply-status">Checking what exports currently bake...</p>';
+  setTimeout(function(){
+    var b = card.querySelector('#v2-c5-apply-btn');
+    if (b) b.addEventListener('click', function(){ _c5ApplyPackToExports(pack); });
+    try { _c5RefreshApplyStatus(); } catch(_){}
+  }, 0);
+  return card;
 }
 
 // --- Brand Kit card ---------------------------------------------
@@ -17795,7 +18477,13 @@ function pickExportSettings(label, opts){
     const wmBtn    = document.getElementById('exs-wm-upload-btn');
 
     const lastOverlays = (last.overlays && typeof last.overlays === 'object') ? last.overlays : {};
-    capInput.checked = (lastOverlays.captions !== false);
+    // SESSIE 77 - C8: consumeer de C7 export-defaults (omniDjExportDefaults) als
+    // FALLBACK wanneer er geen onthouden 'last'-waarde is. 'Last' wint (bestaand
+    // gedrag), daarna de C7-default als die gezet is, anders de oude default.
+    var _exDef = {}; try { _exDef = JSON.parse(localStorage.getItem('omniDjExportDefaults') || '{}') || {}; } catch (_e) {}
+    capInput.checked = (lastOverlays.captions !== undefined)
+      ? (lastOverlays.captions !== false)
+      : (typeof _exDef.bakeCaptions === 'boolean' ? _exDef.bakeCaptions : true);
     capRow.classList.toggle('is-on', capInput.checked);
 
     // SESSIE 53 — info-tekst als geselecteerde clips geen captions hebben.
@@ -17846,7 +18534,7 @@ function pickExportSettings(label, opts){
                               && STATE.brandKit.watermark.enabled !== false);
     wmInput.checked = (typeof lastOverlays.watermark === 'boolean')
                         ? lastOverlays.watermark
-                        : brandWmEnabled;
+                        : (typeof _exDef.watermark === 'boolean' ? _exDef.watermark : brandWmEnabled);
     wmRow.classList.toggle('is-on', wmInput.checked);
     let watermarkJustUploaded = false;
     const refreshWatermarkPanel = () => {
@@ -18146,6 +18834,19 @@ async function startExport(indices, label, opts){
     resolution: settings.resolution,
     overlays:   settings.overlays,
   };
+  // SESSIE 78 - D5: crowd-inmix default uit Export-defaults meesturen. De backend
+  // negeert het tenzij de bronset 2 audiosporen heeft (een gesyncte camera+audio),
+  // dus dit is veilig voor gewone sets.
+  try {
+    var _exd = JSON.parse(localStorage.getItem('omniDjExportDefaults') || '{}') || {};
+    if (_exd.inmix && _exd.inmix.enabled) {
+      body.inmix = {
+        enabled: true,
+        volume: (typeof _exd.inmix.volume === 'number' ? _exd.inmix.volume : 0.25),
+        highpass: (typeof _exd.inmix.highpass === 'number' ? _exd.inmix.highpass : 200),
+      };
+    }
+  } catch (_e) {}
   if (Object.keys(labelsMap).length) body.labels = labelsMap;
   if (settings.outputDir) {
     body.output_dir = settings.outputDir;
@@ -18630,6 +19331,21 @@ async function renderEditor(){
   const idx  = STATE.selectedClipIdx || 0;
   const clip = STATE.clips[idx];
   if (!clip) return;
+  // SESSIE 77 - C8b: pas de C7 editor-default-ratio toe bij het EERSTE clip-open
+  // van de sessie, maar ALLEEN als die variant al op schijf staat (geen on-demand
+  // render, geen aspect-mismatch). Daarna blijven handmatige keuzes staan.
+  if (!STATE.editorRatio) {
+    try {
+      var _edd = JSON.parse(localStorage.getItem('omniDjEditorDefaults') || '{}') || {};
+      var _r2v = {'9:16':'vertical','16:9':'landscape','1:1':'square','4:5':'portrait45'};
+      var _dv = _r2v[_edd.ratio];
+      if (_edd.ratio && _dv && clip.files && clip.files[_dv]) {
+        STATE.editorRatio = _edd.ratio;
+        var _rail = document.getElementById('ed-ratio-rail');
+        if (_rail) _rail.querySelectorAll('button[data-ratio]').forEach(function(x){ x.classList.toggle('on', x.dataset.ratio === STATE.editorRatio); });
+      }
+    } catch (_e) {}
+  }
   // SESSIE 71 — C1: onthoud de laatste editor-sessie voor "Continue editing".
   try { localStorage.setItem('omnidj.editor.lastSession', JSON.stringify({ jobId: STATE.jobId, clipIdx: (clip.index != null ? clip.index : idx) })); } catch(_){}
 
@@ -24590,11 +25306,287 @@ function _renderProfileSection(){
   refreshSave();
 }
 
+// SESSIE 77 - Spoor D: video + audio sync sub-flow (second entry on the Analyse page).
+// Picks video + clean audio via /api/pick-file, POST /api/sync-import, shows
+// metrics/warnings and hands the muxed path to _startLocalJob so the EXISTING
+// analysis pipeline runs. Leaves the normal dropzone flow untouched.
+window.__syncSel = { video: null, audio: null };
+function _syncProgress(on){
+  var p = document.getElementById('sync-progress');
+  if (!p) return;
+  if (on) p.removeAttribute('hidden'); else p.setAttribute('hidden', '');
+}
+window.openSyncImport = function openSyncImport(){
+  window.__syncSel = { video: null, audio: null };
+  var v = document.getElementById('sync-video-name'); if (v) v.textContent = 'No file selected';
+  var a = document.getElementById('sync-audio-name'); if (a) a.textContent = 'No file selected';
+  var s = document.getElementById('sync-status'); if (s) s.textContent = '';
+  _syncProgress(false);
+  var mn = document.getElementById('sync-manual'); if (mn) mn.setAttribute('hidden', '');
+  var b = document.getElementById('sync-run-btn'); if (b) b.disabled = false;
+  var m = document.getElementById('sync-modal'); if (m) m.classList.add('on');
+};
+window.closeSyncImport = function closeSyncImport(){
+  _syncProgress(false);
+  var m = document.getElementById('sync-modal'); if (m) m.classList.remove('on');
+};
+window.syncPick = async function syncPick(kind){
+  var prompt = (kind === 'video') ? 'Choose the camera video' : 'Choose the clean audio';
+  try {
+    var pick = await api('/api/pick-file', { method: 'POST', body: { prompt: prompt } });
+    if (!pick || pick.cancelled || !pick.path) return;
+    window.__syncSel[kind] = pick.path;
+    var el = document.getElementById('sync-' + kind + '-name');
+    if (el) el.textContent = pick.path;
+  } catch (e) {
+    if (typeof toast === 'function') toast('Could not pick file', 'bad');
+  }
+};
+window.runSyncImport = async function runSyncImport(){
+  var sel = window.__syncSel || {};
+  if (!sel.video || !sel.audio) {
+    if (typeof toast === 'function') toast('Choose a video and audio first', 'bad');
+    return;
+  }
+  var btn = document.getElementById('sync-run-btn');
+  var st = document.getElementById('sync-status');
+  if (btn) btn.disabled = true;
+  if (st) st.textContent = 'Synchronizing... this can take a while for long sets.';
+  _syncProgress(true);
+  try {
+    var res = await api('/api/sync-import', { method: 'POST', body: { video_path: sel.video, audio_path: sel.audio } });
+    if (!res || res.ok === false) {
+      _syncProgress(false);
+      if (st) st.textContent = 'Sync failed: ' + ((res && res.error) || 'unknown');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    if (res.status === 'needs_manual') {
+      // D4 - lage confidence: niet stil muxen, laat de gebruiker handmatig uitlijnen.
+      _syncProgress(false);
+      if (st) st.textContent = 'Low match confidence (' + Math.round((res.confidence || 0) * 100) + '%). Align the waveforms below, then confirm.';
+      if (btn) btn.disabled = false;
+      _syncShowManual(res);
+      return;
+    }
+    var conf = Math.round((res.confidence || 0) * 100);
+    var msg = 'Match confidence ' + conf + '%, offset ' + (res.offset_s || 0) + 's';
+    if (res.drift_s) msg += ', drift ' + res.drift_s + 's';
+    if (st) st.textContent = msg + '. Starting analysis...';
+    (res.warnings || []).forEach(function(w){ if (typeof toast === 'function') toast(w); });
+    _syncProgress(false);
+    closeSyncImport();
+    if (typeof _startLocalJob === 'function') { await _startLocalJob(res.output_path); }
+  } catch (e) {
+    _syncProgress(false);
+    if (st) st.textContent = 'Sync failed: ' + (e && e.message || '');
+    if (btn) btn.disabled = false;
+  }
+};
+
+// SESSIE 77 - D4: manuele uitlijning bij lage confidence. De slider is de
+// functionele control (offset in seconden); de canvas-waveforms zijn een gids.
+window.__syncWave = null;
+function _syncDrawWave(offset){
+  try {
+    var w = window.__syncWave;
+    var c = document.getElementById('sync-wave');
+    if (!w || !c || !c.getContext) return;
+    var ctx = c.getContext('2d');
+    var W = c.width, H = c.height;
+    ctx.clearRect(0, 0, W, H);
+    var T = w.window_s || 120;
+    var pps = W / T;
+    function lane(arr, color, shift, y0, h){
+      if (!arr || !arr.length) return;
+      ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.beginPath();
+      var n = arr.length;
+      for (var i = 0; i < n; i++){
+        var x = (i / n) * W + shift * pps;
+        var y = y0 + (h - 2) - arr[i] * (h - 4);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    // Boven: camera-boordgeluid (referentie). Onder: schone audio (verschuift met offset).
+    lane(w.onboard, 'rgba(170,170,180,0.85)', 0, 0, H / 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+    lane(w.clean, '#D97742', offset, H / 2, H / 2);
+  } catch (_e) {}
+}
+window._syncShowManual = function _syncShowManual(res){
+  window.__syncWave = { onboard: res.onboard || [], clean: res.clean || [], window_s: res.window_s || 120 };
+  var sug = Number(res.offset_s || 0);
+  var sl = document.getElementById('sync-offset-slider');
+  if (sl){ sl.min = (sug - 15).toFixed(2); sl.max = (sug + 15).toFixed(2); sl.step = '0.05'; sl.value = String(sug); }
+  var ro = document.getElementById('sync-offset-readout'); if (ro) ro.textContent = sug.toFixed(2) + 's';
+  var mn = document.getElementById('sync-manual'); if (mn) mn.removeAttribute('hidden');
+  _syncDrawWave(sug);
+};
+window.syncOnSlide = function syncOnSlide(){
+  var sl = document.getElementById('sync-offset-slider'); if (!sl) return;
+  var v = Number(sl.value);
+  var ro = document.getElementById('sync-offset-readout'); if (ro) ro.textContent = v.toFixed(2) + 's';
+  _syncDrawWave(v);
+};
+window.syncConfirmManual = async function syncConfirmManual(){
+  var sel = window.__syncSel || {};
+  var sl = document.getElementById('sync-offset-slider');
+  if (!sel.video || !sel.audio || !sl) return;
+  var off = Number(sl.value);
+  var st = document.getElementById('sync-status');
+  var cbtn = document.getElementById('sync-manual-confirm');
+  if (cbtn) cbtn.disabled = true;
+  if (st) st.textContent = 'Muxing with your alignment...';
+  _syncProgress(true);
+  try {
+    var res = await api('/api/sync-import', { method: 'POST', body: { video_path: sel.video, audio_path: sel.audio, manual_offset_s: off } });
+    _syncProgress(false);
+    if (!res || res.ok === false){ if (st) st.textContent = 'Sync failed: ' + ((res && res.error) || 'unknown'); if (cbtn) cbtn.disabled = false; return; }
+    if (st) st.textContent = 'Aligned at ' + off.toFixed(2) + 's. Starting analysis...';
+    closeSyncImport();
+    if (typeof _startLocalJob === 'function') { await _startLocalJob(res.output_path); }
+  } catch (e) {
+    _syncProgress(false);
+    if (st) st.textContent = 'Sync failed: ' + (e && e.message || '');
+    if (cbtn) cbtn.disabled = false;
+  }
+};
+
+// SESSIE 77 - C3: sleepbare editor-panes (cue-breedte + timeline-hoogte), persistent in localStorage.
+(function _edPanesC3(){
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+  function load(){ try{return JSON.parse(localStorage.getItem('omniDjEditorPanes')||'{}')||{};}catch(_e){return {};} }
+  function save(o){ try{localStorage.setItem('omniDjEditorPanes',JSON.stringify(o));}catch(_e){} }
+  function ed(){ return document.querySelector('#view-editor .editor'); }
+  function applySaved(){
+    var e=ed(); if(!e) return; var o=load();
+    if(o.leftW) e.style.setProperty('--ed-left-w', clamp(o.leftW,220,560)+'px');
+    if(o.tlH) e.style.setProperty('--ed-tl-h', Math.max(160,o.tlH)+'px');
+  }
+  function bind(handle,onMove,onEnd){
+    if(!handle) return;
+    var dragging=false;
+    handle.addEventListener('pointerdown',function(e){dragging=true;handle.classList.add('dragging');try{handle.setPointerCapture(e.pointerId);}catch(_x){} e.preventDefault();});
+    handle.addEventListener('pointermove',function(e){ if(dragging) onMove(e); });
+    function end(){ if(!dragging) return; dragging=false; handle.classList.remove('dragging'); onEnd(); }
+    handle.addEventListener('pointerup',function(e){ try{handle.releasePointerCapture(e.pointerId);}catch(_x){} end(); });
+    handle.addEventListener('lostpointercapture',end);
+  }
+  function init(){
+    var e=ed(); if(!e) return;
+    applySaved();
+    var body=document.querySelector('#view-editor .ed-body');
+    bind(document.getElementById('ed-split-x'), function(ev){
+      if(!body) return; var r=body.getBoundingClientRect();
+      var w=clamp(ev.clientX-r.left,220,Math.min(560,r.width-220));
+      e.style.setProperty('--ed-left-w', w+'px');
+    }, function(){ var o=load(); o.leftW=parseInt(getComputedStyle(e).getPropertyValue('--ed-left-w'))||340; save(o); });
+    bind(document.getElementById('ed-split-y'), function(ev){
+      var r=e.getBoundingClientRect();
+      var h=clamp(r.bottom-ev.clientY,160,Math.round(r.height*0.7));
+      e.style.setProperty('--ed-tl-h', h+'px');
+    }, function(){ var o=load(); var v=parseInt(getComputedStyle(e).getPropertyValue('--ed-tl-h')); if(v) o.tlH=v; save(o); });
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init);}else{init();}
+})();
+
+// SESSIE 77 - C7: Advanced-inklap + persistente Editor/Export-defaults (localStorage).
+window.settingsToggleAdvanced = function settingsToggleAdvanced(){
+  var body = document.getElementById('settings-adv-body');
+  var btn = document.getElementById('settings-adv-toggle');
+  if (!body) return;
+  var willOpen = body.hasAttribute('hidden');
+  if (willOpen) { body.removeAttribute('hidden'); } else { body.setAttribute('hidden', ''); }
+  if (btn) btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+};
+
+window._settingsSaveDefaults = function _settingsSaveDefaults(){
+  try {
+    var rsel = document.querySelector('input[name="ed-default-ratio"]:checked');
+    var ed = {
+      ratio: rsel ? rsel.value : '9x16',
+      captions: !!(document.getElementById('ed-default-captions') || {}).checked
+    };
+    var ex = {
+      bakeCaptions: !!(document.getElementById('ex-default-captions') || {}).checked,
+      watermark: !!(document.getElementById('ex-default-watermark') || {}).checked,
+      inmix: {
+        enabled: !!(document.getElementById('ex-default-inmix') || {}).checked,
+        volume: parseFloat((document.getElementById('ex-default-inmix-vol') || {}).value) || 0.25,
+        highpass: 200
+      }
+    };
+    localStorage.setItem('omniDjEditorDefaults', JSON.stringify(ed));
+    localStorage.setItem('omniDjExportDefaults', JSON.stringify(ex));
+    // SESSIE 78 - per-workspace persist (ingelogd). Fire-and-forget; uitgelogd
+    // blijft het puur localStorage, dus geen regressie zonder account.
+    try {
+      if (STATE.session && STATE.session.access_token && typeof api === 'function') {
+        api('/api/workspace/settings', { method: 'PUT', body: { settings: { editor: ed, export: ex } } }).catch(function(){});
+      }
+    } catch (_e3) {}
+    if (typeof toast === 'function') toast('Standaard opgeslagen', 'good');
+  } catch (_e) {}
+};
+
+// SESSIE 78 - haal de per-workspace settings op (ingelogd) en schrijf ze in de
+// localStorage-defaults, dan herverf. Logged-out / geen workspace -> no-op, dus
+// de localStorage-defaults blijven leidend. Wordt aangeroepen bij het openen van
+// Settings en bij een workspace-wissel zodat export-defaults de actieve artist volgen.
+window._settingsSyncFromServer = async function _settingsSyncFromServer(){
+  try {
+    if (!STATE.session || !STATE.session.access_token || typeof api !== 'function') return;
+    var r = await api('/api/workspace/settings');
+    if (!r || !r.ok || !r.settings) return;
+    var s = r.settings;
+    if (s.editor && typeof s.editor === 'object') localStorage.setItem('omniDjEditorDefaults', JSON.stringify(s.editor));
+    if (s['export'] && typeof s['export'] === 'object') localStorage.setItem('omniDjExportDefaults', JSON.stringify(s['export']));
+    if (typeof window._settingsLoadDefaults === 'function') window._settingsLoadDefaults();
+  } catch (_e) {}
+};
+
+window._settingsLoadDefaults = function _settingsLoadDefaults(){
+  try {
+    var ed = {}, ex = {};
+    try { ed = JSON.parse(localStorage.getItem('omniDjEditorDefaults') || '{}') || {}; } catch (_e1) {}
+    try { ex = JSON.parse(localStorage.getItem('omniDjExportDefaults') || '{}') || {}; } catch (_e2) {}
+    var ratio = ed.ratio || '9x16';
+    var radios = document.querySelectorAll('input[name="ed-default-ratio"]');
+    radios.forEach(function(r){
+      r.checked = (r.value === ratio);
+      if (!r.dataset.b){ r.dataset.b = '1'; r.addEventListener('change', window._settingsSaveDefaults); }
+    });
+    var pairs = [['ed-default-captions', !!ed.captions],
+                 ['ex-default-captions', !!ex.bakeCaptions],
+                 ['ex-default-watermark', !!ex.watermark],
+                 ['ex-default-inmix', !!(ex.inmix && ex.inmix.enabled)]];
+    pairs.forEach(function(p){
+      var el = document.getElementById(p[0]);
+      if (!el) return;
+      el.checked = p[1];
+      if (!el.dataset.b){ el.dataset.b = '1'; el.addEventListener('change', window._settingsSaveDefaults); }
+    });
+    // SESSIE 78 - D5: crowd-volume select.
+    var inmixVol = document.getElementById('ex-default-inmix-vol');
+    if (inmixVol) {
+      var vv = (ex.inmix && ex.inmix.volume) ? String(ex.inmix.volume) : '0.25';
+      inmixVol.value = vv;
+      if (inmixVol.value !== vv) inmixVol.value = '0.25';
+      if (!inmixVol.dataset.b){ inmixVol.dataset.b = '1'; inmixVol.addEventListener('change', window._settingsSaveDefaults); }
+    }
+  } catch (_e) {}
+};
+
 async function renderSettings(){
   const view = $('#view-settings');
   if (!view) return;
   // Profile section first so it shows up even if anything below errors.
   _renderProfileSection();
+  // SESSIE 77 - C7: laad + bind de persistente Editor/Export-defaults (statische DOM).
+  try { if (typeof _settingsLoadDefaults === 'function') _settingsLoadDefaults(); } catch(_e){}
+  // SESSIE 78 - per-workspace: trek de settings van de actieve artist op + herverf.
+  try { if (typeof window._settingsSyncFromServer === 'function') window._settingsSyncFromServer(); } catch(_e){}
 
   // Phase 3 — Pro feature gate. For Free users, swap the functional watch-
   // folder card for a locked placeholder. Idempotent: re-runs on every
@@ -26687,6 +27679,8 @@ window.addEventListener('DOMContentLoaded', boot);
           var _wsId = act.dataset.wsId || '';
           if (_wsId && typeof _setActiveWorkspace === 'function') _setActiveWorkspace(_wsId);
         } catch(_){}
+        // SESSIE 78 - per-workspace settings volgen de actieve artist.
+        try { if (typeof window._settingsSyncFromServer === 'function') window._settingsSyncFromServer(); } catch(_){}
         v2PaintArtistChip();
         v2CloseAllDropdowns();
       } else {

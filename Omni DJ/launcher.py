@@ -166,7 +166,13 @@ def _open_browser_when_ready() -> None:
 if __name__ == "__main__":
     _log(f"launcher starting — bundle_dir={BUNDLE_DIR}, port={PORT}, frozen={getattr(sys, 'frozen', False)}")
 
-    threading.Thread(target=_open_browser_when_ready, daemon=True).start()
+    # SESSIE 78 - B1b: als Electron de backend als sidecar start, laadt Electron
+    # de UI zelf in zijn venster. Dan GEEN browser openen (OMNI_DJ_NO_BROWSER=1).
+    # Standalone .app zet die env niet en opent de browser zoals altijd.
+    if os.environ.get("OMNI_DJ_NO_BROWSER") not in ("1", "true", "True", "yes"):
+        threading.Thread(target=_open_browser_when_ready, daemon=True).start()
+    else:
+        _log("OMNI_DJ_NO_BROWSER set -> skip browser auto-open (Electron sidecar)")
 
     # Forceer dependency-scan door PyInstaller — niet werkelijk gebruikt.
     import app as _app  # noqa: F401
