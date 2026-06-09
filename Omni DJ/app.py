@@ -5999,7 +5999,7 @@ def _derive_with_tracking(job_id, target, ratio, source_video_path, tracking_pat
     keyframes so the DJ stays in frame (instead of getting their head
     centre-cropped off).
     """
-    from cutter import _build_tracked_vertical_crop, get_video_info, detect_hw_encoder
+    from cutter import get_video_info, detect_hw_encoder
     # Load tracking data.
     with open(tracking_path, 'r') as f:
         track = json.load(f) or {}
@@ -6030,28 +6030,27 @@ def _derive_with_tracking(job_id, target, ratio, source_video_path, tracking_pat
     else:
         raise RuntimeError(f'unsupported ratio {ratio}')
 
-    # The pan/zoom helper outputs a crop sized to the keyframe metrics;
-    # we then scale+pad to the target out_w x out_h. Pass a custom
-    # target_ratio so the pan-mode pre-builds a window of the right
-    # aspect for this output.
-    crop_expr = _build_tracked_vertical_crop(
-        keyframes, src_w, src_h, crop_mode=crop_mode, target_aspect=target_ratio,
-    )
-    if not crop_expr:
-        raise RuntimeError('tracking crop expression empty')
-
-    # SESSIE 31 — letterbox: no crop, just scale-to-fit + pad with black bars.
-    if crop_expr == '__LETTERBOX__':
-        vf = (
-            f"scale={out_w}:{out_h}:force_original_aspect_ratio=decrease,"
-            f"pad={out_w}:{out_h}:(ow-iw)/2:(oh-ih)/2:black"
+    # SESSIE 81 - 1:1 en 4:5 zijn social-crops die de DJ moeten VULLEN
+    # (gecentreerd in beeld), nooit letterboxen. De crop_mode-keuze
+    # ('letterbox'/'pan'/'zoom') is bedoeld voor de 9:16-render (toon de hele
+    # brede shot); voor een vierkant of 4:5 frame gaf de oude scale+pad-route
+    # een grotendeels zwart beeld (de 16:9-shot met dikke balken). We doen
+    # daarom voor deze twee ratio's altijd een gecentreerde crop-to-fill
+    # rechtstreeks uit de bron, identiek aan de niet-getrackte center-crop in
+    # api_derive_ratio / _derive_ratio_file. crop_mode/keyframes worden hier
+    # bewust genegeerd: de gebruiker wil de DJ gecentreerd, niet getrackt-gevolgd.
+    if ratio == 'square':
+        # R = 1 -> w = h = min(iw, ih), gecentreerd
+        center_crop = (
+            "crop=min(iw\\,ih):min(iw\\,ih):"
+            "(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2"
         )
-    else:
-        vf = (
-            crop_expr + ","
-            f"scale={out_w}:{out_h}:force_original_aspect_ratio=decrease,"
-            f"pad={out_w}:{out_h}:(ow-iw)/2:(oh-ih)/2"
+    else:  # portrait45 -> R = 0.8
+        center_crop = (
+            "crop=min(iw\\,ih*0.8):min(iw/0.8\\,ih):"
+            "(iw-min(iw\\,ih*0.8))/2:(ih-min(iw/0.8\\,ih))/2"
         )
+    vf = f"{center_crop},scale={out_w}:{out_h}"
 
     encoder, quality_args = detect_hw_encoder()
     base = os.path.splitext(os.path.basename(source_video_path))[0]
@@ -6944,10 +6943,14 @@ def _resolve_export_sources(clip, aspects=None, job_id=None, job_output_dir=None
     out = [(k, p) for (k, p) in resolved_base.items() if k in base_wanted]
 
     # Derived (1:1 / 4:5) afleiden uit de basis-cut.
+    # SESSIE 81 - NIET de gecachte clip['files'][d] hergebruiken: een eerder via
+    # de editor (tracked, letterbox-modus) afgeleid bestand kon een geletterboxd
+    # 16:9-in-1:1 frame zijn (bug). Het bestand IS dan wel 1080x1080 (de balken
+    # zitten ingebakken), dus een dimensie-check vangt het niet. We her-deriven
+    # daarom altijd met de gecentreerde center-crop (_derive_ratio_file) en
+    # overschrijven het deterministische pad (-y). Zo is de export altijd een
+    # echte gevulde crop, ongeacht wat de editor eerder cachte.
     for d in derived_wanted:
-        if files.get(d) and os.path.exists(files[d]):
-            out.append((d, files[d]))
-            continue
         base_key = 'vertical' if d == 'portrait45' else 'landscape'
         base_src = (resolved_base.get(base_key)
                     or resolved_base.get('landscape') or resolved_base.get('vertical'))
