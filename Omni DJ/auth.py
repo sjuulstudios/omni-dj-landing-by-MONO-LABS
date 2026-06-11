@@ -227,12 +227,14 @@ def login(email, password):
         return {'ok': False, 'error': f'{type(e).__name__}: {str(e)}'}
 
 
-def call_update_usage_edge_function(access_token, action):
+def call_update_usage_edge_function(access_token, action, job_id=None):
     """SESSIE 30 - Call the `update-usage` edge function with the user's JWT
     for server-side quota bookkeeping. Used by the bundled .app where
     SUPABASE_SERVICE_ROLE_KEY is intentionally absent.
 
-    action: 'get' | 'increment'
+    action: 'get' | 'reserve' | 'release' | 'finalize' | 'increment'
+    SESSIE 83 - reserve/release/finalize vereisen een job_id (atomaire
+    quota-RPC's uit migratie 012); 'increment' blijft als compat-alias.
     Returns the parsed JSON response dict on success, or {'ok': False, 'error': ...}.
     """
     if not SUPABASE_URL or not access_token:
@@ -245,8 +247,11 @@ def call_update_usage_edge_function(access_token, action):
             'apikey': SUPABASE_ANON_KEY,
             'Content-Type': 'application/json',
         }
+        payload = {'action': action}
+        if job_id is not None:
+            payload['job_id'] = str(job_id)
         with httpx.Client(timeout=15.0) as client:
-            resp = client.post(url, headers=headers, json={'action': action})
+            resp = client.post(url, headers=headers, json=payload)
         if resp.status_code >= 400:
             try:
                 body = resp.json()

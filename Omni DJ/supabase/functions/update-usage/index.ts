@@ -3,27 +3,24 @@
  *
  * Server-side quota bookkeeping for the Omni DJ desktop bundle.
  * The shipped .app cannot hold SUPABASE_SERVICE_ROLE_KEY, so all
- * quota reads, rolling-window resets and increments are routed
- * through this function. JWT verification is REQUIRED.
+ * quota reads, reservations and releases are routed through this
+ * function. JWT verification is REQUIRED.
  *
- * Flow:
- *   Bundle .app   POST /functions/v1/update-usage  this function
- *     (user JWT)                                     SERVICE_ROLE
- *                                                    profiles row
+ * SESSIE 83 (2026-06-11) - rewritten per PLAN-QUOTA-PAYMENT-HARDENING:
+ *   - Plan limits now come from the `plan_config` table (single source
+ *     of truth), not a hardcoded constant.
+ *   - Counting is atomic via the reserve_quota / release_quota /
+ *     finalise_quota Postgres RPCs (migration 012). No more
+ *     read-modify-write races.
+ *   - New actions: `reserve` and `release` and `finalize` (all take a
+ *     job_id) alongside the existing `get`.
+ *   - `increment` is kept as a backward-compatibility alias for older
+ *     DMGs in the field: it reserves under a synthetic job id and
+ *     returns the old `{ ok, used }` shape.
  *
- * POST body:    { action: "get" | "increment" }
- * Header:       Authorization: Bearer <supabase access token>
- *
- * Responses:
- *   action=get -> {
- *       ok: true,
- *       profile: { id, plan, usage_this_period, quota_reset_date, ... },
- *       plan, used, limit, remaining, reset_date, reset_in_days
- *   }
- *   action=increment -> {
- *       ok: true,
- *       used: <new usage_this_period>
- *   }
+ * POST body: { action: "get" | "reserve" | "release" | "finalize" | "increment",
+ *              job_id?: string }
+ * Header:    Authorization: Bearer <supabase access token>
  *
  * Deploy (WITH JWT verification, no --no-verify-jwt):
  *   cd "/Users/sjuulsmits/Documents/Claude/Projects/Omni DJ/Omni DJ"
@@ -37,6 +34,7 @@ declare const Deno: {
   env: { get(key: string): string | undefined };
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
+declare const crypto: { randomUUID(): string };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -46,10 +44,12 @@ if (!SUPABASE_SERVICE_ROLE_KEY) {
   console.error('SUPABASE_SERVICE_ROLE_KEY ontbreekt  quota-updates zullen falen');
 }
 
-const PLAN_LIMITS: Record<string, number> = {
+// Fallback only for the degraded case where plan_config cannot be read.
+// The authoritative numbers live in the plan_config table.
+const FALLBACK_LIMITS: Record<string, number | null> = {
   free: 2,
   pro: 10,
-  studio: Number.POSITIVE_INFINITY,
+  studio: null,
 };
 
 const corsHeaders = {
@@ -72,20 +72,35 @@ function jsonError(status: number, message: string): Response {
 function parsePgTimestamp(value: string | null | undefined): Date | null {
   if (!value) return null;
   try {
-    const s = value.endsWith('Z') ? value : value;
-    const d = new Date(s);
+    const d = new Date(value);
     return Number.isNaN(d.getTime()) ? null : d;
   } catch {
     return null;
   }
 }
 
-function buildSnapshot(profile: Record<string, unknown>) {
+type ServiceClient = ReturnType<typeof createClient>;
+
+/** Read plan limits from plan_config. NULL monthly_limit means unlimited. */
+async function loadPlanLimits(serviceClient: ServiceClient): Promise<Record<string, number | null>> {
+  const { data, error } = await serviceClient.from('plan_config').select('plan, monthly_limit');
+  if (error || !data || data.length === 0) {
+    console.warn('plan_config read failed, using fallback limits', error?.message);
+    return { ...FALLBACK_LIMITS };
+  }
+  const map: Record<string, number | null> = {};
+  for (const row of data as Array<{ plan: string; monthly_limit: number | null }>) {
+    map[String(row.plan).toLowerCase()] = row.monthly_limit;
+  }
+  return map;
+}
+
+function buildSnapshot(profile: Record<string, unknown>, limits: Record<string, number | null>) {
   const planRaw = String(profile.plan ?? 'free').toLowerCase();
-  const plan = PLAN_LIMITS[planRaw] !== undefined ? planRaw : 'free';
-  const limit = PLAN_LIMITS[plan];
+  const plan = planRaw in limits ? planRaw : 'free';
+  const limit = plan in limits ? limits[plan] : FALLBACK_LIMITS.free;
   const used = Number(profile.usage_this_period ?? 0) || 0;
-  const remaining = limit === Number.POSITIVE_INFINITY ? null : Math.max(0, limit - used);
+  const remaining = limit === null || limit === undefined ? null : Math.max(0, limit - used);
   const resetDate = parsePgTimestamp(profile.quota_reset_date as string | null);
   const now = new Date();
   const resetInDays =
@@ -94,14 +109,16 @@ function buildSnapshot(profile: Record<string, unknown>) {
     profile,
     plan,
     used,
-    limit: limit === Number.POSITIVE_INFINITY ? null : limit,
+    limit: limit ?? null,
     remaining,
     reset_date: profile.quota_reset_date ?? null,
     reset_in_days: resetInDays,
   };
 }
 
-async function readAndRollProfile(serviceClient: ReturnType<typeof createClient>, userId: string) {
+/** Read the profile and roll the 30-day window if expired (get-path only;
+ * reserve/release roll the window inside the RPC). */
+async function readAndRollProfile(serviceClient: ServiceClient, userId: string) {
   const { data: profile, error } = await serviceClient
     .from('profiles')
     .select('*')
@@ -133,6 +150,23 @@ async function readAndRollProfile(serviceClient: ReturnType<typeof createClient>
     }
   }
   return { ok: true as const, profile: profile as Record<string, unknown> };
+}
+
+/** Call one of the migration-012 quota RPCs and unwrap the jsonb result. */
+async function callQuotaRpc(
+  serviceClient: ServiceClient,
+  fn: 'reserve_quota' | 'release_quota' | 'finalise_quota',
+  userId: string,
+  jobId: string,
+): Promise<{ ok: boolean; [key: string]: unknown }> {
+  const { data, error } = await serviceClient.rpc(fn, { p_user: userId, p_job: jobId });
+  if (error) {
+    return { ok: false, error: `${fn} failed: ${error.message}` };
+  }
+  if (data && typeof data === 'object') {
+    return data as { ok: boolean; [key: string]: unknown };
+  }
+  return { ok: false, error: `${fn} returned an unexpected payload` };
 }
 
 Deno.serve(async (req: Request) => {
@@ -172,29 +206,37 @@ Deno.serve(async (req: Request) => {
     return jsonError(400, 'Body must be JSON');
   }
   const action = String(body.action ?? '').toLowerCase();
-  if (!['get', 'increment'].includes(action)) {
-    return jsonError(400, `Unknown action '${action}'. Expected 'get' or 'increment'.`);
+  const validActions = ['get', 'reserve', 'release', 'finalize', 'finalise', 'increment'];
+  if (!validActions.includes(action)) {
+    return jsonError(400, `Unknown action '${action}'. Expected one of: ${validActions.join(', ')}.`);
   }
 
   if (action === 'get') {
     const result = await readAndRollProfile(serviceClient, userId);
     if (!result.ok) return jsonError(500, result.error);
-    return jsonResponse(200, { ok: true, ...buildSnapshot(result.profile) });
+    const limits = await loadPlanLimits(serviceClient);
+    return jsonResponse(200, { ok: true, ...buildSnapshot(result.profile, limits) });
   }
 
-  // action === 'increment'  read current, write +1.
-  // Acceptable race profile for a one-user-per-machine local app, same as
-  // the Python-side _increment_usage. Swap for an RPC if multi-device.
-  const result = await readAndRollProfile(serviceClient, userId);
-  if (!result.ok) return jsonError(500, result.error);
-  const cur = Number((result.profile as { usage_this_period?: number }).usage_this_period ?? 0) || 0;
-  const newVal = cur + 1;
-  const { error: incErr } = await serviceClient
-    .from('profiles')
-    .update({ usage_this_period: newVal })
-    .eq('id', userId);
-  if (incErr) {
-    return jsonError(500, `quota increment failed: ${incErr.message}`);
+  if (action === 'reserve' || action === 'release' || action === 'finalize' || action === 'finalise') {
+    const jobId = String(body.job_id ?? '').trim();
+    if (!jobId) return jsonError(400, `Action '${action}' requires a job_id`);
+    const fn = action === 'reserve' ? 'reserve_quota'
+             : action === 'release' ? 'release_quota'
+             : 'finalise_quota';
+    const res = await callQuotaRpc(serviceClient, fn, userId, jobId);
+    if (!res.ok) return jsonError(500, String(res.error ?? `${action} failed`));
+    return jsonResponse(200, res);
   }
-  return jsonResponse(200, { ok: true, used: newVal });
+
+  // action === 'increment'  backward-compatibility alias for older DMGs.
+  // Old clients call this once at the END of a successful analysis and only
+  // read `used` back. We map it onto a reserve under a synthetic job id so
+  // the counting still goes through the atomic RPC. If the user is at their
+  // limit the reserve refuses and `used` simply stays where it was, which
+  // is strictly fairer than the old unconditional increment.
+  const legacyJob = `legacy-${crypto.randomUUID()}`;
+  const res = await callQuotaRpc(serviceClient, 'reserve_quota', userId, legacyJob);
+  if (!res.ok) return jsonError(500, String(res.error ?? 'increment failed'));
+  return jsonResponse(200, { ok: true, used: Number(res.used ?? 0) });
 });

@@ -961,6 +961,25 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
     """Background processing with granular progress tracking."""
     audio_path = os.path.join(UPLOAD_DIR, f"{job_id}.wav")
 
+    # SESSIE 83: reserve-at-start vangnet. De upload-endpoints reserveren
+    # zelf al (quota_reserved=True in de job); dit pad dekt de watch-folder
+    # daemon en elke andere entree die geen endpoint-reserve deed. Bij een
+    # technische fout (offline) laten we de analyse doorgaan en telt het
+    # einde-pad alsnog (degraded mode).
+    with jobs_lock:
+        _j0 = jobs.get(job_id) or {}
+        _q_user = _j0.get('user_id')
+        _q_token = _j0.get('access_token')
+        _q_reserved = bool(_j0.get('quota_reserved'))
+    if _q_user and not _q_reserved:
+        _r = _reserve_quota(_q_user, job_id, access_token=_q_token)
+        if _r.get('ok') and not _r.get('allowed'):
+            _update_job(job_id, status='error', error='quota_exceeded',
+                        message='Monthly set limit reached. Upgrade to keep going.')
+            return
+        if _r.get('ok'):
+            _update_job(job_id, quota_reserved=True)
+
     try:
         _update_job(job_id, status='extracting_audio',
                     message='Reading your live DJ set...')
@@ -1021,10 +1040,12 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
         # clean status so the dashboard, the watch-folder daemon and the
         # quota-counter all see a coherent terminal state. We deliberately
         # mark status='done' (not 'error') because the analysis itself
-        # succeeded; there just isn't anything to cut. usage_counted stays
-        # False so an empty set doesn't burn a quota slot.
+        # succeeded; there just isn't anything to cut. SESSIE 83: de plek is
+        # bij de start gereserveerd, dus hier expliciet teruggeven zodat een
+        # lege set geen quota-plek verbrandt (zelfde beleid als voorheen).
         if not clips:
             log.info("Job %s: analyser found 0 clips — skipping cut/encode.", job_id)
+            _release_quota_for_job(job_id)
             _update_job(
                 job_id,
                 status='done',
@@ -1209,18 +1230,32 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
         _update_progress(job_id, stage='done', stage_index=8, percent=100)
         _update_job(job_id, status='done', message=f'Done! {len(results)} clips ready.')
 
-        # Phase 3: increment quota counter exactly once per successfully
-        # completed analysis. The `usage_counted` flag keeps this idempotent
-        # if _process_job ever runs twice for the same job (resume path).
+        # SESSIE 83: de plek is al bij de START gereserveerd (reserve-at-start),
+        # dus hier geen increment meer. Dat elimineert de race met de Stripe-
+        # webhook-reset bij een plan-upgrade mid-run (Sectie 4 van het plan):
+        # de webhook mag usage gerust naar 0 resetten, wij tellen niets bij.
+        # We finaliseren alleen de reservering. `usage_counted` blijft de
+        # idempotentievlag voor het resume-pad.
         with jobs_lock:
             j = jobs.get(job_id) or {}
             already_counted = bool(j.get('usage_counted'))
             user_id_for_quota = j.get('user_id')
             access_token_for_quota = j.get('access_token')
+            was_reserved = bool(j.get('quota_reserved'))
         if user_id_for_quota and not already_counted:
-            new_count = _increment_usage(user_id_for_quota, access_token=access_token_for_quota)
-            if new_count is not None:
+            if was_reserved:
+                _finalise_quota(user_id_for_quota, job_id,
+                                access_token=access_token_for_quota)
                 _update_job(job_id, usage_counted=True)
+            else:
+                # Degraded pad: de start-reserve kon eerder niet (offline).
+                # Tel alsnog via een verse reserve (idempotent per job_id)
+                # zodat de teller niet structureel sets mist. Review R5: de
+                # vlaggen alleen zetten als er ECHT gereserveerd is.
+                r = _reserve_quota(user_id_for_quota, job_id,
+                                   access_token=access_token_for_quota)
+                if r.get('ok') and r.get('allowed'):
+                    _update_job(job_id, usage_counted=True, quota_reserved=True)
 
         # Persist to history (lock-free helper — reads a snapshot)
         snap = _get_snapshot(job_id)
@@ -1241,6 +1276,9 @@ def _process_job(job_id, video_path, clip_duration, min_gap, formats,
                 jobs[job_id]['message'] = str(e)
                 jobs[job_id]['traceback'] = tb_text
                 jobs[job_id].setdefault('progress', {})['stage'] = 'error'
+        # SESSIE 83: mislukte analyse geeft de gereserveerde plek terug
+        # (idempotent, best-effort; kan de teller nooit negatief duwen).
+        _release_quota_for_job(job_id)
 
     finally:
         # Always remove the analysis-only audio file
@@ -1681,15 +1719,53 @@ def api_quota():
 
 # ---------------------------------------------------------------------------
 # Plan-gating (Phase 3) — quota counter + tier limits.
-# Single source of truth for "how many sets per 30-day window per plan".
-# Used by upload endpoints (gate), _process_job (increment), /api/quota (read).
+# SESSIE 83: de bron van waarheid voor de limieten is nu de `plan_config`
+# tabel in Supabase (migratie 012). DEFAULT_PLAN_LIMITS is alleen het
+# offline/degraded vangnet. Tellen gebeurt atomair via reserve_quota /
+# release_quota / finalise_quota (reserve-at-start, zie het plan-document
+# PLAN-QUOTA-PAYMENT-HARDENING-2026-06-11.md).
 # ---------------------------------------------------------------------------
 
-PLAN_LIMITS = {
+DEFAULT_PLAN_LIMITS = {
     'free':   2,
     'pro':    10,
-    'studio': float('inf'),
+    'studio': None,   # None betekent onbeperkt (zelfde conventie als plan_config)
 }
+
+_plan_limits_cache = {'data': None, 'ts': 0.0}
+PLAN_LIMITS_TTL_SECONDS = 300.0
+
+
+def _plan_limits():
+    """SESSIE 83: lees de maandlimieten uit plan_config (cache 5 min).
+    Retourneert {plan: int | float('inf')}. Valt terug op DEFAULT_PLAN_LIMITS
+    als er geen admin-client is of de read faalt (offline/degraded)."""
+    now = time.time()
+    cached = _plan_limits_cache['data']
+    if cached is not None and (now - _plan_limits_cache['ts']) < PLAN_LIMITS_TTL_SECONDS:
+        return cached
+    limits = None
+    if supabase_admin is not None:
+        try:
+            resp = supabase_admin.table('plan_config').select('plan, monthly_limit').execute()
+            rows = getattr(resp, 'data', None) or []
+            if rows:
+                limits = {}
+                for r in rows:
+                    lim = r.get('monthly_limit')
+                    limits[str(r.get('plan') or '').strip().lower()] = (
+                        float('inf') if lim is None else int(lim)
+                    )
+        except Exception as e:
+            log.warning('plan_config read failed, fallback limits: %s', e)
+    if not limits:
+        if cached is not None:
+            return cached  # oude cache is beter dan flappen naar de fallback
+        limits = {k: (float('inf') if v is None else v)
+                  for k, v in DEFAULT_PLAN_LIMITS.items()}
+    _plan_limits_cache['data'] = limits
+    _plan_limits_cache['ts'] = now
+    return limits
 
 
 def _parse_pg_timestamp(value):
@@ -1763,10 +1839,13 @@ def _get_or_refresh_profile(user_id, access_token=None):
     if not profile:
         return {'ok': False, 'error': 'profile not found'}
 
+    limits = _plan_limits()
     plan = (profile.get('plan') or 'free').strip().lower()
-    if plan not in PLAN_LIMITS:
+    if plan not in limits:
         plan = 'free'
-    limit = PLAN_LIMITS[plan]
+    limit = limits.get(plan)
+    if limit is None:
+        limit = float('inf') if plan == 'studio' else DEFAULT_PLAN_LIMITS.get(plan) or 2
 
     used = int(profile.get('usage_this_period') or 0)
     reset_date = _parse_pg_timestamp(profile.get('quota_reset_date'))
@@ -1813,47 +1892,107 @@ def _get_or_refresh_profile(user_id, access_token=None):
     }
 
 
-def _increment_usage(user_id, access_token=None):
-    """Bump usage_this_period by 1. Called once per successfully completed
-    analysis from inside _process_job. Bypasses RLS via supabase_admin.
-    Logs and swallows errors  never raises into the worker thread.
-    Returns the new usage count, or None on failure.
-
-    SESSIE 30 - if supabase_admin is None (bundled .app) and access_token is
-    given, increment via the update-usage edge function instead.
-    """
-    if not user_id:
-        return None
+def _call_quota_rpc(rpc_name, edge_action, user_id, job_id, access_token=None):
+    """SESSIE 83: gedeelde transportlaag voor de drie quota-RPC's uit
+    migratie 012. In dev (supabase_admin aanwezig) rechtstreeks via de
+    service_role RPC; in de bundle via de update-usage edge function met
+    de JWT van de gebruiker. Retourneert altijd een dict met 'ok'."""
+    if not user_id or not job_id:
+        return {'ok': False, 'error': 'user_id of job_id ontbreekt'}
     if supabase_admin is None:
         if not access_token:
-            return None
+            return {'ok': False, 'error': 'geen supabase_admin en geen access_token'}
         try:
             from auth import call_update_usage_edge_function
-            edge = call_update_usage_edge_function(access_token, 'increment')
+            edge = call_update_usage_edge_function(access_token, edge_action, job_id=job_id)
         except Exception as e:
-            log.warning('Quota increment edge call raised for %s: %s', user_id, e)
-            return None
-        if not edge.get('ok'):
-            log.warning('Quota increment edge function failed for %s: %s', user_id, edge.get('error'))
-            return None
-        new_val = int(edge.get('used') or 0)
-        log.info('Quota incremented via edge function for %s -> %d', user_id, new_val)
-        return new_val
+            return {'ok': False, 'error': f'edge {edge_action} raised: {type(e).__name__}: {e}'}
+        if not isinstance(edge, dict):
+            return {'ok': False, 'error': f'edge {edge_action}: onverwacht antwoord'}
+        return edge
     try:
-        # Read-modify-write. Acceptable race profile for a one-user-per-machine
-        # local app. If we go multi-device for a single account, swap this for
-        # an atomic Postgres RPC (UPDATE ... SET usage = usage + 1 RETURNING).
-        resp = supabase_admin.table('profiles').select('usage_this_period').eq('id', user_id).single().execute()
-        cur = int((getattr(resp, 'data', None) or {}).get('usage_this_period') or 0)
-        new_val = cur + 1
-        supabase_admin.table('profiles').update({
-            'usage_this_period': new_val,
-        }).eq('id', user_id).execute()
-        log.info('Quota incremented for %s: %d -> %d', user_id, cur, new_val)
-        return new_val
+        resp = supabase_admin.rpc(rpc_name, {'p_user': user_id, 'p_job': str(job_id)}).execute()
+        data = getattr(resp, 'data', None)
+        if isinstance(data, dict):
+            return data
+        return {'ok': False, 'error': f'{rpc_name}: onverwacht antwoord'}
     except Exception as e:
-        log.warning('Quota increment failed for %s: %s', user_id, e)
-        return None
+        return {'ok': False, 'error': f'{rpc_name} failed: {type(e).__name__}: {e}'}
+
+
+def _reserve_quota(user_id, job_id, access_token=None):
+    """SESSIE 83: reserve-at-start (fix A+B uit het hardening-plan). Claimt
+    atomair 1 analyse-plek voor deze job. Idempotent per job_id: nogmaals
+    aanroepen voor dezelfde job telt nooit dubbel.
+
+    Returns het RPC/edge-resultaat:
+      {'ok': True, 'allowed': bool, 'plan', 'used', 'limit', 'remaining',
+       'reset_date', 'reset_in_days', ...}
+      of {'ok': False, 'error': '...'} bij een technische fout."""
+    res = _call_quota_rpc('reserve_quota', 'reserve', user_id, job_id, access_token)
+    if res.get('ok'):
+        log.info('Quota reserve voor %s job %s: allowed=%s used=%s/%s',
+                 user_id, job_id, res.get('allowed'), res.get('used'), res.get('limit'))
+    else:
+        log.warning('Quota reserve faalde voor %s job %s: %s',
+                    user_id, job_id, res.get('error'))
+    return res
+
+
+def _release_quota(user_id, job_id, access_token=None):
+    """SESSIE 83: geef een gereserveerde plek terug (mislukte of lege
+    analyse). Idempotent en met floor op 0 aan de serverkant, dus veilig
+    om vaker aan te roepen, ook na een webhook-reset. Best-effort."""
+    res = _call_quota_rpc('release_quota', 'release', user_id, job_id, access_token)
+    if res.get('ok'):
+        log.info('Quota release voor %s job %s: released=%s used=%s',
+                 user_id, job_id, res.get('released'), res.get('used'))
+    else:
+        log.warning('Quota release faalde voor %s job %s: %s',
+                    user_id, job_id, res.get('error'))
+    return res
+
+
+def _finalise_quota(user_id, job_id, access_token=None):
+    """SESSIE 83: markeer de reservering als definitief na een geslaagde
+    analyse. Geen tellerwijziging (de plek was al geclaimd bij de start);
+    voorkomt alleen dat een latere verdwaalde release nog decrementeert.
+    Best-effort."""
+    res = _call_quota_rpc('finalise_quota', 'finalize', user_id, job_id, access_token)
+    if not res.get('ok'):
+        log.warning('Quota finalise faalde voor %s job %s: %s',
+                    user_id, job_id, res.get('error'))
+    return res
+
+
+def _snap_from_reserve(res):
+    """SESSIE 83: normaliseer een reserve-resultaat naar de snapshot-vorm
+    die _quota_block_response verwacht (limit None -> float inf)."""
+    limit = res.get('limit')
+    return {
+        'plan': res.get('plan') or 'free',
+        'used': int(res.get('used') or 0),
+        'limit': float('inf') if limit is None else limit,
+        'reset_in_days': res.get('reset_in_days'),
+        'reset_date': res.get('reset_date'),
+    }
+
+
+def _release_quota_for_job(job_id):
+    """SESSIE 83: release op basis van de in-memory job (user_id +
+    access_token uit de jobs-dict). Aangeroepen vanuit _process_job bij
+    een mislukte of lege analyse. Best-effort, raised nooit."""
+    try:
+        with jobs_lock:
+            j = jobs.get(job_id) or {}
+            user_id = j.get('user_id')
+            token = j.get('access_token')
+            reserved = bool(j.get('quota_reserved'))
+        if not user_id or not reserved:
+            return
+        _release_quota(user_id, job_id, access_token=token)
+    except Exception as e:
+        log.warning('Quota release-for-job faalde voor %s: %s', job_id, e)
 
 
 def _quota_block_response(snap):
@@ -2109,6 +2248,17 @@ def _require_job_access(job_id, allow_query_token=False):
     if owner != user_info['user_id']:
         # Don't reveal existence to other users.
         return None, None, (jsonify({'ok': False, 'error': 'Job not found'}), 404)
+    # SESSIE 83 (review R2): ververs het opgeslagen access_token van de job
+    # met het verse token van deze (geauthenticeerde eigenaar-)call. De
+    # frontend pollt /api/status continu met een vers token; zo kan de
+    # release/finalise aan het einde van een lange set in de bundle niet
+    # meer stranden op een verlopen JWT van het start-moment.
+    fresh_token = user_info.get('access_token')
+    if fresh_token:
+        with jobs_lock:
+            live = jobs.get(job_id)
+            if live is not None and live.get('user_id') == user_info['user_id']:
+                live['access_token'] = fresh_token
     return user_info, job, None
 
 
@@ -4839,6 +4989,9 @@ def upload():
     # Phase 3: auth + quota gate runs BEFORE file save. Anonymous calls or
     # expired tokens get 401, plan limit reached gets 402 — neither writes
     # bytes to disk or starts ffmpeg.
+    # SESSIE 83: deze snapshot-check is alleen UX (snelle 402 voordat er
+    # bytes geupload worden). De ECHTE, atomaire claim gebeurt verderop met
+    # _reserve_quota, vlak voor de job start (fix A: parallelle starts).
     user_info, err = _require_authed_user()
     if err:
         return err
@@ -4944,50 +5097,84 @@ def upload():
             pass
         return jsonify({'error': f'Invalid video file: {info}'}), 422
 
-    # Persist settings
-    _save_settings({
-        'clip_duration': clip_duration, 'min_gap': min_gap,
-        'sensitivity': sensitivity, 'formats': formats,
-        'use_demucs': use_demucs, 'normalize_audio': normalize_audio,
-        'bars_before': bars_before, 'bars_after': bars_after,
-    })
+    # SESSIE 83: atomaire reservering (fix A+B). HIER wordt de plek echt
+    # geclaimd, na alle validatie en vlak voor de job start, zodat twee
+    # parallelle uploads nooit allebei "nog 1 plek vrij" kunnen zien en een
+    # afgekeurde upload nooit een plek verbrandt.
+    reserve = _reserve_quota(user_id, job_id, access_token=user_info.get('access_token'))
+    if not reserve.get('ok'):
+        try:
+            os.remove(video_path)
+        except OSError:
+            pass
+        return jsonify({'ok': False,
+                        'error': reserve.get('error', 'quota reserve failed')}), 500
+    if not reserve.get('allowed'):
+        try:
+            os.remove(video_path)
+        except OSError:
+            pass
+        return _quota_block_response(_snap_from_reserve(reserve))
 
-    # Create job (lock protects the shared jobs dict)
-    # Phase-4 deelstap 2c — `fps` captured during ffprobe validation is kept
-    # at job-level. _get_snapshot() injects it into every clip below so the
-    # editor can display a frame counter without an extra round-trip.
-    with jobs_lock:
-        jobs[job_id] = {
-            'id': job_id,
-            'filename': safe_name,
-            'video_path': video_path,
-            'user_id': user_id,                # Phase 3: who to bill for this set
-            'access_token': user_info.get('access_token'),  # SESSIE 30: routed through update-usage edge function when no service_role
-            'workspace_id': current_workspace_id(user_info, required=False)[0],  # SESSIE 74 fase 2b: brand-scope van de job
-            'usage_counted': False,            # Phase 3: idempotency for increment
-            'status': 'queued',
-            'message': 'Upload complete, starting analysis...',
-            'clips': [], 'results': [], 'waveform': [], 'filmstrip': [],
-            'duration': 0, 'video_info': {}, 'bpm': {},
-            'fps': info.get('fps') if isinstance(info, dict) else None,
-            'favorites': [],
-            'settings': {
-                'clip_duration': clip_duration, 'min_gap': min_gap,
-                'sensitivity': sensitivity, 'formats': formats,
-                'use_demucs': use_demucs, 'normalize_audio': normalize_audio,
-                'overlay_text': overlay_text,
-                'bars_before': bars_before, 'bars_after': bars_after,
+    # SESSIE 83 (review R1): alles tussen de geslaagde reserve en de
+    # thread-start in een try/except, zodat een onverwachte fout hier de
+    # zojuist geclaimde plek netjes teruggeeft in plaats van 'm te lekken.
+    try:
+        # Persist settings
+        _save_settings({
+            'clip_duration': clip_duration, 'min_gap': min_gap,
+            'sensitivity': sensitivity, 'formats': formats,
+            'use_demucs': use_demucs, 'normalize_audio': normalize_audio,
+            'bars_before': bars_before, 'bars_after': bars_after,
+        })
+
+        # Create job (lock protects the shared jobs dict)
+        # Phase-4 deelstap 2c - `fps` captured during ffprobe validation is kept
+        # at job-level. _get_snapshot() injects it into every clip below so the
+        # editor can display a frame counter without an extra round-trip.
+        with jobs_lock:
+            jobs[job_id] = {
+                'id': job_id,
+                'filename': safe_name,
+                'video_path': video_path,
+                'user_id': user_id,                # Phase 3: who to bill for this set
+                'access_token': user_info.get('access_token'),  # SESSIE 30: routed through update-usage edge function when no service_role
+                'workspace_id': current_workspace_id(user_info, required=False)[0],  # SESSIE 74 fase 2b: brand-scope van de job
+                'usage_counted': False,            # Phase 3: idempotency for the resume path
+                'quota_reserved': True,            # SESSIE 83: plek atomair geclaimd bij start
+                'status': 'queued',
+                'message': 'Upload complete, starting analysis...',
+                'clips': [], 'results': [], 'waveform': [], 'filmstrip': [],
+                'duration': 0, 'video_info': {}, 'bpm': {},
+                'fps': info.get('fps') if isinstance(info, dict) else None,
+                'favorites': [],
+                'settings': {
+                    'clip_duration': clip_duration, 'min_gap': min_gap,
+                    'sensitivity': sensitivity, 'formats': formats,
+                    'use_demucs': use_demucs, 'normalize_audio': normalize_audio,
+                    'overlay_text': overlay_text,
+                    'bars_before': bars_before, 'bars_after': bars_after,
+                }
             }
-        }
 
-    thread = threading.Thread(
-        target=_process_job,
-        args=(job_id, video_path, clip_duration, min_gap, formats,
-              sensitivity, use_demucs, normalize_audio, overlay_text,
-              bars_before, bars_after)
-    )
-    thread.daemon = True
-    thread.start()
+        thread = threading.Thread(
+            target=_process_job,
+            args=(job_id, video_path, clip_duration, min_gap, formats,
+                  sensitivity, use_demucs, normalize_audio, overlay_text,
+                  bars_before, bars_after)
+        )
+        thread.daemon = True
+        thread.start()
+    except Exception as e:
+        log.exception('upload: fout na reserve, plek wordt teruggegeven (%s)', job_id)
+        _release_quota(user_id, job_id, access_token=user_info.get('access_token'))
+        with jobs_lock:
+            jobs.pop(job_id, None)
+        try:
+            os.remove(video_path)
+        except OSError:
+            pass
+        return jsonify({'ok': False, 'error': 'Upload kon niet gestart worden.'}), 500
 
     # SESSIE 35 — audit log
     _audit(
@@ -5077,6 +5264,8 @@ def upload_local():
     # Phase 3: auth + quota gate. Same logic as /api/upload — must run before
     # any file validation / proxy work so a quota-blocked user sees the
     # upgrade modal instantly.
+    # SESSIE 83: dit is de snelle UX-check; de atomaire claim volgt verderop
+    # via _reserve_quota, vlak voor de job geregistreerd wordt.
     user_info, err = _require_authed_user()
     if err:
         return err
@@ -5162,39 +5351,57 @@ def upload_local():
     normalize_audio = bool(_g('normalize_audio', False))
     overlay_text    = _g('overlay_text', None)
 
-    with jobs_lock:
-        jobs[job_id] = {
-            'id': job_id,
-            'filename': safe_name,
-            'video_path': raw_path,           # SOURCE LIVES IN PLACE — do not delete on cleanup
-            'no_copy': True,
-            'user_id': user_id,                # Phase 3: who to bill for this set
-            'access_token': user_info.get('access_token'),  # SESSIE 30: routed through update-usage edge function when no service_role
-            'workspace_id': current_workspace_id(user_info, required=False)[0],  # SESSIE 74 fase 2b: brand-scope van de job
-            'usage_counted': False,            # Phase 3: idempotency for increment
-            'status': 'queued',
-            'message': 'Local source registered — starting analysis...',
-            'clips': [], 'results': [], 'waveform': [], 'filmstrip': [],
-            'duration': duration, 'video_info': info if isinstance(info, dict) else {},
-            'fps': info.get('fps') if isinstance(info, dict) else None,  # Phase 4 deelstap 2c
-            'bpm': {}, 'favorites': [],
-            'settings': {
-                'clip_duration': clip_duration, 'min_gap': min_gap,
-                'sensitivity': sensitivity, 'formats': formats,
-                'use_demucs': use_demucs, 'normalize_audio': normalize_audio,
-                'overlay_text': overlay_text,
-                'bars_before': bars_before, 'bars_after': bars_after,
-            },
-        }
+    # SESSIE 83: atomaire reservering (fix A+B), na validatie en vlak voor
+    # de job geregistreerd wordt. Zelfde patroon als /api/upload.
+    reserve = _reserve_quota(user_id, job_id, access_token=user_info.get('access_token'))
+    if not reserve.get('ok'):
+        return jsonify({'ok': False,
+                        'error': reserve.get('error', 'quota reserve failed')}), 500
+    if not reserve.get('allowed'):
+        return _quota_block_response(_snap_from_reserve(reserve))
 
-    thread = threading.Thread(
-        target=_process_job,
-        args=(job_id, raw_path, clip_duration, min_gap, formats,
-              sensitivity, use_demucs, normalize_audio, overlay_text,
-              bars_before, bars_after)
-    )
-    thread.daemon = True
-    thread.start()
+    # SESSIE 83 (review R1): zelfde lek-bescherming als /api/upload.
+    try:
+        with jobs_lock:
+            jobs[job_id] = {
+                'id': job_id,
+                'filename': safe_name,
+                'video_path': raw_path,           # SOURCE LIVES IN PLACE - do not delete on cleanup
+                'no_copy': True,
+                'user_id': user_id,                # Phase 3: who to bill for this set
+                'access_token': user_info.get('access_token'),  # SESSIE 30: routed through update-usage edge function when no service_role
+                'workspace_id': current_workspace_id(user_info, required=False)[0],  # SESSIE 74 fase 2b: brand-scope van de job
+                'usage_counted': False,            # Phase 3: idempotency for the resume path
+                'quota_reserved': True,            # SESSIE 83: plek atomair geclaimd bij start
+                'status': 'queued',
+                'message': 'Local source registered - starting analysis...',
+                'clips': [], 'results': [], 'waveform': [], 'filmstrip': [],
+                'duration': duration, 'video_info': info if isinstance(info, dict) else {},
+                'fps': info.get('fps') if isinstance(info, dict) else None,  # Phase 4 deelstap 2c
+                'bpm': {}, 'favorites': [],
+                'settings': {
+                    'clip_duration': clip_duration, 'min_gap': min_gap,
+                    'sensitivity': sensitivity, 'formats': formats,
+                    'use_demucs': use_demucs, 'normalize_audio': normalize_audio,
+                    'overlay_text': overlay_text,
+                    'bars_before': bars_before, 'bars_after': bars_after,
+                },
+            }
+
+        thread = threading.Thread(
+            target=_process_job,
+            args=(job_id, raw_path, clip_duration, min_gap, formats,
+                  sensitivity, use_demucs, normalize_audio, overlay_text,
+                  bars_before, bars_after)
+        )
+        thread.daemon = True
+        thread.start()
+    except Exception:
+        log.exception('upload-local: fout na reserve, plek wordt teruggegeven (%s)', job_id)
+        _release_quota(user_id, job_id, access_token=user_info.get('access_token'))
+        with jobs_lock:
+            jobs.pop(job_id, None)
+        return jsonify({'ok': False, 'error': 'Analyse kon niet gestart worden.'}), 500
     return jsonify({'job_id': job_id, 'no_copy': True, 'estimated_gb': round(est_gb, 1)})
 
 

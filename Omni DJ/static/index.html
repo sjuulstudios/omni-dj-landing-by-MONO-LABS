@@ -7107,6 +7107,130 @@
     border-right: none;
   }
 
+  /* SESSIE 82 - C6 Calendar redesign: grid + rechter-rail + agenda + polish */
+  body.redesign-v2 #view-calendar .cal-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 16px;
+    align-items: start;
+  }
+  body.redesign-v2 #view-calendar .cal-main { min-width: 0; }
+  body.redesign-v2 #view-calendar .cal-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: sticky;
+    top: 12px;
+  }
+  body.redesign-v2 #view-calendar .cal-rail-card {
+    background: var(--v2-bg-elevated);
+    border: 1px solid var(--v2-border-subtle);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  body.redesign-v2 #view-calendar .cal-rail-h {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--v2-text-tertiary);
+    margin: 0 0 10px;
+  }
+  body.redesign-v2 #view-calendar .cal-up-item {
+    display: flex;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--v2-border-subtle);
+    cursor: pointer;
+  }
+  body.redesign-v2 #view-calendar .cal-up-item:first-child { border-top: none; padding-top: 0; }
+  body.redesign-v2 #view-calendar .cal-up-item:hover .cal-up-name { color: var(--v2-accent); }
+  body.redesign-v2 #view-calendar .cal-up-date { flex: 0 0 38px; text-align: center; }
+  body.redesign-v2 #view-calendar .cal-up-day {
+    font-size: 16px; font-weight: 700; color: var(--v2-text-primary); line-height: 1;
+  }
+  body.redesign-v2 #view-calendar .cal-up-mon {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--v2-text-tertiary); margin-top: 2px;
+  }
+  body.redesign-v2 #view-calendar .cal-up-body { min-width: 0; flex: 1; }
+  body.redesign-v2 #view-calendar .cal-up-name {
+    font-size: 13px; color: var(--v2-text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: color .15s;
+  }
+  body.redesign-v2 #view-calendar .cal-up-meta {
+    font-size: 11px; color: var(--v2-text-secondary); margin-top: 2px;
+  }
+  body.redesign-v2 #view-calendar .cal-pc-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 0;
+  }
+  body.redesign-v2 #view-calendar .cal-pc-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto;
+  }
+  body.redesign-v2 #view-calendar .cal-pc-name {
+    flex: 1; font-size: 12px; color: var(--v2-text-secondary);
+  }
+  body.redesign-v2 #view-calendar .cal-pc-count {
+    font-size: 12px; font-weight: 600; color: var(--v2-text-primary);
+  }
+  body.redesign-v2 #view-calendar .cal-rail-empty {
+    font-size: 12px; color: var(--v2-text-tertiary); line-height: 1.5;
+  }
+  body.redesign-v2 #view-calendar .cal-agenda {
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  body.redesign-v2 #view-calendar .cal-ag-day {
+    display: grid; grid-template-columns: 92px 1fr; gap: 14px;
+  }
+  body.redesign-v2 #view-calendar .cal-ag-date { text-align: right; padding-top: 2px; }
+  body.redesign-v2 #view-calendar .cal-ag-date .d {
+    font-size: 20px; font-weight: 700; color: var(--v2-text-primary); line-height: 1;
+  }
+  body.redesign-v2 #view-calendar .cal-ag-date .w {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--v2-text-tertiary); margin-top: 4px;
+  }
+  body.redesign-v2 #view-calendar .cal-ag-date.is-today .d { color: var(--v2-accent); }
+  body.redesign-v2 #view-calendar .cal-ag-items {
+    display: flex; flex-direction: column; gap: 8px;
+    border-left: 1px solid var(--v2-border-subtle); padding-left: 14px;
+  }
+  body.redesign-v2 #view-calendar .cal-ag-item {
+    background: var(--v2-bg-elevated); border: 1px solid var(--v2-border-subtle);
+    border-radius: 10px; padding: 10px 12px; cursor: pointer;
+    transition: border-color .15s;
+  }
+  body.redesign-v2 #view-calendar .cal-ag-item:hover { border-color: var(--v2-border-strong); }
+  body.redesign-v2 #view-calendar .cal-ag-item-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  body.redesign-v2 #view-calendar .cal-ag-time {
+    font-size: 12px; font-weight: 600; color: var(--v2-text-primary);
+  }
+  body.redesign-v2 #view-calendar .cal-ag-plats { display: flex; gap: 5px; flex-wrap: wrap; }
+  body.redesign-v2 #view-calendar .cal-ag-plat {
+    font-size: 10px; padding: 2px 7px; border-radius: 20px;
+    background: var(--v2-bg-hover); color: var(--v2-text-secondary);
+    border: 1px solid var(--v2-border-subtle);
+  }
+  body.redesign-v2 #view-calendar .cal-ag-name {
+    font-size: 13px; color: var(--v2-text-secondary); margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  body.redesign-v2 #view-calendar .cal-agenda-empty {
+    padding: 48px 16px; text-align: center;
+    color: var(--v2-text-tertiary); font-size: 13px;
+  }
+  @media (max-width: 1100px) {
+    body.redesign-v2 #view-calendar .cal-layout { grid-template-columns: 1fr; }
+    body.redesign-v2 #view-calendar .cal-rail { position: static; flex-direction: row; flex-wrap: wrap; }
+    body.redesign-v2 #view-calendar .cal-rail-card { flex: 1 1 240px; }
+  }
+  @media (max-width: 640px) {
+    body.redesign-v2 #view-calendar .cal-ag-day { grid-template-columns: 64px 1fr; }
+  }
+
   /* Schedule modal */
   body.redesign-v2 .v2-modal-bg {
     position: fixed; inset: 0; z-index: 9997;
@@ -9624,12 +9748,12 @@
       <div class="page-head">
         <div>
           <h1>Content Calendar</h1>
-          <p class="sub">Plan a week of content in 10 minutes. Drafts opslaan kan nu, autopublish via Postiz volgt zodra je social-accounts gekoppeld zijn.</p>
+          <p class="sub">Plan a week of content in ten minutes. Save drafts now; auto-publishing through Postiz arrives once your social accounts are connected.</p>
         </div>
       </div>
       <div class="v2-mockbanner">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-        <span>Preview &mdash; drafts blijven lokaal in je browser. Publishing-flow via Postiz volgt later.</span>
+        <span>Preview. Drafts sync to your workspace when you are signed in, otherwise they stay on this device. Auto-publishing through Postiz comes later.</span>
       </div>
       <div class="cal-toolbar">
         <div class="cal-nav">
@@ -9646,6 +9770,7 @@
           <div class="cal-modeswitch" id="cal-modeswitch">
             <button type="button" class="is-on" data-cal-mode="month">Month</button>
             <button type="button" data-cal-mode="week">Week</button>
+            <button type="button" data-cal-mode="agenda">Agenda</button>
           </div>
           <button type="button" class="cal-schedule-btn" onclick="calOpenSchedule()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -9653,11 +9778,19 @@
           </button>
         </div>
       </div>
-      <div id="cal-month-wrap">
-        <div class="cal-grid" id="cal-grid"><!-- renderer fills --></div>
-      </div>
-      <div id="cal-week-wrap" style="display:none">
-        <div class="cal-week" id="cal-week"><!-- renderer fills --></div>
+      <div class="cal-layout">
+        <div class="cal-main">
+          <div id="cal-month-wrap">
+            <div class="cal-grid" id="cal-grid"><!-- renderer fills --></div>
+          </div>
+          <div id="cal-week-wrap" style="display:none">
+            <div class="cal-week" id="cal-week"><!-- renderer fills --></div>
+          </div>
+          <div id="cal-agenda-wrap" style="display:none">
+            <div class="cal-agenda" id="cal-agenda"><!-- renderer fills --></div>
+          </div>
+        </div>
+        <aside class="cal-rail" id="cal-rail"><!-- renderer fills --></aside>
       </div>
     </main>
 
@@ -9778,7 +9911,7 @@
     <div class="v2-modal-bg" id="cal-schedule-modal" onclick="if(event.target===this)calCloseSchedule()">
       <div class="v2-modal" role="dialog" aria-modal="true">
         <h2 id="cal-modal-title">Schedule a post</h2>
-        <p class="modal-sub">Plan een clip op &eacute;&eacute;n of meer kanalen. Draft wordt lokaal opgeslagen.</p>
+        <p class="modal-sub">Plan a clip on one or more channels. Drafts save to your workspace when signed in.</p>
 
         <div class="field">
           <label>Clip</label>
@@ -9789,7 +9922,7 @@
 
         <div class="field">
           <label>Caption</label>
-          <textarea id="cal-caption" placeholder="Schrijf een korte caption&hellip;"></textarea>
+          <textarea id="cal-caption" placeholder="Write a short caption&hellip;"></textarea>
         </div>
 
         <div class="field">
@@ -9803,15 +9936,15 @@
         </div>
 
         <div class="field">
-          <label>Datum &amp; tijd</label>
+          <label>Date &amp; time</label>
           <input type="datetime-local" id="cal-datetime" />
         </div>
 
         <div class="modal-foot">
           <!-- SESSIE 74 - Slice 4: Verwijder-knop, alleen zichtbaar in edit-modus. -->
-          <button type="button" class="modal-btn" id="cal-delete-btn" onclick="calDeleteSchedule()" style="display:none;margin-right:auto;color:#e06b6b">Verwijder</button>
-          <button type="button" class="modal-btn" onclick="calCloseSchedule()">Annuleer</button>
-          <button type="button" class="modal-btn is-primary" onclick="calSaveSchedule()">Opslaan</button>
+          <button type="button" class="modal-btn" id="cal-delete-btn" onclick="calDeleteSchedule()" style="display:none;margin-right:auto;color:#e06b6b">Delete</button>
+          <button type="button" class="modal-btn" onclick="calCloseSchedule()">Cancel</button>
+          <button type="button" class="modal-btn is-primary" onclick="calSaveSchedule()">Save</button>
         </div>
       </div>
     </div>
@@ -12900,7 +13033,7 @@ window.renderSocial = function renderSocial(){
 
 var V2_CAL_STATE = {
   year: null, month: null,   // null on first render → set to today
-  mode: 'month',             // 'month' | 'week'
+  mode: 'month',             // 'month' | 'week' | 'agenda'
   weekStart: null,           // Date object — first day of currently shown week
   events: null,              // {[ymd]: [event,...]}
   editing: { clipId: null, platforms: [] }
@@ -13008,22 +13141,27 @@ window.renderCalendar = function renderCalendar(){
     V2_CAL_STATE.weekStart.setDate(t.getDate() - dow);
   }
   var lbl = document.getElementById('cal-label');
-  var monthName = new Date(V2_CAL_STATE.year, V2_CAL_STATE.month, 1)
-    .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  if (lbl) lbl.textContent = monthName;
+  if (lbl) {
+    if (V2_CAL_STATE.mode === 'agenda') {
+      lbl.textContent = 'Upcoming';
+    } else {
+      lbl.textContent = new Date(V2_CAL_STATE.year, V2_CAL_STATE.month, 1)
+        .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+  }
 
   var events = _v2LoadCalEvents();
-  var monthWrap = document.getElementById('cal-month-wrap');
-  var weekWrap  = document.getElementById('cal-week-wrap');
-  if (V2_CAL_STATE.mode === 'month') {
-    if (monthWrap) monthWrap.style.display = '';
-    if (weekWrap)  weekWrap.style.display = 'none';
-    _v2RenderMonth(events);
-  } else {
-    if (monthWrap) monthWrap.style.display = 'none';
-    if (weekWrap)  weekWrap.style.display = '';
-    _v2RenderWeek(events);
-  }
+  var monthWrap  = document.getElementById('cal-month-wrap');
+  var weekWrap   = document.getElementById('cal-week-wrap');
+  var agendaWrap = document.getElementById('cal-agenda-wrap');
+  var mode = V2_CAL_STATE.mode;
+  if (monthWrap)  monthWrap.style.display  = (mode === 'month')  ? '' : 'none';
+  if (weekWrap)   weekWrap.style.display   = (mode === 'week')   ? '' : 'none';
+  if (agendaWrap) agendaWrap.style.display = (mode === 'agenda') ? '' : 'none';
+  if (mode === 'week') _v2RenderWeek(events);
+  else if (mode === 'agenda') _v2RenderAgenda(events);
+  else _v2RenderMonth(events);
+  _v2RenderRail(events);
 };
 
 function _v2RenderMonth(events){
@@ -13092,6 +13230,103 @@ function _v2RenderWeek(events){
     });
   });
   wk.innerHTML = html;
+}
+
+// SESSIE 82 - C6: platform-meta + flatten/upcoming helpers + agenda-view + rechter-rail.
+var _V2_PLAT_META = {
+  tiktok:    { name: 'TikTok',    color: '#FE2C55' },
+  instagram: { name: 'Instagram', color: '#EE2A7B' },
+  youtube:   { name: 'YouTube',   color: '#FF0000' },
+  x:         { name: 'X',         color: '#E7E5E1' }
+};
+function _v2FlatEvents(events){
+  // Flatten {ymd:[ev]} into one array, sorted ascending by datetime.
+  var out = [];
+  Object.keys(events || {}).forEach(function(ymd){
+    (events[ymd] || []).forEach(function(ev){
+      var t = (ev.time && /^\d{2}:\d{2}/.test(ev.time)) ? ev.time.slice(0, 5) : '00:00';
+      out.push({ ev: ev, ymd: ymd, time: t, dt: new Date(ymd + 'T' + t + ':00') });
+    });
+  });
+  out.sort(function(a, b){ return a.dt - b.dt; });
+  return out;
+}
+function _v2UpcomingEvents(events){
+  var now = new Date();
+  var startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return _v2FlatEvents(events).filter(function(x){ return x.dt >= startToday; });
+}
+function _v2EventName(ev){
+  if (ev.clipName) return ev.clipName;
+  if (ev.caption) return ev.caption.replace(/\s+/g, ' ').trim().slice(0, 40);
+  return 'Post';
+}
+function _v2RenderAgenda(events){
+  var host = document.getElementById('cal-agenda');
+  if (!host) return;
+  var items = _v2UpcomingEvents(events);
+  if (!items.length){
+    host.innerHTML = '<div class="cal-agenda-empty">No upcoming posts. Pick a day or use the Schedule post button to plan one.</div>';
+    return;
+  }
+  var groups = [], byYmd = {};
+  items.forEach(function(x){
+    if (!byYmd[x.ymd]){ byYmd[x.ymd] = { ymd: x.ymd, list: [] }; groups.push(byYmd[x.ymd]); }
+    byYmd[x.ymd].list.push(x);
+  });
+  var todayStr = new Date().toDateString();
+  host.innerHTML = groups.slice(0, 60).map(function(g){
+    var d = new Date(g.ymd + 'T00:00:00');
+    var isToday = d.toDateString() === todayStr;
+    var rows = g.list.map(function(x){
+      var ev = x.ev;
+      var plats = (ev.platforms || []).map(function(p){
+        var m = _V2_PLAT_META[p];
+        return '<span class="cal-ag-plat">' + _v2Esc(m ? m.name : p) + '</span>';
+      }).join('');
+      return '<div class="cal-ag-item" onclick="calOpenEdit(\'' + _v2Esc(ev.id || '') + '\',\'' + x.ymd + '\')">'
+        +    '<div class="cal-ag-item-top"><span class="cal-ag-time">' + _v2Esc(x.time) + '</span><span class="cal-ag-plats">' + plats + '</span></div>'
+        +    '<div class="cal-ag-name">' + _v2Esc(_v2EventName(ev)) + '</div>'
+        +  '</div>';
+    }).join('');
+    return '<div class="cal-ag-day">'
+      +    '<div class="cal-ag-date' + (isToday ? ' is-today' : '') + '">'
+      +      '<div class="d">' + d.getDate() + '</div>'
+      +      '<div class="w">' + d.toLocaleDateString('en-US', { weekday: 'short' }) + ' &middot; ' + d.toLocaleDateString('en-US', { month: 'short' }) + '</div>'
+      +    '</div>'
+      +    '<div class="cal-ag-items">' + rows + '</div>'
+      +  '</div>';
+  }).join('');
+}
+function _v2RenderRail(events){
+  var host = document.getElementById('cal-rail');
+  if (!host) return;
+  var up = _v2UpcomingEvents(events);
+  var upHtml;
+  if (!up.length){
+    upHtml = '<div class="cal-rail-empty">Nothing scheduled yet. Click a day or use Schedule post.</div>';
+  } else {
+    upHtml = up.slice(0, 6).map(function(x){
+      var ev = x.ev;
+      var d = new Date(x.ymd + 'T00:00:00');
+      var plats = (ev.platforms || []).map(function(p){ var m = _V2_PLAT_META[p]; return m ? m.name : p; }).join(', ');
+      var meta = x.time + (plats ? ' &middot; ' + plats : '');
+      return '<div class="cal-up-item" onclick="calOpenEdit(\'' + _v2Esc(ev.id || '') + '\',\'' + x.ymd + '\')">'
+        +    '<div class="cal-up-date"><div class="cal-up-day">' + d.getDate() + '</div><div class="cal-up-mon">' + d.toLocaleDateString('en-US', { month: 'short' }) + '</div></div>'
+        +    '<div class="cal-up-body"><div class="cal-up-name">' + _v2Esc(_v2EventName(ev)) + '</div><div class="cal-up-meta">' + _v2Esc(meta) + '</div></div>'
+        +  '</div>';
+    }).join('');
+  }
+  var counts = {};
+  up.forEach(function(x){ (x.ev.platforms || []).forEach(function(p){ counts[p] = (counts[p] || 0) + 1; }); });
+  var order = ['tiktok', 'instagram', 'youtube', 'x'];
+  var pcRows = order.map(function(p){
+    var m = _V2_PLAT_META[p];
+    return '<div class="cal-pc-row"><span class="cal-pc-dot" style="background:' + m.color + '"></span><span class="cal-pc-name">' + _v2Esc(m.name) + '</span><span class="cal-pc-count">' + (counts[p] || 0) + '</span></div>';
+  }).join('');
+  host.innerHTML =
+      '<div class="cal-rail-card"><div class="cal-rail-h">Up next</div>' + upHtml + '</div>'
+    + '<div class="cal-rail-card"><div class="cal-rail-h">Posts by platform</div>' + pcRows + '</div>';
 }
 
 window.calPrev = function calPrev(){
@@ -13241,14 +13476,14 @@ window.calSaveSchedule = function calSaveSchedule(){
   var dt = (document.getElementById('cal-datetime')||{}).value || '';
   var modal = document.getElementById('cal-schedule-modal');
   if (!dt) {
-    if (typeof toast === 'function') toast('Kies een datum + tijd', 'bad');
+    if (typeof toast === 'function') toast('Pick a date and time', 'bad');
     return;
   }
   // Gather platforms
   var plats = [];
   if (modal) modal.querySelectorAll('.plat-chip.is-on').forEach(function(b){ plats.push(b.dataset.plat); });
   if (!plats.length) {
-    if (typeof toast === 'function') toast('Selecteer minstens één platform', 'bad');
+    if (typeof toast === 'function') toast('Select at least one platform', 'bad');
     return;
   }
   var d = new Date(dt);
@@ -13280,13 +13515,13 @@ window.calSaveSchedule = function calSaveSchedule(){
     api(_path, { method: _method, body: _body }).then(function(r){
       if (r && r.ok) {
         calCloseSchedule();
-        if (typeof toast === 'function') toast(_editId ? 'Draft bijgewerkt' : 'Draft opgeslagen', 'good');
+        if (typeof toast === 'function') toast(_editId ? 'Draft updated' : 'Draft saved', 'good');
         if (typeof loadCalendarPosts === 'function') loadCalendarPosts();
       } else {
-        if (typeof toast === 'function') toast('Kon draft niet opslaan', 'bad');
+        if (typeof toast === 'function') toast('Could not save draft', 'bad');
       }
     }).catch(function(e){
-      if (typeof toast === 'function') toast('Kon draft niet opslaan: ' + (e && e.message || ''), 'bad');
+      if (typeof toast === 'function') toast('Could not save draft: ' + (e && e.message || ''), 'bad');
     });
     return;
   }
@@ -13304,7 +13539,7 @@ window.calSaveSchedule = function calSaveSchedule(){
   });
   _v2SaveCalEvents();
   calCloseSchedule();
-  if (typeof toast === 'function') toast('Draft opgeslagen', 'ok');
+  if (typeof toast === 'function') toast('Draft saved', 'ok');
   window.renderCalendar();
 };
 
@@ -13336,13 +13571,13 @@ window.calDeleteSchedule = function calDeleteSchedule(){
   api('/api/calendar/delete', { method: 'POST', body: { id: id } }).then(function(r){
     if (r && r.ok) {
       calCloseSchedule();
-      if (typeof toast === 'function') toast('Draft verwijderd', 'good');
+      if (typeof toast === 'function') toast('Draft deleted', 'good');
       if (typeof loadCalendarPosts === 'function') loadCalendarPosts();
     } else {
-      if (typeof toast === 'function') toast('Kon niet verwijderen', 'bad');
+      if (typeof toast === 'function') toast('Could not delete', 'bad');
     }
   }).catch(function(e){
-    if (typeof toast === 'function') toast('Kon niet verwijderen: ' + (e && e.message || ''), 'bad');
+    if (typeof toast === 'function') toast('Could not delete: ' + (e && e.message || ''), 'bad');
   });
 };
 

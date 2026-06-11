@@ -202,6 +202,21 @@ async function handleSubscriptionUpdated(sub: Stripe.Subscription) {
     stripe_subscription_id: sub.id,
   };
 
+  // SESSIE 83 (beslissing D in PLAN-QUOTA-PAYMENT-HARDENING): bij een
+  // DOWNGRADE (bv. Studio -> Pro) reset de teller naar 0 met een vers
+  // 30-dagen window, zodat de gebruiker niet meteen geblokkeerd is door
+  // verbruik dat onder het hogere plan is opgebouwd. Upgrades resetten al
+  // via checkout.session.completed; gelijkblijvend plan blijft ongemoeid.
+  const planRank: Record<string, number> = { free: 0, pro: 1, studio: 2 };
+  const currentPlan = String((profile as { plan?: string }).plan ?? 'free').toLowerCase();
+  const currentRank = planRank[currentPlan] ?? 0;
+  const newRank = planRank[plan] ?? 0;
+  if (newRank < currentRank) {
+    update.usage_this_period = 0;
+    update.quota_reset_date = thirtyDaysFromNow();
+    console.log(`Downgrade ${currentPlan} -> ${plan} for ${profile.id}: usage reset to 0`);
+  }
+
   const { error } = await supabase.from('profiles').update(update).eq('id', profile.id);
   if (error) {
     console.error('Profile update failed (subscription.updated)', profile.id, error);
@@ -226,6 +241,11 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
     plan: 'free',
     stripe_subscription_id: null,
     // Keep stripe_customer_id so they can re-subscribe with same card later.
+    // SESSIE 83 (beslissing D): downgrade naar free reset de teller naar 0
+    // met een vers window, zodat de gebruiker direct zijn free-tegoed heeft
+    // in plaats van geblokkeerd te zijn door het oude (hogere) verbruik.
+    usage_this_period: 0,
+    quota_reset_date: thirtyDaysFromNow(),
   };
 
   const { error } = await supabase.from('profiles').update(update).eq('id', profile.id);
